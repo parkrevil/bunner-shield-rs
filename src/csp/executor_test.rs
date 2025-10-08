@@ -4,11 +4,11 @@ use crate::constants::header::{
 };
 use crate::csp::{CspOptions, CspReportGroup};
 
-mod header_pairs {
+mod execute {
     use super::*;
 
     #[test]
-    fn given_enforced_policy_when_header_pairs_then_returns_csp_header() {
+    fn given_enforced_policy_when_execute_then_returns_csp_header() {
         let policy = CspOptions::new()
             .with_directive("default-src", "'self'")
             .with_directive("base-uri", "'none'")
@@ -16,7 +16,7 @@ mod header_pairs {
             .validate()
             .expect("policy");
 
-        let headers = header_pairs(&policy);
+        let headers = Csp::new(&policy).execute();
 
         assert_eq!(headers.len(), 1);
         assert_eq!(headers[0].0, CONTENT_SECURITY_POLICY);
@@ -27,7 +27,7 @@ mod header_pairs {
     }
 
     #[test]
-    fn given_report_only_policy_when_header_pairs_then_includes_report_to_header() {
+    fn given_report_only_policy_when_execute_then_includes_report_to_header() {
         let group = CspReportGroup::new("default", "https://reports.example.com");
         let policy = CspOptions::new()
             .with_directive("default-src", "'self'")
@@ -38,7 +38,7 @@ mod header_pairs {
             .validate()
             .expect("policy");
 
-        let headers = header_pairs(&policy);
+        let headers = Csp::new(&policy).execute();
 
         assert_eq!(headers.len(), 2);
         assert_eq!(headers[0].0, CONTENT_SECURITY_POLICY_REPORT_ONLY);
