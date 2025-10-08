@@ -6,3 +6,7 @@ impl Shield {
         Self
     }
 }
+
+#[cfg(test)]
+#[path = "shield_test.rs"]
+mod shield_test;
