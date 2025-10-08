@@ -1,5 +1,5 @@
 use super::CspOptions;
-use crate::constants::header::{
+use crate::constants::headers::{
     CONTENT_SECURITY_POLICY, CONTENT_SECURITY_POLICY_REPORT_ONLY, REPORT_TO,
 };
 use crate::executor::Executor;

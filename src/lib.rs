@@ -6,3 +6,4 @@ mod shield;
 
 pub use crate::csp::{CspOptions, CspOptionsError, CspReportGroup};
 pub use crate::shield::{Shield, ShieldError};
+pub use crate::constants::headers;

@@ -51,7 +51,7 @@ impl CspOptions {
         self
     }
 
-    pub fn validate(self) -> Result<Self, CspOptionsError> {
+    pub(crate) fn validate(self) -> Result<Self, CspOptionsError> {
         if self.directives.is_empty() {
             return Err(CspOptionsError::MissingDirectives);
         }
