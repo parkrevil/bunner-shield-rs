@@ -14,10 +14,7 @@ impl Shield {
         Self::default()
     }
 
-    pub fn content_security_policy(
-        mut self,
-        options: CspOptions,
-    ) -> Result<Self, CspOptionsError> {
+    pub fn content_security_policy(mut self, options: CspOptions) -> Result<Self, CspOptionsError> {
         let validated = options.validate()?;
         let executor: HeaderExecutor = Box::new(Csp::new(validated));
         self.pipeline.push(executor);
