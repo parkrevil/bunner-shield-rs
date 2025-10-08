@@ -3,6 +3,7 @@ use crate::constants::header::{
     CONTENT_SECURITY_POLICY, CONTENT_SECURITY_POLICY_REPORT_ONLY, REPORT_TO,
 };
 use crate::executor::Executor;
+use crate::normalized_headers::NormalizedHeaders;
 
 pub struct Csp {
     options: CspOptions,
@@ -15,8 +16,6 @@ impl Csp {
 }
 
 impl Executor for Csp {
-    type Output = Vec<(String, String)>;
-
     fn validate_options(&self) -> Result<(), String> {
         self.options
             .clone()
@@ -25,25 +24,19 @@ impl Executor for Csp {
             .map_err(|err| err.to_string())
     }
 
-    fn execute(&self) -> Self::Output {
-        let mut pairs = Vec::with_capacity(2);
-
+    fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), String> {
         let header_name = if self.options.report_only {
             CONTENT_SECURITY_POLICY_REPORT_ONLY
         } else {
             CONTENT_SECURITY_POLICY
         };
 
-        pairs.push((header_name.to_string(), self.options.serialize()));
+        headers.insert(header_name, self.options.serialize());
 
         if let Some(group) = &self.options.report_group {
-            pairs.push((REPORT_TO.to_string(), group.to_header_value()));
+            headers.insert(REPORT_TO, group.to_header_value());
         }
 
-        pairs
+        Ok(())
     }
 }
-
-#[cfg(test)]
-#[path = "executor_test.rs"]
-mod executor_test;

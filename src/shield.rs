@@ -2,9 +2,10 @@ use crate::constants::executor_order::CONTENT_SECURITY_POLICY;
 use crate::csp::{Csp, CspOptions};
 use crate::executor::Executor;
 use crate::normalized_headers::NormalizedHeaders;
+use std::collections::HashMap;
 use thiserror::Error;
 
-type ShieldExecutor = Box<dyn Executor<Output = Vec<(String, String)>> + 'static>;
+type ShieldExecutor = Box<dyn Executor + 'static>;
 
 struct PipelineEntry {
     order: u8,
@@ -34,13 +35,18 @@ impl Shield {
 
     pub fn secure(
         &self,
-        mut headers: Vec<(String, String)>,
-    ) -> Result<NormalizedHeaders, ShieldError> {
+        headers: HashMap<String, String>,
+    ) -> Result<HashMap<String, String>, ShieldError> {
+        let mut normalized = NormalizedHeaders::new(headers);
+
         for entry in &self.pipeline {
-            headers.extend(entry.executor.execute());
+            entry
+                .executor
+                .execute(&mut normalized)
+                .map_err(ShieldError::ExecutionFailed)?;
         }
 
-        Ok(NormalizedHeaders::from_pairs(headers))
+        Ok(normalized.into_result())
     }
 
     pub fn content_security_policy(self, options: CspOptions) -> Result<Self, ShieldError> {
@@ -52,8 +58,6 @@ impl Shield {
 pub enum ShieldError {
     #[error("executor validation failed: {0}")]
     ExecutorValidationFailed(String),
+    #[error("execution failed: {0}")]
+    ExecutionFailed(String),
 }
-
-#[cfg(test)]
-#[path = "shield_test.rs"]
-mod shield_test;

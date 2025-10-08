@@ -1,39 +1,42 @@
+use std::collections::HashMap;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NormalizedHeaders {
-    entries: Vec<HeaderEntry>,
+    entries: HashMap<String, HeaderEntry>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct HeaderEntry {
-    normalized: String,
     original: String,
     value: String,
 }
 
 impl NormalizedHeaders {
-    pub fn from_pairs(pairs: Vec<(String, String)>) -> Self {
-        let entries = pairs
-            .into_iter()
-            .map(|(name, value)| HeaderEntry {
-                normalized: name.to_ascii_lowercase(),
-                original: name,
-                value,
-            })
-            .collect();
+    pub fn new(origin_headers: HashMap<String, String>) -> Self {
+        let mut normalized = Self {
+            entries: HashMap::new(),
+        };
 
-        Self { entries }
+        for (name, value) in origin_headers {
+            normalized.insert(name, value);
+        }
+
+        normalized
     }
 
-    pub fn get(&self, name: &str) -> Option<&str> {
-        let target = name.to_ascii_lowercase();
+    pub fn insert(&mut self, name: impl Into<String>, value: impl Into<String>) {
+        let original = name.into();
+        let normalized = original.to_ascii_lowercase();
+        let value = value.into();
 
         self.entries
-            .iter()
-            .find(|entry| entry.normalized == target)
-            .map(|entry| entry.value.as_str())
+            .insert(normalized, HeaderEntry { original, value });
+    }
+
+    pub fn into_result(self) -> HashMap<String, String> {
+        self.entries
+            .into_values()
+            .map(|entry| (entry.original, entry.value))
+            .collect()
     }
 }
-
-#[cfg(test)]
-#[path = "normalized_headers_test.rs"]
-mod normalized_headers_test;

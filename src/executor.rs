@@ -1,6 +1,6 @@
-pub trait Executor {
-    type Output;
+use crate::normalized_headers::NormalizedHeaders;
 
+pub trait Executor {
     fn validate_options(&self) -> Result<(), String>;
-    fn execute(&self) -> Self::Output;
+    fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), String>;
 }
