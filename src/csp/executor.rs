@@ -1,5 +1,7 @@
 use super::CspOptions;
-use crate::constants::header::{CONTENT_SECURITY_POLICY, CONTENT_SECURITY_POLICY_REPORT_ONLY, REPORT_TO};
+use crate::constants::header::{
+    CONTENT_SECURITY_POLICY, CONTENT_SECURITY_POLICY_REPORT_ONLY, REPORT_TO,
+};
 
 pub fn header_pairs(options: &CspOptions) -> Vec<(String, String)> {
     let mut pairs = Vec::with_capacity(2);

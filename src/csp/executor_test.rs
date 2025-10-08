@@ -1,6 +1,8 @@
 use super::*;
+use crate::constants::header::{
+    CONTENT_SECURITY_POLICY, CONTENT_SECURITY_POLICY_REPORT_ONLY, REPORT_TO,
+};
 use crate::csp::{CspOptions, CspReportGroup};
-use crate::constants::header::{CONTENT_SECURITY_POLICY, CONTENT_SECURITY_POLICY_REPORT_ONLY, REPORT_TO};
 
 mod header_pairs {
     use super::*;
