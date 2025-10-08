@@ -5,9 +5,7 @@ mod from_pairs {
 
     #[test]
     fn given_mixed_case_pairs_when_from_pairs_then_get_is_case_insensitive() {
-        let pairs = vec![
-            ("X-Test".to_string(), "value".to_string()),
-        ];
+        let pairs = vec![("X-Test".to_string(), "value".to_string())];
 
         let headers = NormalizedHeaders::from_pairs(pairs);
 
@@ -20,9 +18,8 @@ mod get {
 
     #[test]
     fn given_missing_header_when_get_then_returns_none() {
-        let headers = NormalizedHeaders::from_pairs(vec![
-            ("X-Trace".to_string(), "123".to_string()),
-        ]);
+        let headers =
+            NormalizedHeaders::from_pairs(vec![("X-Trace".to_string(), "123".to_string())]);
 
         let result = headers.get("x-test");
 
