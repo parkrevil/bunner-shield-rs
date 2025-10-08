@@ -6,7 +6,7 @@ mod header_pairs {
 
     #[test]
     fn given_enforced_policy_when_header_pairs_then_returns_csp_header() {
-    let policy = CspOptions::new()
+        let policy = CspOptions::new()
             .with_directive("default-src", "'self'")
             .with_directive("base-uri", "'none'")
             .with_directive("frame-ancestors", "'none'")
@@ -26,7 +26,7 @@ mod header_pairs {
     #[test]
     fn given_report_only_policy_when_header_pairs_then_includes_report_to_header() {
         let group = CspReportGroup::new("default", "https://reports.example.com");
-    let policy = CspOptions::new()
+        let policy = CspOptions::new()
             .with_directive("default-src", "'self'")
             .with_directive("base-uri", "'none'")
             .with_directive("frame-ancestors", "'none'")

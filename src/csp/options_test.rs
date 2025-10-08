@@ -5,7 +5,7 @@ mod validate {
 
     #[test]
     fn given_minimum_directives_when_validate_then_returns_policy() {
-    let validated = CspOptions::new()
+        let validated = CspOptions::new()
             .with_directive("default-src", "'self'")
             .with_directive("base-uri", "'none'")
             .with_directive("frame-ancestors", "'none'")
@@ -22,7 +22,7 @@ mod validate {
 
     #[test]
     fn given_uppercase_directive_when_validate_then_returns_error() {
-    let options = CspOptions::new().with_directive("Default-Src", "'self'");
+        let options = CspOptions::new().with_directive("Default-Src", "'self'");
 
         let result = options.validate();
 
@@ -31,7 +31,7 @@ mod validate {
 
     #[test]
     fn given_report_only_without_group_when_validate_then_returns_error() {
-    let options = CspOptions::new()
+        let options = CspOptions::new()
             .with_directive("default-src", "'self'")
             .enable_report_only();
 
@@ -46,7 +46,7 @@ mod validate {
     #[test]
     fn given_invalid_group_when_validate_then_returns_error() {
         let group = CspReportGroup::new("", "https://reports.example.com");
-    let options = CspOptions::new()
+        let options = CspOptions::new()
             .with_directive("default-src", "'self'")
             .with_report_group(group);
 
