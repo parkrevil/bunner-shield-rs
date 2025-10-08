@@ -1,5 +1,6 @@
 use super::*;
 use crate::csp::{CspOptions, CspReportGroup};
+use crate::constants::header::{CONTENT_SECURITY_POLICY, CONTENT_SECURITY_POLICY_REPORT_ONLY, REPORT_TO};
 
 mod header_pairs {
     use super::*;
@@ -16,7 +17,7 @@ mod header_pairs {
         let headers = header_pairs(&policy);
 
         assert_eq!(headers.len(), 1);
-        assert_eq!(headers[0].0, HEADER_CONTENT_SECURITY_POLICY);
+        assert_eq!(headers[0].0, CONTENT_SECURITY_POLICY);
         assert_eq!(
             headers[0].1,
             "default-src 'self'; base-uri 'none'; frame-ancestors 'none'"
@@ -38,8 +39,8 @@ mod header_pairs {
         let headers = header_pairs(&policy);
 
         assert_eq!(headers.len(), 2);
-        assert_eq!(headers[0].0, HEADER_CONTENT_SECURITY_POLICY_REPORT_ONLY);
-        assert_eq!(headers[1].0, HEADER_REPORT_TO);
+        assert_eq!(headers[0].0, CONTENT_SECURITY_POLICY_REPORT_ONLY);
+        assert_eq!(headers[1].0, REPORT_TO);
         assert_eq!(headers[1].1, group.to_header_value());
     }
 }
