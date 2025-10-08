@@ -1,12 +1,19 @@
-use crate::csp::{Csp, CspOptions, CspOptionsError};
+use crate::constants::executor_order::CONTENT_SECURITY_POLICY;
+use crate::csp::{Csp, CspOptions};
 use crate::executor::Executor;
 use crate::normalized_headers::NormalizedHeaders;
+use thiserror::Error;
 
-type HeaderExecutor = Box<dyn Executor<Output = Vec<(String, String)>> + 'static>;
+type ShieldExecutor = Box<dyn Executor<Output = Vec<(String, String)>> + 'static>;
+
+struct PipelineEntry {
+    order: u8,
+    executor: ShieldExecutor,
+}
 
 #[derive(Default)]
 pub struct Shield {
-    pipeline: Vec<HeaderExecutor>,
+    pipeline: Vec<PipelineEntry>,
 }
 
 impl Shield {
@@ -14,20 +21,34 @@ impl Shield {
         Self::default()
     }
 
-    pub fn content_security_policy(mut self, options: CspOptions) -> Result<Self, CspOptionsError> {
-        let validated = options.validate()?;
-        let executor: HeaderExecutor = Box::new(Csp::new(validated));
-        self.pipeline.push(executor);
+    pub fn add_feature(mut self, order: u8, executor: ShieldExecutor) -> Result<Self, ShieldError> {
+        executor
+            .validate_options()
+            .map_err(ShieldError::ExecutorValidationFailed)?;
+
+        self.pipeline.push(PipelineEntry { order, executor });
+        self.pipeline.sort_by(|a, b| a.order.cmp(&b.order));
+
         Ok(self)
     }
 
-    pub fn secure(&self, mut headers: Vec<(String, String)>) -> NormalizedHeaders {
-        for executor in &self.pipeline {
-            headers.extend(executor.execute());
+    pub fn secure(&self, mut headers: Vec<(String, String)>) -> Result<NormalizedHeaders, ShieldError> {
+        for entry in &self.pipeline {
+            headers.extend(entry.executor.execute());
         }
 
-        NormalizedHeaders::from_pairs(headers)
+        Ok(NormalizedHeaders::from_pairs(headers))
     }
+
+    pub fn content_security_policy(self, options: CspOptions) -> Result<Self, ShieldError> {
+        self.add_feature(CONTENT_SECURITY_POLICY, Box::new(Csp::new(options)))
+    }
+}
+
+#[derive(Debug, Error)]
+pub enum ShieldError {
+    #[error("executor validation failed: {0}")]
+    ExecutorValidationFailed(String),
 }
 
 #[cfg(test)]

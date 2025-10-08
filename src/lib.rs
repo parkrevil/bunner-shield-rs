@@ -5,4 +5,4 @@ mod normalized_headers;
 mod shield;
 
 pub use crate::csp::{CspOptions, CspOptionsError, CspReportGroup};
-pub use crate::shield::Shield;
+pub use crate::shield::{Shield, ShieldError};

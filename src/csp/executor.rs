@@ -17,6 +17,15 @@ impl Csp {
 impl Executor for Csp {
     type Output = Vec<(String, String)>;
 
+    fn validate_options(&self) -> Result<(), String> {
+        self
+            .options
+            .clone()
+            .validate()
+            .map(|_| ())
+            .map_err(|err| err.to_string())
+    }
+
     fn execute(&self) -> Self::Output {
         let mut pairs = Vec::with_capacity(2);
 
