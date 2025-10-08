@@ -32,7 +32,10 @@ impl Shield {
         Ok(self)
     }
 
-    pub fn secure(&self, mut headers: Vec<(String, String)>) -> Result<NormalizedHeaders, ShieldError> {
+    pub fn secure(
+        &self,
+        mut headers: Vec<(String, String)>,
+    ) -> Result<NormalizedHeaders, ShieldError> {
         for entry in &self.pipeline {
             headers.extend(entry.executor.execute());
         }

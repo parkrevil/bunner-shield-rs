@@ -11,7 +11,7 @@ mod new {
                 CspOptions::new()
                     .with_directive("default-src", "'self'")
                     .with_directive("base-uri", "'none'")
-                    .with_directive("frame-ancestors", "'none'")
+                    .with_directive("frame-ancestors", "'none'"),
             )
             .expect("feature");
         let headers = vec![

@@ -18,8 +18,7 @@ impl Executor for Csp {
     type Output = Vec<(String, String)>;
 
     fn validate_options(&self) -> Result<(), String> {
-        self
-            .options
+        self.options
             .clone()
             .validate()
             .map(|_| ())
