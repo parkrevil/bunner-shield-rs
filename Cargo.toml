@@ -13,6 +13,7 @@ authors = ["parkrevil"]
 readme = "README.md"
 
 [dependencies]
+thiserror = "2"
 
 [dev-dependencies.cargo-husky]
 version = "1"

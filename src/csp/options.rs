@@ -1,4 +1,4 @@
-use std::fmt::{self, Display};
+use thiserror::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CspReportGroup {
@@ -103,28 +103,19 @@ impl CspOptions {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum CspOptionsError {
+    #[error("missing directives")]
     MissingDirectives,
+    #[error("invalid directive name")]
     InvalidDirectiveName,
+    #[error("invalid directive value")]
     InvalidDirectiveValue,
+    #[error("report-only mode requires report group")]
     ReportOnlyMissingGroup,
+    #[error("invalid report group")]
     InvalidReportGroup,
 }
-
-impl Display for CspOptionsError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::MissingDirectives => write!(f, "missing directives"),
-            Self::InvalidDirectiveName => write!(f, "invalid directive name"),
-            Self::InvalidDirectiveValue => write!(f, "invalid directive value"),
-            Self::ReportOnlyMissingGroup => write!(f, "report-only mode requires report group"),
-            Self::InvalidReportGroup => write!(f, "invalid report group"),
-        }
-    }
-}
-
-impl std::error::Error for CspOptionsError {}
 
 #[cfg(test)]
 #[path = "options_test.rs"]
