@@ -16,7 +16,7 @@ mod execute {
             .validate()
             .expect("policy");
 
-        let headers = Csp::new(&policy).execute();
+        let headers = Csp::new(policy).execute();
 
         assert_eq!(headers.len(), 1);
         assert_eq!(headers[0].0, CONTENT_SECURITY_POLICY);
@@ -38,7 +38,7 @@ mod execute {
             .validate()
             .expect("policy");
 
-        let headers = Csp::new(&policy).execute();
+        let headers = Csp::new(policy).execute();
 
         assert_eq!(headers.len(), 2);
         assert_eq!(headers[0].0, CONTENT_SECURITY_POLICY_REPORT_ONLY);

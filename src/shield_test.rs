@@ -4,19 +4,7 @@ mod new {
     use super::*;
 
     #[test]
-    fn given_default_state_when_new_then_returns_shield() {
-        let expected = Shield;
-        let actual = Shield::new();
-
-        assert_eq!(actual, expected);
-    }
-}
-
-mod secure {
-    use super::*;
-
-    #[test]
-    fn given_header_pairs_when_secure_then_returns_normalized_headers() {
+    fn given_default_state_when_secure_then_returns_normalized_headers() {
         let shield = Shield::new();
         let headers = vec![
             ("X-Test".to_string(), "A".to_string()),

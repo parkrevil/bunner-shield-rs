@@ -4,18 +4,17 @@ use crate::constants::header::{
 };
 use crate::executor::Executor;
 
-#[allow(dead_code)]
-pub struct Csp<'a> {
-    options: &'a CspOptions,
+pub struct Csp {
+    options: CspOptions,
 }
 
-impl<'a> Csp<'a> {
-    pub fn new(options: &'a CspOptions) -> Self {
+impl Csp {
+    pub fn new(options: CspOptions) -> Self {
         Self { options }
     }
 }
 
-impl<'a> Executor for Csp<'a> {
+impl Executor for Csp {
     type Output = Vec<(String, String)>;
 
     fn execute(&self) -> Self::Output {
