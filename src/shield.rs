@@ -40,13 +40,13 @@ impl Shield {
         Ok(normalized.into_result())
     }
 
-    pub fn content_security_policy(mut self, options: CspOptions) -> Result<Self, ShieldError> {
+    pub fn csp(mut self, options: CspOptions) -> Result<Self, ShieldError> {
         self.add_feature(CONTENT_SECURITY_POLICY, Box::new(Csp::new(options)))?;
 
         Ok(self)
     }
 
-    pub fn strict_transport_security(mut self, options: HstsOptions) -> Result<Self, ShieldError> {
+    pub fn hsts(mut self, options: HstsOptions) -> Result<Self, ShieldError> {
         self.add_feature(STRICT_TRANSPORT_SECURITY, Box::new(Hsts::new(options)))?;
 
         Ok(self)

@@ -8,7 +8,7 @@ fn given_enforced_policy_when_secure_then_applies_csp_header() {
         .directive("base-uri", "'none'")
         .directive("frame-ancestors", "'none'");
     let shield = Shield::new()
-        .content_security_policy(policy)
+        .csp(policy)
         .expect("feature");
     let mut headers = HashMap::new();
     headers.insert("X-Request-Id".to_string(), "abc-123".to_string());
@@ -36,7 +36,7 @@ fn given_report_only_policy_when_secure_then_emits_report_headers() {
         .report_only()
         .report_group(report_group.clone());
     let shield = Shield::new()
-        .content_security_policy(policy)
+        .csp(policy)
         .expect("feature");
     let headers = HashMap::new();
 

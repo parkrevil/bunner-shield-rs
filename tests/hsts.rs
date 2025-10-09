@@ -5,7 +5,7 @@ use std::collections::HashMap;
 fn given_valid_hsts_when_secure_then_applies_header() {
     let options = HstsOptions::new().include_subdomains();
     let shield = Shield::new()
-        .strict_transport_security(options)
+        .hsts(options)
         .expect("feature");
     let headers = HashMap::new();
     let result = shield.secure(headers).expect("secure");
@@ -21,7 +21,7 @@ fn given_valid_hsts_when_secure_then_applies_header() {
 #[test]
 fn given_invalid_preload_combo_when_add_feature_then_returns_error() {
     let options = HstsOptions::new().enable_preload();
-    let result = Shield::new().strict_transport_security(options);
+    let result = Shield::new().hsts(options);
 
     match result {
         Err(ShieldError::ExecutorValidationFailed(_)) => {}
