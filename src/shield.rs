@@ -1,10 +1,9 @@
 use crate::constants::executor_order::CONTENT_SECURITY_POLICY;
 use crate::csp::{Csp, CspOptions};
-use crate::executor::{ShieldExecutor};
+use crate::executor::ShieldExecutor;
 use crate::normalized_headers::NormalizedHeaders;
 use std::collections::HashMap;
 use thiserror::Error;
-
 
 struct PipelineEntry {
     order: u8,

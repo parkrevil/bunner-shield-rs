@@ -2,7 +2,7 @@ use super::CspOptions;
 use crate::constants::headers::{
     CONTENT_SECURITY_POLICY, CONTENT_SECURITY_POLICY_REPORT_ONLY, REPORT_TO,
 };
-use crate::executor::{FeatureExecutor};
+use crate::executor::FeatureExecutor;
 use crate::normalized_headers::NormalizedHeaders;
 
 pub struct Csp {
@@ -17,7 +17,7 @@ impl Csp {
 
 impl FeatureExecutor for Csp {
     type Options = CspOptions;
-    
+
     fn options(&self) -> &Self::Options {
         &self.options
     }
