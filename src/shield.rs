@@ -1,6 +1,9 @@
-use crate::constants::executor_order::{CONTENT_SECURITY_POLICY, X_POWERED_BY};
+use crate::constants::executor_order::{
+    CONTENT_SECURITY_POLICY, STRICT_TRANSPORT_SECURITY, X_POWERED_BY,
+};
 use crate::csp::{Csp, CspOptions};
 use crate::executor::{Executor, ExecutorError};
+use crate::hsts::{Hsts, HstsOptions};
 use crate::normalized_headers::NormalizedHeaders;
 use crate::x_powered_by::XPoweredBy;
 use std::collections::HashMap;
@@ -39,6 +42,12 @@ impl Shield {
 
     pub fn content_security_policy(mut self, options: CspOptions) -> Result<Self, ShieldError> {
         self.add_feature(CONTENT_SECURITY_POLICY, Box::new(Csp::new(options)))?;
+
+        Ok(self)
+    }
+
+    pub fn strict_transport_security(mut self, options: HstsOptions) -> Result<Self, ShieldError> {
+        self.add_feature(STRICT_TRANSPORT_SECURITY, Box::new(Hsts::new(options)))?;
 
         Ok(self)
     }
