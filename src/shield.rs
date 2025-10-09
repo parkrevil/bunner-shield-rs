@@ -1,6 +1,6 @@
 use crate::constants::executor_order::CONTENT_SECURITY_POLICY;
 use crate::csp::{Csp, CspOptions};
-use crate::executor::{ExecutorError, Executor};
+use crate::executor::{Executor, ExecutorError};
 use crate::normalized_headers::NormalizedHeaders;
 use std::collections::HashMap;
 use thiserror::Error;
