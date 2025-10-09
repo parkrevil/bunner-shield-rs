@@ -55,6 +55,49 @@ mod validate {
 
         assert!(matches!(result, Err(CspOptionsError::InvalidReportGroup)));
     }
+
+    #[test]
+    fn given_valid_nonce_when_validate_then_accepts_directive() {
+        let options = CspOptions::new()
+            .directive("script-src", "'nonce-dGVzdE5vbmNlVmFsdWVTYWZlMTIzNDU='")
+            .directive("default-src", "'self'");
+
+        let result = options.validate();
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn given_invalid_nonce_when_validate_then_returns_error() {
+        let options = CspOptions::new()
+            .directive("script-src", "'nonce-@@@@'")
+            .directive("default-src", "'self'");
+
+        let result = options.validate();
+
+        assert!(matches!(result, Err(CspOptionsError::InvalidNonce)));
+    }
+
+    #[test]
+    fn given_invalid_hash_when_validate_then_returns_error() {
+        let options = CspOptions::new()
+            .directive("script-src", "'sha256-short'")
+            .directive("default-src", "'self'");
+
+        let result = options.validate();
+
+        assert!(matches!(result, Err(CspOptionsError::InvalidHash)));
+    }
+
+    #[test]
+    fn given_control_character_when_validate_then_returns_error() {
+        let options = CspOptions::new()
+            .directive("default-src", "'self'\nscript" );
+
+        let result = options.validate();
+
+        assert!(matches!(result, Err(CspOptionsError::InvalidDirectiveToken)));
+    }
 }
 
 mod report_group {

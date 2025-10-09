@@ -1,4 +1,5 @@
 use crate::executor::FeatureOptions;
+use std::borrow::Cow;
 use thiserror::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -9,10 +10,10 @@ pub struct CspReportGroup {
 }
 
 impl CspReportGroup {
-    pub fn new(name: impl Into<String>, endpoint: impl Into<String>) -> Self {
+    pub fn new<'a>(name: impl Into<Cow<'a, str>>, endpoint: impl Into<Cow<'a, str>>) -> Self {
         Self {
-            name: name.into(),
-            endpoint: endpoint.into(),
+            name: name.into().into_owned(),
+            endpoint: endpoint.into().into_owned(),
             max_age: 10_886_400,
         }
     }
@@ -37,8 +38,13 @@ impl CspOptions {
         Self::default()
     }
 
-    pub fn directive(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
-        self.directives.push((name.into(), value.into()));
+    pub fn directive<'a>(
+        mut self,
+        name: impl Into<Cow<'a, str>>,
+        value: impl Into<Cow<'a, str>>,
+    ) -> Self {
+        self.directives
+            .push((name.into().into_owned(), value.into().into_owned()));
         self
     }
 
@@ -53,14 +59,14 @@ impl CspOptions {
     }
 
     fn is_valid_directive_name(name: &str) -> bool {
-        !name.trim().is_empty()
-            && name
-                .chars()
-                .all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '-')
-    }
+        let mut chars = name.chars();
 
-    fn contains_invalid_token(value: &str) -> bool {
-        value.contains(['\r', '\n']) || value.trim().is_empty()
+        match chars.next() {
+            Some(first) if first.is_ascii_lowercase() => {}
+            _ => return false,
+        }
+
+        chars.all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '-')
     }
 
     pub fn serialize(&self) -> String {
@@ -85,9 +91,7 @@ impl FeatureOptions for CspOptions {
                 return Err(CspOptionsError::InvalidDirectiveName);
             }
 
-            if Self::contains_invalid_token(value) {
-                return Err(CspOptionsError::InvalidDirectiveValue);
-            }
+            Self::validate_directive_value(value)?;
         }
 
         if self.report_only && self.report_group.is_none() {
@@ -95,13 +99,109 @@ impl FeatureOptions for CspOptions {
         }
 
         if let Some(group) = &self.report_group {
-            if Self::contains_invalid_token(&group.name) || group.name.trim().is_empty() {
+            if Self::has_invalid_header_text(&group.name) || group.name.trim().is_empty() {
                 return Err(CspOptionsError::InvalidReportGroup);
             }
 
-            if Self::contains_invalid_token(&group.endpoint) || group.endpoint.trim().is_empty() {
+            if Self::has_invalid_header_text(&group.endpoint) || group.endpoint.trim().is_empty() {
                 return Err(CspOptionsError::InvalidReportGroup);
             }
+        }
+
+        Ok(())
+    }
+}
+
+impl CspOptions {
+    fn has_invalid_header_text(value: &str) -> bool {
+        value.contains(['\r', '\n'])
+    }
+
+    fn validate_directive_value(value: &str) -> Result<(), CspOptionsError> {
+        if value.trim().is_empty() {
+            return Err(CspOptionsError::InvalidDirectiveValue);
+        }
+
+        if Self::has_invalid_header_text(value) {
+            return Err(CspOptionsError::InvalidDirectiveToken);
+        }
+
+        for token in value.split_whitespace() {
+            Self::validate_token(token)?;
+        }
+
+        Ok(())
+    }
+
+    fn validate_token(token: &str) -> Result<(), CspOptionsError> {
+        if token.is_empty() {
+            return Err(CspOptionsError::InvalidDirectiveValue);
+        }
+
+        if let Some(rest) = token.strip_prefix("'nonce-") {
+            return Self::validate_nonce(rest);
+        }
+
+        if let Some(rest) = token.strip_prefix("'sha256-") {
+            return Self::validate_hash(rest, 44);
+        }
+
+        if let Some(rest) = token.strip_prefix("'sha384-") {
+            return Self::validate_hash(rest, 64);
+        }
+
+        if let Some(rest) = token.strip_prefix("'sha512-") {
+            return Self::validate_hash(rest, 88);
+        }
+
+        if token.starts_with('"') || token.ends_with('"') {
+            return Err(CspOptionsError::InvalidDirectiveToken);
+        }
+
+        if token.starts_with('\'') && !token.ends_with('\'') {
+            return Err(CspOptionsError::InvalidDirectiveToken);
+        }
+
+        if token.chars().any(|ch| ch.is_control()) {
+            return Err(CspOptionsError::InvalidDirectiveToken);
+        }
+
+        Ok(())
+    }
+
+    fn validate_nonce(rest: &str) -> Result<(), CspOptionsError> {
+        let encoded = rest
+            .strip_suffix('\'')
+            .ok_or(CspOptionsError::InvalidNonce)?;
+
+        if encoded.len() < 22 {
+            return Err(CspOptionsError::InvalidNonce);
+        }
+
+        if !encoded
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '+' | '/' | '='))
+        {
+            return Err(CspOptionsError::InvalidNonce);
+        }
+
+        Ok(())
+    }
+
+    fn validate_hash(rest: &str, expected_len: usize) -> Result<(), CspOptionsError> {
+        let encoded = rest
+            .strip_suffix('\'')
+            .ok_or(CspOptionsError::InvalidHash)?;
+
+        if encoded.len() != expected_len {
+            return Err(CspOptionsError::InvalidHash);
+        }
+
+        if !encoded
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '+' | '/' | '='))
+        {
+            return Err(CspOptionsError::InvalidHash);
         }
 
         Ok(())
@@ -116,6 +216,12 @@ pub enum CspOptionsError {
     InvalidDirectiveName,
     #[error("invalid directive value")]
     InvalidDirectiveValue,
+    #[error("invalid directive token")]
+    InvalidDirectiveToken,
+    #[error("invalid nonce source expression")]
+    InvalidNonce,
+    #[error("invalid hash source expression")]
+    InvalidHash,
     #[error("report-only mode requires report group")]
     ReportOnlyMissingGroup,
     #[error("invalid report group")]
