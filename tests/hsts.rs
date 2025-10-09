@@ -4,9 +4,7 @@ use std::collections::HashMap;
 #[test]
 fn given_valid_hsts_when_secure_then_applies_header() {
     let options = HstsOptions::new().include_subdomains();
-    let shield = Shield::new()
-        .hsts(options)
-        .expect("feature");
+    let shield = Shield::new().hsts(options).expect("feature");
     let headers = HashMap::new();
     let result = shield.secure(headers).expect("secure");
 
