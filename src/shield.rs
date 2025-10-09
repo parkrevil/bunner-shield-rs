@@ -1,13 +1,13 @@
 use crate::constants::executor_order::CONTENT_SECURITY_POLICY;
 use crate::csp::{Csp, CspOptions};
-use crate::executor::ShieldExecutor;
+use crate::executor::{ExecutorError, Executor};
 use crate::normalized_headers::NormalizedHeaders;
 use std::collections::HashMap;
 use thiserror::Error;
 
 struct PipelineEntry {
     order: u8,
-    executor: ShieldExecutor,
+    executor: Executor,
 }
 
 #[derive(Default)]
@@ -20,7 +20,7 @@ impl Shield {
         Self::default()
     }
 
-    fn add_feature(mut self, order: u8, executor: ShieldExecutor) -> Result<Self, ShieldError> {
+    fn add_feature(mut self, order: u8, executor: Executor) -> Result<Self, ShieldError> {
         executor
             .validate_options()
             .map_err(ShieldError::ExecutorValidationFailed)?;
@@ -55,7 +55,7 @@ impl Shield {
 #[derive(Debug, Error)]
 pub enum ShieldError {
     #[error("executor validation failed: {0}")]
-    ExecutorValidationFailed(String),
+    ExecutorValidationFailed(ExecutorError),
     #[error("execution failed: {0}")]
-    ExecutionFailed(String),
+    ExecutionFailed(ExecutorError),
 }

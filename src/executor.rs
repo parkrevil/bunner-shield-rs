@@ -1,38 +1,41 @@
 use crate::normalized_headers::NormalizedHeaders;
+use std::error::Error as StdError;
 
-pub type ShieldExecutor = Box<dyn DynFeatureExecutor + 'static>;
+pub type Executor = Box<dyn DynFeatureExecutor + 'static>;
+pub type ExecutorError = Box<dyn StdError + Send + Sync>;
 
 pub(crate) trait FeatureExecutor {
     type Options: FeatureOptions;
 
     fn options(&self) -> &Self::Options;
-    fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), String>;
-    fn validate_options(&self) -> Result<(), <Self::Options as FeatureOptions>::Error> {
-        self.options().validate()
+    fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), ExecutorError>;
+    fn validate_options(&self) -> Result<(), ExecutorError> {
+        self.options()
+            .validate()
+            .map_err(|err| Box::new(err) as ExecutorError)
     }
 }
 
 pub(crate) trait FeatureOptions {
-    type Error;
+    type Error: StdError + Send + Sync + 'static;
 
     fn validate(&self) -> Result<(), Self::Error>;
 }
 
 pub(crate) trait DynFeatureExecutor {
-    fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), String>;
-    fn validate_options(&self) -> Result<(), String>;
+    fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), ExecutorError>;
+    fn validate_options(&self) -> Result<(), ExecutorError>;
 }
 
 impl<T> DynFeatureExecutor for T
 where
     T: FeatureExecutor,
-    <T::Options as FeatureOptions>::Error: std::fmt::Display,
 {
-    fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), String> {
+    fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), ExecutorError> {
         FeatureExecutor::execute(self, headers)
     }
 
-    fn validate_options(&self) -> Result<(), String> {
-        FeatureExecutor::validate_options(self).map_err(|err| err.to_string())
+    fn validate_options(&self) -> Result<(), ExecutorError> {
+        FeatureExecutor::validate_options(self)
     }
 }

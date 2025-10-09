@@ -2,7 +2,7 @@ use super::CspOptions;
 use crate::constants::headers::{
     CONTENT_SECURITY_POLICY, CONTENT_SECURITY_POLICY_REPORT_ONLY, REPORT_TO,
 };
-use crate::executor::FeatureExecutor;
+use crate::executor::{ExecutorError, FeatureExecutor};
 use crate::normalized_headers::NormalizedHeaders;
 
 pub struct Csp {
@@ -22,7 +22,7 @@ impl FeatureExecutor for Csp {
         &self.options
     }
 
-    fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), String> {
+    fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), ExecutorError> {
         let header_name = if self.options.report_only {
             CONTENT_SECURITY_POLICY_REPORT_ONLY
         } else {
