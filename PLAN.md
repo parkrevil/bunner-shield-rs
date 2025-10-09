@@ -68,16 +68,7 @@
 
 ## Shield 코어 및 헤더 정규화 계층
 - **목표**: 모든 기능이 공통으로 사용하는 `Shield` 구조체와 `NormalizedHeaders` 타입을 구축합니다.
-- **구현 작업**
-   1. ~~`src/shield/mod.rs`에 `pub struct Shield` 정의. `Shield::new()`는 비활성화 상태의 기능 레지스트리를 초기화합니다.~~
-  2. 각 체인 메서드(예: `content_security_policy`, `strict_transport_security`, `csrf`)는 기능별 상태(`FeatureStage`)를 파이프라인 벡터에 등록하고, 옵션이 있으면 `validate()` 호출 후 내부 구성을 최신 상태로 덮어씁니다.
-  3. 파이프라인은 `FeatureStage { order: FeatureOrder, apply: fn(&mut NormalizedHeaders) -> Result<(), ShieldError> }` 형태로 구성하여 실행 순서를 고정합니다.
-   4. ~~`src/headers/normalized.rs`에 `NormalizedHeaders` 타입과 소문자화/역정규화 로직을 구현합니다. 입력은 `HeaderMap` 또는 `(String, String)` 쌍으로 받아, RFC 7230 준수 여부를 검사합니다.~~
-   5. ~~`src/constants.rs`(또는 각 모듈)에서 모든 헤더 키와 상수 값을 `pub const`로 정의하여 중복을 방지합니다.~~
-  6. `Shield::secure(mut headers: HeaderMap) -> Result<HeaderMap, ShieldError>`를 구현하여: (a) 입력 헤더를 `NormalizedHeaders`로 변환, (b) 파이프라인 순서대로 각 기능 모듈의 `apply(&mut NormalizedHeaders)`를 호출, (c) 최종 결과를 원래 케이스 규칙에 맞춰 `HeaderMap`으로 복원합니다.
-   7. ~~`ShieldError` 열거형을 정의해 모든 `validate()`/`apply()` 오류를 수집하고, 실패 시 원본 헤더를 변경하지 않은 채 반환하는 전략을 문서화합니다.~~
 - **주의/검증**
-  - 기능 적용 순서는 1단계 → 2단계 → 3단계 순으로 고정하고, 상호 의존 관계가 있는 경우(`COEP` ↔ `CORP`)에 대한 순서 테스트를 추가합니다.
   - `NormalizedHeaders` 변환 시 헤더 값 트리밍, 금지 문자 검사 등을 포함해 헤더 인젝션을 방지합니다.
 - **참조 규격**: RFC 7230/7231 (HTTP 메시지 문법), Rust API Guidelines
 
@@ -85,17 +76,6 @@
 
 ## 1. Content Security Policy (CSP) 기본 구현
 - **목표**: 기본 CSP 및 Report-Only 헤더를 생성하는 안전한 API 제공.
-- **파이프라인 순서**: 1 (1단계)
-- ~~**정적 상수**: `const HEADER_CONTENT_SECURITY_POLICY`, `const HEADER_CONTENT_SECURITY_POLICY_REPORT_ONLY`, `const HEADER_REPORT_TO`~~
-- **구현 작업**
-   1. ~~`src/csp/mod.rs`와 `src/csp/options.rs`를 생성하고, `CspDirective`, `CspOptions`, `CspPolicy` 구조를 정의합니다.~~
-   2. ~~`CspOptions`는 체이닝 메서드(e.g. `with_directive`, `with_report_only_group`)를 제공하며, `validate()` 내부에서 디렉티브 문법을 확인합니다.~~
-   3. ~~`Shield::content_security_policy(options: CspOptions)` 체인 메서드를 추가하고, 내부에서 `options.validate()` 호출 후 `NormalizedHeaders`에 CSP/Report-To 헤더를 삽입합니다.~~
-  4. ~~기본 지침에 맞춘 1단계 프리셋(`CspOptions::strict_minimum()`)과 Report-Only 모드 토글을 제공하되, 최종 적용은 `Shield::secure(headers)`에서 수행합니다.~~
-   5. ~~단위 테스트: 미설정 시 헤더 미삽입, Report-Only 활성화 시 `Content-Security-Policy-Report-Only`가 정확히 직렬화되는지 확인합니다.~~
-- **주의/검증**
-  - W3C CSP Level 3 문법 검증을 위해 `csp::validator` 모듈에서 금지 토큰 검사 로직을 유지합니다.
-  - nonce/hash 값은 라이브러리 소비자가 주입하므로, API는 `Cow<'a, str>` 기반으로 유연성 보장하되 `validate()`에서 길이/문자셋 확인을 수행합니다.
 - **참조 규격**: W3C CSP Level 3, OWASP Top 10 A03:2021
 
 ## 2. X-Powered-By 제거

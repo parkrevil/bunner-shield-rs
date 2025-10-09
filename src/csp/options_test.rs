@@ -91,12 +91,14 @@ mod validate {
 
     #[test]
     fn given_control_character_when_validate_then_returns_error() {
-        let options = CspOptions::new()
-            .directive("default-src", "'self'\nscript" );
+        let options = CspOptions::new().directive("default-src", "'self'\nscript");
 
         let result = options.validate();
 
-        assert!(matches!(result, Err(CspOptionsError::InvalidDirectiveToken)));
+        assert!(matches!(
+            result,
+            Err(CspOptionsError::InvalidDirectiveToken)
+        ));
     }
 }
 
