@@ -33,6 +33,11 @@ impl NormalizedHeaders {
             .insert(normalized, HeaderEntry { original, value });
     }
 
+    pub fn remove(&mut self, name: &str) {
+        let normalized = name.to_ascii_lowercase();
+        self.entries.remove(&normalized);
+    }
+
     pub fn into_result(self) -> HashMap<String, String> {
         self.entries
             .into_values()

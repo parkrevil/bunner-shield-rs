@@ -22,6 +22,17 @@ pub(crate) trait FeatureOptions {
     fn validate(&self) -> Result<(), Self::Error>;
 }
 
+#[derive(Default)]
+pub(crate) struct NoopOptions;
+
+impl FeatureOptions for NoopOptions {
+    type Error = std::convert::Infallible;
+
+    fn validate(&self) -> Result<(), Self::Error> {
+        Ok(())
+    }
+}
+
 pub(crate) trait DynFeatureExecutor {
     fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), ExecutorError>;
     fn validate_options(&self) -> Result<(), ExecutorError>;
