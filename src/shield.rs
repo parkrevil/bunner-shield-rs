@@ -1,11 +1,11 @@
 use crate::constants::executor_order::CONTENT_SECURITY_POLICY;
 use crate::csp::{Csp, CspOptions};
-use crate::executor::Executor;
+use crate::feature::FeatureExecutor;
 use crate::normalized_headers::NormalizedHeaders;
 use std::collections::HashMap;
 use thiserror::Error;
 
-type ShieldExecutor = Box<dyn Executor + 'static>;
+type ShieldExecutor = Box<dyn FeatureExecutor + 'static>;
 
 struct PipelineEntry {
     order: u8,

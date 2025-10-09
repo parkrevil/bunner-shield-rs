@@ -1,4 +1,5 @@
 use super::*;
+use crate::feature::FeatureOptions;
 
 mod validate {
     use super::*;
@@ -6,9 +7,9 @@ mod validate {
     #[test]
     fn given_minimum_directives_when_validate_then_returns_policy() {
         let validated = CspOptions::new()
-            .with_directive("default-src", "'self'")
-            .with_directive("base-uri", "'none'")
-            .with_directive("frame-ancestors", "'none'")
+            .directive("default-src", "'self'")
+            .directive("base-uri", "'none'")
+            .directive("frame-ancestors", "'none'")
             .validate()
             .expect("policy");
 
@@ -22,7 +23,7 @@ mod validate {
 
     #[test]
     fn given_uppercase_directive_when_validate_then_returns_error() {
-        let options = CspOptions::new().with_directive("Default-Src", "'self'");
+        let options = CspOptions::new().directive("Default-Src", "'self'");
 
         let result = options.validate();
 
@@ -32,8 +33,8 @@ mod validate {
     #[test]
     fn given_report_only_without_group_when_validate_then_returns_error() {
         let options = CspOptions::new()
-            .with_directive("default-src", "'self'")
-            .enable_report_only();
+            .directive("default-src", "'self'")
+            .report_only();
 
         let result = options.validate();
 
@@ -47,8 +48,8 @@ mod validate {
     fn given_invalid_group_when_validate_then_returns_error() {
         let group = CspReportGroup::new("", "https://reports.example.com");
         let options = CspOptions::new()
-            .with_directive("default-src", "'self'")
-            .with_report_group(group);
+            .directive("default-src", "'self'")
+            .report_group(group);
 
         let result = options.validate();
 

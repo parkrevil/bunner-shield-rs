@@ -4,9 +4,9 @@ use std::collections::HashMap;
 #[test]
 fn given_enforced_policy_when_secure_then_applies_csp_header() {
     let policy = CspOptions::new()
-        .with_directive("default-src", "'self'")
-        .with_directive("base-uri", "'none'")
-        .with_directive("frame-ancestors", "'none'");
+        .directive("default-src", "'self'")
+        .directive("base-uri", "'none'")
+        .directive("frame-ancestors", "'none'");
     let shield = Shield::new()
         .content_security_policy(policy)
         .expect("feature");
@@ -31,10 +31,10 @@ fn given_enforced_policy_when_secure_then_applies_csp_header() {
 fn given_report_only_policy_when_secure_then_emits_report_headers() {
     let report_group = CspReportGroup::new("default", "https://reports.example.com");
     let policy = CspOptions::new()
-        .with_directive("default-src", "'self'")
-        .with_directive("script-src", "'unsafe-inline'")
-        .enable_report_only()
-        .with_report_group(report_group.clone());
+        .directive("default-src", "'self'")
+        .directive("script-src", "'unsafe-inline'")
+        .report_only()
+        .report_group(report_group.clone());
     let shield = Shield::new()
         .content_security_policy(policy)
         .expect("feature");

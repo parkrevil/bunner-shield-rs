@@ -1,3 +1,4 @@
+use crate::feature::FeatureOptions;
 use thiserror::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -36,22 +37,45 @@ impl CspOptions {
         Self::default()
     }
 
-    pub fn with_directive(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
+    pub fn directive(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
         self.directives.push((name.into(), value.into()));
         self
     }
 
-    pub fn enable_report_only(mut self) -> Self {
+    pub fn report_only(mut self) -> Self {
         self.report_only = true;
         self
     }
 
-    pub fn with_report_group(mut self, group: CspReportGroup) -> Self {
+    pub fn report_group(mut self, group: CspReportGroup) -> Self {
         self.report_group = Some(group);
         self
     }
 
-    pub(crate) fn validate(self) -> Result<Self, CspOptionsError> {
+    fn is_valid_directive_name(name: &str) -> bool {
+        !name.trim().is_empty()
+            && name
+                .chars()
+                .all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '-')
+    }
+
+    fn contains_invalid_token(value: &str) -> bool {
+        value.contains(['\r', '\n']) || value.trim().is_empty()
+    }
+
+    pub fn serialize(&self) -> String {
+        self.directives
+            .iter()
+            .map(|(name, value)| format!("{} {}", name, value))
+            .collect::<Vec<_>>()
+            .join("; ")
+    }
+}
+
+impl FeatureOptions for CspOptions {
+    type Error = CspOptionsError;
+
+    fn validate(self) -> Result<Self, Self::Error> {
         if self.directives.is_empty() {
             return Err(CspOptionsError::MissingDirectives);
         }
@@ -81,25 +105,6 @@ impl CspOptions {
         }
 
         Ok(self)
-    }
-
-    fn is_valid_directive_name(name: &str) -> bool {
-        !name.trim().is_empty()
-            && name
-                .chars()
-                .all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '-')
-    }
-
-    fn contains_invalid_token(value: &str) -> bool {
-        value.contains(['\r', '\n']) || value.trim().is_empty()
-    }
-
-    pub fn serialize(&self) -> String {
-        self.directives
-            .iter()
-            .map(|(name, value)| format!("{} {}", name, value))
-            .collect::<Vec<_>>()
-            .join("; ")
     }
 }
 
