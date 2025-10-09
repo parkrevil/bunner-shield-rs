@@ -75,7 +75,7 @@ impl CspOptions {
 impl FeatureOptions for CspOptions {
     type Error = CspOptionsError;
 
-    fn validate(self) -> Result<Self, Self::Error> {
+    fn validate(&self) -> Result<(), Self::Error> {
         if self.directives.is_empty() {
             return Err(CspOptionsError::MissingDirectives);
         }
@@ -104,7 +104,7 @@ impl FeatureOptions for CspOptions {
             }
         }
 
-        Ok(self)
+        Ok(())
     }
 }
 

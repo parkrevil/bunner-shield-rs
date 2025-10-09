@@ -18,9 +18,7 @@ impl Csp {
 impl FeatureExecutor for Csp {
     fn validate_options(&self) -> Result<(), String> {
         self.options
-            .clone()
             .validate()
-            .map(|_| ())
             .map_err(|err| err.to_string())
     }
 

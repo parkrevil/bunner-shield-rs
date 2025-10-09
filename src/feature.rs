@@ -8,7 +8,5 @@ pub trait FeatureExecutor {
 pub trait FeatureOptions {
     type Error;
 
-    fn validate(self) -> Result<Self, Self::Error>
-    where
-        Self: Sized;
+    fn validate(&self) -> Result<(), Self::Error>;
 }

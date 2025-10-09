@@ -6,24 +6,24 @@ mod validate {
 
     #[test]
     fn given_minimum_directives_when_validate_then_returns_policy() {
-        let validated = CspOptions::new()
+        let options = CspOptions::new()
             .directive("default-src", "'self'")
             .directive("base-uri", "'none'")
-            .directive("frame-ancestors", "'none'")
-            .validate()
-            .expect("policy");
+            .directive("frame-ancestors", "'none'");
 
-        assert!(!validated.report_only);
-        assert!(validated.report_group.is_none());
+        options.validate().expect("policy");
+
+        assert!(!options.report_only);
+        assert!(options.report_group.is_none());
         assert_eq!(
-            validated.serialize(),
+            options.serialize(),
             "default-src 'self'; base-uri 'none'; frame-ancestors 'none'"
         );
     }
 
     #[test]
     fn given_uppercase_directive_when_validate_then_returns_error() {
-        let options = CspOptions::new().directive("Default-Src", "'self'");
+    let options = CspOptions::new().directive("Default-Src", "'self'");
 
         let result = options.validate();
 
