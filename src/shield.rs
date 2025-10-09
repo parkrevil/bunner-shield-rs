@@ -20,17 +20,6 @@ impl Shield {
         Self::default()
     }
 
-    fn add_feature(mut self, order: u8, executor: Executor) -> Result<Self, ShieldError> {
-        executor
-            .validate_options()
-            .map_err(ShieldError::ExecutorValidationFailed)?;
-
-        self.pipeline.push(PipelineEntry { order, executor });
-        self.pipeline.sort_by(|a, b| a.order.cmp(&b.order));
-
-        Ok(self)
-    }
-
     pub fn secure(
         &self,
         headers: HashMap<String, String>,
@@ -47,8 +36,21 @@ impl Shield {
         Ok(normalized.into_result())
     }
 
-    pub fn content_security_policy(self, options: CspOptions) -> Result<Self, ShieldError> {
-        self.add_feature(CONTENT_SECURITY_POLICY, Box::new(Csp::new(options)))
+    pub fn content_security_policy(mut self, options: CspOptions) -> Result<Self, ShieldError> {
+        self.add_feature(CONTENT_SECURITY_POLICY, Box::new(Csp::new(options)))?;
+
+        Ok(self)
+    }
+
+    fn add_feature(&mut self, order: u8, executor: Executor) -> Result<(), ShieldError> {
+        executor
+            .validate_options()
+            .map_err(ShieldError::ExecutorValidationFailed)?;
+
+        self.pipeline.push(PipelineEntry { order, executor });
+        self.pipeline.sort_by(|a, b| a.order.cmp(&b.order));
+
+        Ok(())
     }
 }
 
