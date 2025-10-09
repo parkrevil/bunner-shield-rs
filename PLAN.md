@@ -59,17 +59,6 @@
 
 `Shield::secure`는 이 표의 순서를 기준으로 파이프라인을 실행합니다.
 
-## 2. X-Powered-By 제거
-- **목표**: 서버 정보 노출 방지를 위한 공통 미들웨어 제거 기능 제공.
-- **파이프라인 순서**: 2 (1단계)
-- **정적 상수**: `const HEADER_X_POWERED_BY`
-- **구현 작업**
-  1. `src/x_powered_by/mod.rs`에서 제거 로직과 `XPoweredByRemoval` 유틸 정의.
-  2. `Shield::x_powered_by_disabled()` 체인 메서드에서 `NormalizedHeaders`에서 해당 키를 제거하고, 반환 헤더에는 원본 케이스(`X-Powered-By`)를 유지하지 않도록 명시합니다.
-  3. 단위 테스트: 입력 헤더에 대소문자가 섞인 경우에도 제거되는지 검증합니다.
-- **주의/검증**: 헤더 키 케이스 민감도(HTTP/1.1은 케이스 무시)이므로 정규화 로직과 연계해 제거합니다.
-- **참조 규격**: OWASP ASVS 4.0 V14.5, CWE-200
-
 ## 3. Strict-Transport-Security (HSTS)
 - **목표**: HTTPS 강제 및 프리로드 지원.
 - **파이프라인 순서**: 3 (1단계)
