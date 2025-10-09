@@ -57,21 +57,7 @@
 | 17 | 3단계 | X-DNS-Prefetch-Control |
 | 18 | 3단계 | Clear-Site-Data |
 
-`Shield::secure`는 이 표의 순서를 기준으로 파이프라인을 실행합니다.
-
-## 3. Strict-Transport-Security (HSTS)
-- **목표**: HTTPS 강제 및 프리로드 지원.
-- **파이프라인 순서**: 3 (1단계)
-- **정적 상수**: `const HEADER_STRICT_TRANSPORT_SECURITY`
-- **구현 작업**
-  1. `src/hsts/` 디렉터리에 `mod.rs`, `options.rs`, `error.rs`를 생성하고 `HstsOptions { max_age, include_subdomains, preload }` 정의.
-  2. `HstsOptions`는 `with_max_age`, `include_subdomains`, `enable_preload` 메서드로 체이닝을 지원하며, `validate()`에서 프리로드 조건(`max_age >= 31536000`, `include_subdomains=true`)을 확인합니다.
-  3. `Shield::strict_transport_security(options: HstsOptions)` 체인 메서드에서 `options.validate()?` 후 `NormalizedHeaders`에 헤더 삽입.
-  4. 테스트: 잘못된 조합 시 `ShieldError::InvalidHsts` 반환, 정상 조합은 헤더 문자열이 RFC 6797 형식임을 검증합니다.
-- **주의/검증**
-  - RFC 6797 준수: HTTP 응답 코드 2xx/3xx에서만 사용되도록 문서화.
-  - 로컬 개발(HTTP) 환경에서는 비활성화 안내.
-- **참조 규격**: RFC 6797, Chromium HSTS preload 정책
+`Shield::secure`는 이 표의 순서를 기준으로 파이프라인을
 
 ## 4. X-Content-Type-Options
 - **목표**: MIME 스니핑 방지를 위해 `nosniff` 헤더 설정.
