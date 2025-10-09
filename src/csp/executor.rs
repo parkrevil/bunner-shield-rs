@@ -17,9 +17,7 @@ impl Csp {
 
 impl FeatureExecutor for Csp {
     fn validate_options(&self) -> Result<(), String> {
-        self.options
-            .validate()
-            .map_err(|err| err.to_string())
+        self.options.validate().map_err(|err| err.to_string())
     }
 
     fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), String> {

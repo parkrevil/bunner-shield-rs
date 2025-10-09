@@ -23,7 +23,7 @@ mod validate {
 
     #[test]
     fn given_uppercase_directive_when_validate_then_returns_error() {
-    let options = CspOptions::new().directive("Default-Src", "'self'");
+        let options = CspOptions::new().directive("Default-Src", "'self'");
 
         let result = options.validate();
 
