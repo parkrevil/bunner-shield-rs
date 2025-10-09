@@ -1,5 +1,5 @@
 use super::*;
-use crate::feature::FeatureOptions;
+use crate::executor::FeatureOptions;
 
 mod validate {
     use super::*;

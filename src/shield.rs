@@ -1,11 +1,10 @@
 use crate::constants::executor_order::CONTENT_SECURITY_POLICY;
 use crate::csp::{Csp, CspOptions};
-use crate::feature::FeatureExecutor;
+use crate::executor::{ShieldExecutor};
 use crate::normalized_headers::NormalizedHeaders;
 use std::collections::HashMap;
 use thiserror::Error;
 
-type ShieldExecutor = Box<dyn FeatureExecutor + 'static>;
 
 struct PipelineEntry {
     order: u8,
@@ -22,7 +21,7 @@ impl Shield {
         Self::default()
     }
 
-    pub fn add_feature(mut self, order: u8, executor: ShieldExecutor) -> Result<Self, ShieldError> {
+    fn add_feature(mut self, order: u8, executor: ShieldExecutor) -> Result<Self, ShieldError> {
         executor
             .validate_options()
             .map_err(ShieldError::ExecutorValidationFailed)?;

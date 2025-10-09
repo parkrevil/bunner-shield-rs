@@ -1,4 +1,4 @@
-use crate::feature::FeatureOptions;
+use crate::executor::FeatureOptions;
 use thiserror::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
