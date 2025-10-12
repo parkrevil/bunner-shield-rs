@@ -1,6 +1,7 @@
 mod coep;
 mod constants;
 mod coop;
+mod corp;
 pub mod csp;
 pub mod csrf;
 mod executor;
@@ -14,6 +15,7 @@ mod x_powered_by;
 pub use crate::coep::{Coep, CoepOptions, CoepPolicy};
 pub use crate::constants::{header_keys, header_values};
 pub use crate::coop::{Coop, CoopOptions, CoopPolicy};
+pub use crate::corp::{Corp, CorpOptions, CorpPolicy};
 pub use crate::csp::{CspOptions, CspOptionsError, CspReportGroup};
 pub use crate::csrf::{CsrfOptions, CsrfOptionsError, CsrfTokenError, HmacCsrfService};
 pub use crate::hsts::{HstsOptions, HstsOptionsError};
