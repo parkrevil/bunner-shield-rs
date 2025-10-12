@@ -38,7 +38,6 @@
 ## 파이프라인 실행 순서 개요
 | 순서 | 단계 | 기능 |
 | --- | --- | --- |
-| 8 | 1단계 | Cross-Origin-Opener-Policy (COOP) |
 | 9 | 1단계 | Cross-Origin-Resource-Policy (CORP) |
 | 10 | 2단계 | Strict CSP 고급 프로파일 |
 | 11 | 2단계 | X-Frame-Options |
@@ -49,16 +48,6 @@
 | 16 | 2단계 | Permissions-Policy |
 | 17 | 3단계 | X-DNS-Prefetch-Control |
 | 18 | 3단계 | Clear-Site-Data |
-
-## 8. Cross-Origin-Opener-Policy (COOP)
-- **목표**: `same-origin` 기본값 제공.
-- **파이프라인 순서**: 8 (1단계)
-- **정적 상수**: `const HEADER_CROSS_ORIGIN_OPENER_POLICY`, `const VALUE_SAME_ORIGIN`, `const VALUE_SAME_ORIGIN_ALLOW_POPUPS`
-- **구현 작업**
-  1. `src/coop/mod.rs`에서 enum(`UnsafeNone`, `SameOriginAllowPopups`, `SameOrigin`)과 `CoopOptions` 정의.
-  2. `CoopOptions` 기본값을 `same_origin()`으로 설정하고, `allow_popups()` 호출 시 추가 주석을 포함합니다.
-  3. `Shield::coop(options: CoopOptions)` 체인 메서드에서 `options.validate()` 후 헤더를 적용합니다.
-- **참조 규격**: WHATWG HTML Standard
 
 ## 9. Cross-Origin-Resource-Policy (CORP)
 - **목표**: 리소스 접근 정책을 선언.
