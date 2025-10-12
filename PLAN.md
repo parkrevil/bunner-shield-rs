@@ -38,7 +38,6 @@
 ## 파이프라인 실행 순서 개요
 | 순서 | 단계 | 기능 |
 | --- | --- | --- |
-| 9 | 1단계 | Cross-Origin-Resource-Policy (CORP) |
 | 10 | 2단계 | Strict CSP 고급 프로파일 |
 | 11 | 2단계 | X-Frame-Options |
 | 12 | 2단계 | Referrer-Policy |
@@ -48,18 +47,6 @@
 | 16 | 2단계 | Permissions-Policy |
 | 17 | 3단계 | X-DNS-Prefetch-Control |
 | 18 | 3단계 | Clear-Site-Data |
-
-## 9. Cross-Origin-Resource-Policy (CORP)
-- **목표**: 리소스 접근 정책을 선언.
-- **파이프라인 순서**: 9 (1단계)
-- **정적 상수**: `const HEADER_CROSS_ORIGIN_RESOURCE_POLICY`, `const VALUE_SAME_ORIGIN`, `const VALUE_SAME_SITE`, `const VALUE_CROSS_ORIGIN`
-- **구현 작업**
-  1. `src/corp/mod.rs`에서 enum(`SameOrigin`, `SameSite`, `CrossOrigin`), `CorpOptions` 정의.
-  2. `CorpOptions` 기본값을 `same_origin()`으로 설정하고, 허용 범위 확장 시 명시적 메서드(`allow_same_site()`, `allow_cross_origin()`).
-  3. `Shield::corp(options: CorpOptions)` 체인 메서드에서 `options.validate()` 실행 후 헤더 직렬화 결과를 테스트로 검증합니다.
-- **참조 규격**: WHATWG Fetch, OWASP Secure Headers
-
----
 
 ## 10. Strict CSP 고급 프로파일 (2단계)
 - **목표**: nonce/hash + `strict-dynamic`를 포함한 강화 정책 지원.
