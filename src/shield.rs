@@ -1,12 +1,13 @@
 use crate::constants::executor_order::{
-    CONTENT_SECURITY_POLICY, CSRF_TOKEN, STRICT_TRANSPORT_SECURITY, X_CONTENT_TYPE_OPTIONS,
-    X_POWERED_BY,
+    CONTENT_SECURITY_POLICY, CSRF_TOKEN, SAME_SITE, STRICT_TRANSPORT_SECURITY,
+    X_CONTENT_TYPE_OPTIONS, X_POWERED_BY,
 };
 use crate::csp::{Csp, CspOptions};
 use crate::csrf::{Csrf, CsrfOptions};
 use crate::executor::{Executor, ExecutorError};
 use crate::hsts::{Hsts, HstsOptions};
 use crate::normalized_headers::NormalizedHeaders;
+use crate::same_site::{SameSite, SameSiteOptions};
 use crate::x_content_type_options::XContentTypeOptions;
 use crate::x_powered_by::XPoweredBy;
 use std::collections::HashMap;
@@ -69,6 +70,12 @@ impl Shield {
 
     pub fn x_powered_by(mut self) -> Result<Self, ShieldError> {
         self.add_feature(X_POWERED_BY, Box::new(XPoweredBy::new()))?;
+
+        Ok(self)
+    }
+
+    pub fn same_site(mut self, options: SameSiteOptions) -> Result<Self, ShieldError> {
+        self.add_feature(SAME_SITE, Box::new(SameSite::new(options)))?;
 
         Ok(self)
     }

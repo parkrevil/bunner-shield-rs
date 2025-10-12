@@ -38,6 +38,13 @@ impl NormalizedHeaders {
         self.entries.remove(&normalized);
     }
 
+    pub fn get(&self, name: &str) -> Option<&str> {
+        let normalized = name.to_ascii_lowercase();
+        self.entries
+            .get(&normalized)
+            .map(|entry| entry.value.as_str())
+    }
+
     pub fn into_result(self) -> HashMap<String, String> {
         self.entries
             .into_values()

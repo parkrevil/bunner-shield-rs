@@ -11,6 +11,9 @@ pub mod header_keys {
 
 pub mod header_values {
     pub const NOSNIFF: &str = "nosniff";
+    pub const SAMESITE_LAX: &str = "Lax";
+    pub const SAMESITE_STRICT: &str = "Strict";
+    pub const SAMESITE_NONE: &str = "None";
 }
 
 pub mod cookie {
@@ -23,4 +26,5 @@ pub mod executor_order {
     pub const STRICT_TRANSPORT_SECURITY: u8 = 3;
     pub const X_CONTENT_TYPE_OPTIONS: u8 = 4;
     pub const CSRF_TOKEN: u8 = 5;
+    pub const SAME_SITE: u8 = 6;
 }
