@@ -1,8 +1,9 @@
 use crate::coep::{Coep, CoepOptions};
 use crate::constants::executor_order::{
-    CONTENT_SECURITY_POLICY, CROSS_ORIGIN_EMBEDDER_POLICY, CSRF_TOKEN, SAME_SITE,
-    STRICT_TRANSPORT_SECURITY, X_CONTENT_TYPE_OPTIONS, X_POWERED_BY,
+    CONTENT_SECURITY_POLICY, CROSS_ORIGIN_EMBEDDER_POLICY, CROSS_ORIGIN_OPENER_POLICY, CSRF_TOKEN,
+    SAME_SITE, STRICT_TRANSPORT_SECURITY, X_CONTENT_TYPE_OPTIONS, X_POWERED_BY,
 };
+use crate::coop::{Coop, CoopOptions};
 use crate::csp::{Csp, CspOptions};
 use crate::csrf::{Csrf, CsrfOptions};
 use crate::executor::{Executor, ExecutorError};
@@ -47,6 +48,12 @@ impl Shield {
 
     pub fn csp(mut self, options: CspOptions) -> Result<Self, ShieldError> {
         self.add_feature(CONTENT_SECURITY_POLICY, Box::new(Csp::new(options)))?;
+
+        Ok(self)
+    }
+
+    pub fn coop(mut self, options: CoopOptions) -> Result<Self, ShieldError> {
+        self.add_feature(CROSS_ORIGIN_OPENER_POLICY, Box::new(Coop::new(options)))?;
 
         Ok(self)
     }
