@@ -1,6 +1,5 @@
 use crate::constants::header_values::{COEP_CREDENTIALLESS, COEP_REQUIRE_CORP};
 use crate::executor::FeatureOptions;
-use thiserror::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CoepPolicy {
@@ -20,51 +19,31 @@ impl CoepPolicy {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CoepOptions {
     pub(crate) policy: CoepPolicy,
-    pub(crate) cache_warning: bool,
 }
 
 impl CoepOptions {
     pub fn new() -> Self {
-        Self {
-            policy: CoepPolicy::RequireCorp,
-            cache_warning: false,
-        }
+        Self::default()
     }
 
     pub fn policy(mut self, policy: CoepPolicy) -> Self {
         self.policy = policy;
-        if matches!(self.policy, CoepPolicy::Credentialless) {
-            self.cache_warning = true;
-        }
-        self
-    }
-
-    pub fn cache_warning(mut self, enabled: bool) -> Self {
-        self.cache_warning = enabled;
         self
     }
 }
 
 impl Default for CoepOptions {
     fn default() -> Self {
-        Self::new()
+        Self {
+            policy: CoepPolicy::RequireCorp,
+        }
     }
 }
 
 impl FeatureOptions for CoepOptions {
-    type Error = CoepOptionsError;
+    type Error = std::convert::Infallible;
 
     fn validate(&self) -> Result<(), Self::Error> {
-        if matches!(self.policy, CoepPolicy::Credentialless) && !self.cache_warning {
-            return Err(CoepOptionsError::CredentiallessRequiresWarning);
-        }
-
         Ok(())
     }
-}
-
-#[derive(Debug, Error, PartialEq, Eq)]
-pub enum CoepOptionsError {
-    #[error("credentialless mode must include cache impact warning")]
-    CredentiallessRequiresWarning,
 }

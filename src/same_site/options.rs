@@ -43,9 +43,7 @@ pub struct SameSiteOptions {
 
 impl SameSiteOptions {
     pub fn new() -> Self {
-        Self {
-            meta: CookieMeta::new(true, true, SameSitePolicy::Lax),
-        }
+        Self::default()
     }
 
     pub fn secure(mut self, secure: bool) -> Self {
@@ -66,7 +64,9 @@ impl SameSiteOptions {
 
 impl Default for SameSiteOptions {
     fn default() -> Self {
-        Self::new()
+        Self {
+            meta: CookieMeta::new(true, true, SameSitePolicy::Lax),
+        }
     }
 }
 

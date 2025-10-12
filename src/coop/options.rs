@@ -27,9 +27,7 @@ pub struct CoopOptions {
 
 impl CoopOptions {
     pub fn new() -> Self {
-        Self {
-            policy: CoopPolicy::SameOrigin,
-        }
+        Self::default()
     }
 
     pub fn policy(mut self, policy: CoopPolicy) -> Self {
@@ -40,7 +38,9 @@ impl CoopOptions {
 
 impl Default for CoopOptions {
     fn default() -> Self {
-        Self::new()
+        Self {
+            policy: CoopPolicy::SameOrigin,
+        }
     }
 }
 

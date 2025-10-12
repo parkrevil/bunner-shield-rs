@@ -10,16 +10,6 @@ pub struct HstsOptions {
     pub(crate) preload: bool,
 }
 
-impl Default for HstsOptions {
-    fn default() -> Self {
-        Self {
-            max_age: PRELOAD_MIN_MAX_AGE,
-            include_subdomains: false,
-            preload: false,
-        }
-    }
-}
-
 impl HstsOptions {
     pub fn new() -> Self {
         Self::default()
@@ -52,6 +42,16 @@ impl HstsOptions {
         }
 
         parts.join("; ")
+    }
+}
+
+impl Default for HstsOptions {
+    fn default() -> Self {
+        Self {
+            max_age: PRELOAD_MIN_MAX_AGE,
+            include_subdomains: false,
+            preload: false,
+        }
     }
 }
 

@@ -1,4 +1,4 @@
-use bunner_shield_rs::{CoepOptions, CoepPolicy, Shield, ShieldError, header_keys};
+use bunner_shield_rs::{CoepOptions, CoepPolicy, Shield, header_keys};
 use std::collections::HashMap;
 
 #[test]
@@ -30,17 +30,4 @@ fn given_credentialless_policy_when_secure_then_sets_header() {
             .map(String::as_str),
         Some("credentialless"),
     );
-}
-
-#[test]
-fn given_missing_cache_warning_when_add_feature_then_returns_error() {
-    let options = CoepOptions::new()
-        .policy(CoepPolicy::Credentialless)
-        .cache_warning(false);
-    let result = Shield::new().coep(options);
-
-    match result {
-        Err(ShieldError::ExecutorValidationFailed(_)) => {}
-        _ => panic!("expected executor validation failure"),
-    }
 }
