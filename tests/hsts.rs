@@ -18,7 +18,7 @@ fn given_valid_hsts_when_secure_then_applies_header() {
 
 #[test]
 fn given_invalid_preload_combo_when_add_feature_then_returns_error() {
-    let options = HstsOptions::new().enable_preload();
+    let options = HstsOptions::new().preload();
     let result = Shield::new().hsts(options);
 
     match result {

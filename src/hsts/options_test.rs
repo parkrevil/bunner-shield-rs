@@ -15,7 +15,7 @@ mod validate {
 
     #[test]
     fn given_zero_max_age_when_validate_then_returns_error() {
-        let options = HstsOptions::new().with_max_age(0);
+        let options = HstsOptions::new().max_age(0);
 
         let result = options.validate();
 
@@ -24,7 +24,7 @@ mod validate {
 
     #[test]
     fn given_preload_without_subdomains_when_validate_then_returns_error() {
-        let options = HstsOptions::new().enable_preload();
+        let options = HstsOptions::new().preload();
 
         let result = options.validate();
 
@@ -37,9 +37,9 @@ mod validate {
     #[test]
     fn given_preload_with_short_max_age_when_validate_then_returns_error() {
         let options = HstsOptions::new()
-            .with_max_age(10_000)
+            .max_age(10_000)
             .include_subdomains()
-            .enable_preload();
+            .preload();
 
         let result = options.validate();
 
@@ -52,9 +52,9 @@ mod validate {
     #[test]
     fn given_valid_preload_combo_when_validate_then_returns_ok() {
         let options = HstsOptions::new()
-            .with_max_age(31_536_000)
+            .max_age(31_536_000)
             .include_subdomains()
-            .enable_preload();
+            .preload();
 
         let result = options.validate();
 

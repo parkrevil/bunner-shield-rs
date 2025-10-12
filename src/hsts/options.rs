@@ -25,7 +25,7 @@ impl HstsOptions {
         Self::default()
     }
 
-    pub fn with_max_age(mut self, seconds: u64) -> Self {
+    pub fn max_age(mut self, seconds: u64) -> Self {
         self.max_age = seconds;
         self
     }
@@ -35,7 +35,7 @@ impl HstsOptions {
         self
     }
 
-    pub fn enable_preload(mut self) -> Self {
+    pub fn preload(mut self) -> Self {
         self.preload = true;
         self
     }

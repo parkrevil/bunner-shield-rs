@@ -1,7 +1,9 @@
 use crate::constants::executor_order::{
-    CONTENT_SECURITY_POLICY, STRICT_TRANSPORT_SECURITY, X_CONTENT_TYPE_OPTIONS, X_POWERED_BY,
+    CONTENT_SECURITY_POLICY, CSRF_TOKEN, STRICT_TRANSPORT_SECURITY, X_CONTENT_TYPE_OPTIONS,
+    X_POWERED_BY,
 };
 use crate::csp::{Csp, CspOptions};
+use crate::csrf::{Csrf, CsrfOptions};
 use crate::executor::{Executor, ExecutorError};
 use crate::hsts::{Hsts, HstsOptions};
 use crate::normalized_headers::NormalizedHeaders;
@@ -49,6 +51,12 @@ impl Shield {
 
     pub fn hsts(mut self, options: HstsOptions) -> Result<Self, ShieldError> {
         self.add_feature(STRICT_TRANSPORT_SECURITY, Box::new(Hsts::new(options)))?;
+
+        Ok(self)
+    }
+
+    pub fn csrf(mut self, options: CsrfOptions) -> Result<Self, ShieldError> {
+        self.add_feature(CSRF_TOKEN, Box::new(Csrf::new(options)))?;
 
         Ok(self)
     }

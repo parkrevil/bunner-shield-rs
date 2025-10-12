@@ -1,5 +1,6 @@
 mod constants;
 pub mod csp;
+pub mod csrf;
 mod executor;
 pub mod hsts;
 mod normalized_headers;
@@ -9,5 +10,6 @@ mod x_powered_by;
 
 pub use crate::constants::{header_keys, header_values};
 pub use crate::csp::{CspOptions, CspOptionsError, CspReportGroup};
+pub use crate::csrf::{CsrfOptions, CsrfOptionsError, CsrfTokenError, HmacCsrfService};
 pub use crate::hsts::{HstsOptions, HstsOptionsError};
 pub use crate::shield::{Shield, ShieldError};
