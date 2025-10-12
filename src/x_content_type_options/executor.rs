@@ -1,5 +1,5 @@
-use crate::constants::header_keys::{X_CONTENT_TYPE_OPTIONS};
-use crate::constants::header_values::{NOSNIFF};
+use crate::constants::header_keys::X_CONTENT_TYPE_OPTIONS;
+use crate::constants::header_values::NOSNIFF;
 use crate::executor::{ExecutorError, FeatureExecutor, NoopOptions};
 use crate::normalized_headers::NormalizedHeaders;
 
