@@ -38,7 +38,6 @@
 ## 파이프라인 실행 순서 개요
 | 순서 | 단계 | 기능 |
 | --- | --- | --- |
-| 7 | 1단계 | Cross-Origin-Embedder-Policy (COEP) |
 | 8 | 1단계 | Cross-Origin-Opener-Policy (COOP) |
 | 9 | 1단계 | Cross-Origin-Resource-Policy (CORP) |
 | 10 | 2단계 | Strict CSP 고급 프로파일 |
@@ -50,17 +49,6 @@
 | 16 | 2단계 | Permissions-Policy |
 | 17 | 3단계 | X-DNS-Prefetch-Control |
 | 18 | 3단계 | Clear-Site-Data |
-
-## 7. Cross-Origin-Embedder-Policy (COEP)
-- **목표**: 헤더 `Cross-Origin-Embedder-Policy` 기본값 `require-corp` 제공.
-- **파이프라인 순서**: 7 (1단계)
-- **정적 상수**: `const HEADER_CROSS_ORIGIN_EMBEDDER_POLICY`, `const VALUE_REQUIRE_CORP`, `const VALUE_CREDENTIALLESS`
-- **구현 작업**
-  1. `src/coep/mod.rs`에 enum(`RequireCorp`, `Credentialless`), `CoepOptions` 정의.
-  2. `CoepOptions`는 `require_corp()` 기본값을 제공하고, `credentialless()` 호출 시 추가 검증(캐시/쿠키 영향 표기)을 수행합니다.
-  3. `Shield::coep(options: CoepOptions)` 체인 메서드에서 `options.validate()` 후 `NormalizedHeaders`에 헤더 삽입.
-- **주의/검증**: credentialless 선택 시 캐시/쿠키 동작 변화에 대한 주석 추가.
-- **참조 규격**: WHATWG Fetch, W3C HTML Standard
 
 ## 8. Cross-Origin-Opener-Policy (COOP)
 - **목표**: `same-origin` 기본값 제공.
