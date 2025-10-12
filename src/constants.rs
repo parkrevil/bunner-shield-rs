@@ -7,6 +7,7 @@ pub mod header_keys {
     pub const X_CONTENT_TYPE_OPTIONS: &str = "X-Content-Type-Options";
     pub const SET_COOKIE: &str = "Set-Cookie";
     pub const CSRF_TOKEN: &str = "X-CSRF-Token";
+    pub const CROSS_ORIGIN_EMBEDDER_POLICY: &str = "Cross-Origin-Embedder-Policy";
 }
 
 pub mod header_values {
@@ -14,6 +15,8 @@ pub mod header_values {
     pub const SAMESITE_LAX: &str = "Lax";
     pub const SAMESITE_STRICT: &str = "Strict";
     pub const SAMESITE_NONE: &str = "None";
+    pub const COEP_REQUIRE_CORP: &str = "require-corp";
+    pub const COEP_CREDENTIALLESS: &str = "credentialless";
 }
 
 pub mod cookie {
@@ -27,4 +30,5 @@ pub mod executor_order {
     pub const X_CONTENT_TYPE_OPTIONS: u8 = 4;
     pub const CSRF_TOKEN: u8 = 5;
     pub const SAME_SITE: u8 = 6;
+    pub const CROSS_ORIGIN_EMBEDDER_POLICY: u8 = 7;
 }
