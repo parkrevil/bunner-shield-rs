@@ -38,12 +38,6 @@
 ## 파이프라인 실행 순서 개요
 | 순서 | 단계 | 기능 |
 | --- | --- | --- |
-| 1 | 1단계 | Content Security Policy (CSP) |
-| 2 | 1단계 | X-Powered-By 제거 |
-| 3 | 1단계 | Strict-Transport-Security (HSTS) |
-| 4 | 1단계 | X-Content-Type-Options |
-| 5 | 1단계 | CSRF 토큰 모듈 |
-| 6 | 1단계 | SameSite Cookie 속성 관리 |
 | 7 | 1단계 | Cross-Origin-Embedder-Policy (COEP) |
 | 8 | 1단계 | Cross-Origin-Opener-Policy (COOP) |
 | 9 | 1단계 | Cross-Origin-Resource-Policy (CORP) |
@@ -56,18 +50,6 @@
 | 16 | 2단계 | Permissions-Policy |
 | 17 | 3단계 | X-DNS-Prefetch-Control |
 | 18 | 3단계 | Clear-Site-Data |
-
-## 6. SameSite Cookie 속성 관리
-- **목표**: 모든 애플리케이션 쿠키에 안전한 SameSite 기본값 제공.
-- **파이프라인 순서**: 6 (1단계)
-- **정적 상수**: `const HEADER_SET_COOKIE`, `const SAMESITE_LAX`, `const SAMESITE_STRICT`, `const SAMESITE_NONE`
-- **구현 작업**
-  1. `src/same_site/mod.rs`에 `SameSiteOptions`, `SameSitePolicy` enum(Lax/Strict/None), `CookieMeta` 구조체 정의.
-  2. `SameSiteOptions`는 `enforce_secure()`, `http_only(bool)`, `strict_mode()` 등 체이닝 메서드를 제공하고, `validate()`에서 `None` + `!Secure` 조합 차단.
-  3. `Shield::same_site(options: SameSiteOptions)` 체인 메서드가 `validate()` 이후 쿠키 메타데이터 테이블을 갱신하여 `Secure`/`HttpOnly` 기본값을 강제합니다.
-  4. 단위 테스트: `None` + `!Secure` 조합에서 에러 반환, 기본 Lax 정책이 적용되는지 확인.
-- **주의/검증**: 사용자 정의 쿠키 주입 시에도 기본 정책 덮어쓰기 지원.
-- **참조 규격**: RFC 6265bis, Chrome SameSite Updates
 
 ## 7. Cross-Origin-Embedder-Policy (COEP)
 - **목표**: 헤더 `Cross-Origin-Embedder-Policy` 기본값 `require-corp` 제공.
