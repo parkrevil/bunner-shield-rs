@@ -1,4 +1,4 @@
-use bunner_shield_rs::{header_keys, SameSiteOptions, SameSitePolicy, Shield, ShieldError};
+use bunner_shield_rs::{SameSiteOptions, SameSitePolicy, Shield, ShieldError, header_keys};
 use std::collections::HashMap;
 
 #[test]
@@ -21,7 +21,9 @@ fn given_cookie_without_attributes_when_secure_then_sets_defaults() {
 
 #[test]
 fn given_cookie_with_attributes_when_secure_then_overwrites_policy() {
-    let options = SameSiteOptions::new().http_only(false).same_site(SameSitePolicy::Strict);
+    let options = SameSiteOptions::new()
+        .http_only(false)
+        .same_site(SameSitePolicy::Strict);
     let shield = Shield::new().same_site(options).expect("feature");
     let mut headers = HashMap::new();
     headers.insert(
@@ -39,7 +41,9 @@ fn given_cookie_with_attributes_when_secure_then_overwrites_policy() {
 
 #[test]
 fn given_none_without_secure_when_add_feature_then_returns_error() {
-    let options = SameSiteOptions::new().secure(false).same_site(SameSitePolicy::None);
+    let options = SameSiteOptions::new()
+        .secure(false)
+        .same_site(SameSitePolicy::None);
     let result = Shield::new().same_site(options);
 
     match result {
