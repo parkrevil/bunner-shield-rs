@@ -1,4 +1,4 @@
-use bunner_shield_rs::{CspOptions, CspReportGroup, Shield, headers};
+use bunner_shield_rs::{CspOptions, CspReportGroup, Shield, header_keys};
 use std::collections::HashMap;
 
 #[test]
@@ -15,7 +15,7 @@ fn given_enforced_policy_when_secure_then_applies_csp_header() {
 
     assert_eq!(
         result
-            .get(headers::CONTENT_SECURITY_POLICY)
+            .get(header_keys::CONTENT_SECURITY_POLICY)
             .map(String::as_str),
         Some("default-src 'self'; base-uri 'none'; frame-ancestors 'none'")
     );
@@ -40,12 +40,12 @@ fn given_report_only_policy_when_secure_then_emits_report_headers() {
 
     assert_eq!(
         result
-            .get(headers::CONTENT_SECURITY_POLICY_REPORT_ONLY)
+            .get(header_keys::CONTENT_SECURITY_POLICY_REPORT_ONLY)
             .map(String::as_str),
         Some("default-src 'self'; script-src 'unsafe-inline'")
     );
     assert_eq!(
-        result.get(headers::REPORT_TO).map(String::as_str),
+        result.get(header_keys::REPORT_TO).map(String::as_str),
         Some(report_group.to_header_value().as_str())
     );
 }

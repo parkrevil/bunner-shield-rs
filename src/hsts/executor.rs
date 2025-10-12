@@ -1,5 +1,5 @@
 use super::HstsOptions;
-use crate::constants::headers::STRICT_TRANSPORT_SECURITY;
+use crate::constants::header_keys::STRICT_TRANSPORT_SECURITY;
 use crate::executor::{ExecutorError, FeatureExecutor};
 use crate::normalized_headers::NormalizedHeaders;
 

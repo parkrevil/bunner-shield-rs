@@ -1,12 +1,13 @@
-use crate::constants::header_keys::X_POWERED_BY;
+use crate::constants::header_keys::{X_CONTENT_TYPE_OPTIONS};
+use crate::constants::header_values::{NOSNIFF};
 use crate::executor::{ExecutorError, FeatureExecutor, NoopOptions};
 use crate::normalized_headers::NormalizedHeaders;
 
-pub struct XPoweredBy {
+pub struct XContentTypeOptions {
     options: NoopOptions,
 }
 
-impl XPoweredBy {
+impl XContentTypeOptions {
     pub fn new() -> Self {
         Self {
             options: NoopOptions,
@@ -14,7 +15,7 @@ impl XPoweredBy {
     }
 }
 
-impl FeatureExecutor for XPoweredBy {
+impl FeatureExecutor for XContentTypeOptions {
     type Options = NoopOptions;
 
     fn options(&self) -> &Self::Options {
@@ -22,7 +23,7 @@ impl FeatureExecutor for XPoweredBy {
     }
 
     fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), ExecutorError> {
-        headers.remove(X_POWERED_BY);
+        headers.insert(X_CONTENT_TYPE_OPTIONS, NOSNIFF);
 
         Ok(())
     }
