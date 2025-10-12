@@ -59,17 +59,6 @@
 
 `Shield::secure`는 이 표의 순서를 기준으로 파이프라인을
 
-## 4. X-Content-Type-Options
-- **목표**: MIME 스니핑 방지를 위해 `nosniff` 헤더 설정.
-- **파이프라인 순서**: 4 (1단계)
-- **정적 상수**: `const HEADER_X_CONTENT_TYPE_OPTIONS`, `const VALUE_NOSNIFF`
-- **구현 작업**
-  1. `src/x_content_type_options/mod.rs`에서 `XContentTypeOptions` 모듈 정의하고 `NOSNIFF_VALUE` 상수 유지.
-  2. `Shield::x_content_type_options()` 체인 메서드는 입력 옵션 없이 `NormalizedHeaders`에 `nosniff`를 삽입하며, 이미 존재할 경우 덮어쓰기 전략을 문서화합니다.
-  3. 단위 테스트: 중복 호출 시 헤더가 한 번만 존재하는지 검증합니다.
-- **주의/검증**: HTTP/2에서 중복 헤더 금지 검증.
-- **참조 규격**: OWASP Secure Headers Project
-
 ## 5. CSRF 토큰 모듈
 - **목표**: Double Submit Cookie 패턴을 지원하는 토큰 생성/검증 기능 제공.
 - **파이프라인 순서**: 5 (1단계)
