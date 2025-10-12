@@ -57,22 +57,6 @@
 | 17 | 3단계 | X-DNS-Prefetch-Control |
 | 18 | 3단계 | Clear-Site-Data |
 
-`Shield::secure`는 이 표의 순서를 기준으로 파이프라인을
-
-## 5. CSRF 토큰 모듈
-- **목표**: Double Submit Cookie 패턴을 지원하는 토큰 생성/검증 기능 제공.
-- **파이프라인 순서**: 5 (1단계)
-- **정적 상수**: `const HEADER_SET_COOKIE`, `const HEADER_CSRF_TOKEN`, `const COOKIE_PREFIX_SECURE`
-- **구현 작업**
-  1. `src/csrf/` 디렉터리에 `mod.rs`, `options.rs`, `token.rs`를 생성하고 `CsrfOptions`, `CsrfTokenService` trait, `HmacCsrfService` 구현 (SHA-256) 정의.
-  2. `CsrfOptions`는 `with_cookie_name`, `rotate_on`, `with_token_length` 등의 체이닝 메서드를 제공하며, `validate()`에서 토큰 최소 길이와 회전 이벤트 구성을 확인합니다.
-  3. `Shield::csrf(options: CsrfOptions)` 체인 메서드에서 `options.validate()` 호출 후 토큰 생성/검증 핸들러를 등록하고, `NormalizedHeaders`에 `Set-Cookie` 지침을 주입합니다.
-  4. 모듈 내부 단위 테스트로 성공/실패 경로를 검증하고, `no_std` 환경 호환 여부를 확인합니다.
-- **주의/검증**
-  - RFC 6265bis에 따른 쿠키 속성 검증 (Secure/Lax 기본값 강제).
-  - OWASP CSRF Cheat Sheet에 따른 토큰 길이(≥128bit) 확인.
-- **참조 규격**: OWASP CSRF Cheat Sheet, RFC 6265bis, CWE-352
-
 ## 6. SameSite Cookie 속성 관리
 - **목표**: 모든 애플리케이션 쿠키에 안전한 SameSite 기본값 제공.
 - **파이프라인 순서**: 6 (1단계)
