@@ -7,6 +7,7 @@ pub mod header_keys {
     pub const X_CONTENT_TYPE_OPTIONS: &str = "X-Content-Type-Options";
     pub const X_FRAME_OPTIONS: &str = "X-Frame-Options";
     pub const REFERRER_POLICY: &str = "Referrer-Policy";
+    pub const X_DOWNLOAD_OPTIONS: &str = "X-Download-Options";
     pub const SET_COOKIE: &str = "Set-Cookie";
     pub const CSRF_TOKEN: &str = "X-CSRF-Token";
     pub const CROSS_ORIGIN_EMBEDDER_POLICY: &str = "Cross-Origin-Embedder-Policy";
@@ -41,6 +42,7 @@ pub mod header_values {
     pub const REFERRER_POLICY_UNSAFE_URL: &str = "unsafe-url";
     pub const ORIGIN_AGENT_CLUSTER_ENABLE: &str = "?1";
     pub const ORIGIN_AGENT_CLUSTER_DISABLE: &str = "?0";
+    pub const X_DOWNLOAD_OPTIONS_NOOPEN: &str = "noopen";
 }
 
 pub mod cookie {
@@ -60,4 +62,5 @@ pub mod executor_order {
     pub const X_FRAME_OPTIONS: u8 = 10;
     pub const REFERRER_POLICY: u8 = 11;
     pub const ORIGIN_AGENT_CLUSTER: u8 = 12;
+    pub const X_DOWNLOAD_OPTIONS: u8 = 13;
 }

@@ -12,6 +12,7 @@ mod referrer_policy;
 mod same_site;
 mod shield;
 mod x_content_type_options;
+mod x_download_options;
 mod x_frame_options;
 mod x_powered_by;
 
@@ -28,4 +29,5 @@ pub use crate::same_site::{
     CookieMeta, SameSite, SameSiteOptions, SameSiteOptionsError, SameSitePolicy,
 };
 pub use crate::shield::{Shield, ShieldError};
+pub use crate::x_download_options::XDownloadOptions;
 pub use crate::x_frame_options::{XFrameOptions, XFrameOptionsOptions, XFrameOptionsPolicy};

@@ -2,7 +2,8 @@ use crate::coep::{Coep, CoepOptions};
 use crate::constants::executor_order::{
     CONTENT_SECURITY_POLICY, CROSS_ORIGIN_EMBEDDER_POLICY, CROSS_ORIGIN_OPENER_POLICY,
     CROSS_ORIGIN_RESOURCE_POLICY, CSRF_TOKEN, ORIGIN_AGENT_CLUSTER, REFERRER_POLICY, SAME_SITE,
-    STRICT_TRANSPORT_SECURITY, X_CONTENT_TYPE_OPTIONS, X_FRAME_OPTIONS, X_POWERED_BY,
+    STRICT_TRANSPORT_SECURITY, X_CONTENT_TYPE_OPTIONS, X_DOWNLOAD_OPTIONS, X_FRAME_OPTIONS,
+    X_POWERED_BY,
 };
 use crate::coop::{Coop, CoopOptions};
 use crate::corp::{Corp, CorpOptions};
@@ -15,6 +16,7 @@ use crate::origin_agent_cluster::{OriginAgentCluster, OriginAgentClusterOptions}
 use crate::referrer_policy::{ReferrerPolicy as ReferrerPolicyExecutor, ReferrerPolicyOptions};
 use crate::same_site::{SameSite, SameSiteOptions};
 use crate::x_content_type_options::XContentTypeOptions;
+use crate::x_download_options::XDownloadOptions;
 use crate::x_frame_options::{XFrameOptions, XFrameOptionsOptions};
 use crate::x_powered_by::XPoweredBy;
 use std::collections::HashMap;
@@ -83,6 +85,12 @@ impl Shield {
 
     pub fn x_content_type_options(mut self) -> Result<Self, ShieldError> {
         self.add_feature(X_CONTENT_TYPE_OPTIONS, Box::new(XContentTypeOptions::new()))?;
+
+        Ok(self)
+    }
+
+    pub fn x_download_options(mut self) -> Result<Self, ShieldError> {
+        self.add_feature(X_DOWNLOAD_OPTIONS, Box::new(XDownloadOptions::new()))?;
 
         Ok(self)
     }
