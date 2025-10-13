@@ -38,23 +38,12 @@
 ## 파이프라인 실행 순서 개요
 | 순서 | 단계 | 기능 |
 | --- | --- | --- |
-| 12 | 2단계 | Referrer-Policy |
 | 13 | 2단계 | Origin-Agent-Cluster |
 | 14 | 2단계 | X-Download-Options |
 | 15 | 2단계 | X-Permitted-Cross-Domain-Policies |
 | 16 | 2단계 | Permissions-Policy |
 | 17 | 3단계 | X-DNS-Prefetch-Control |
 | 18 | 3단계 | Clear-Site-Data |
-
-## 12. Referrer-Policy
-- **목표**: `strict-origin-when-cross-origin` 기본값 제공.
-- **파이프라인 순서**: 12 (2단계)
-- **정적 상수**: `const HEADER_REFERRER_POLICY`, `const VALUE_STRICT_ORIGIN_WHEN_CROSS_ORIGIN`
-- **구현 작업**
-  1. `src/referrer_policy/mod.rs`에서 enum(`NoReferrer`, `SameOrigin`, `StrictOriginWhenCrossOrigin`, 등)과 `ReferrerPolicyOptions` 정의.
-  2. `Shield::referrer_policy(options: ReferrerPolicyOptions)` 체인 메서드는 기본값을 `strict_origin_when_cross_origin()`으로 설정하고, 필요 시 다른 정책을 선택할 수 있도록 합니다.
-- **주의/검증**: GDPR/개인정보 보호 관련 주석 포함.
-- **참조 규격**: W3C Referrer Policy, GDPR Recital 39
 
 ## 13. Origin-Agent-Cluster
 - **목표**: 헤더 `Origin-Agent-Cluster: ?1` 제공.
