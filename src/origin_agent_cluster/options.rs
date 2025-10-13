@@ -28,7 +28,9 @@ impl OriginAgentClusterOptions {
 
 impl Default for OriginAgentClusterOptions {
     fn default() -> Self {
-        Self { enabled: ORIGIN_AGENT_CLUSTER_ENABLE }
+        Self {
+            enabled: ORIGIN_AGENT_CLUSTER_ENABLE,
+        }
     }
 }
 
