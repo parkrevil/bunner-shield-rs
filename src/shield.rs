@@ -1,8 +1,8 @@
 use crate::coep::{Coep, CoepOptions};
 use crate::constants::executor_order::{
     CONTENT_SECURITY_POLICY, CROSS_ORIGIN_EMBEDDER_POLICY, CROSS_ORIGIN_OPENER_POLICY,
-    CROSS_ORIGIN_RESOURCE_POLICY, CSRF_TOKEN, SAME_SITE, STRICT_TRANSPORT_SECURITY,
-    X_CONTENT_TYPE_OPTIONS, X_FRAME_OPTIONS, X_POWERED_BY,
+    CROSS_ORIGIN_RESOURCE_POLICY, CSRF_TOKEN, REFERRER_POLICY, SAME_SITE,
+    STRICT_TRANSPORT_SECURITY, X_CONTENT_TYPE_OPTIONS, X_FRAME_OPTIONS, X_POWERED_BY,
 };
 use crate::coop::{Coop, CoopOptions};
 use crate::corp::{Corp, CorpOptions};
@@ -11,6 +11,7 @@ use crate::csrf::{Csrf, CsrfOptions};
 use crate::executor::{Executor, ExecutorError};
 use crate::hsts::{Hsts, HstsOptions};
 use crate::normalized_headers::NormalizedHeaders;
+use crate::referrer_policy::{ReferrerPolicy as ReferrerPolicyExecutor, ReferrerPolicyOptions};
 use crate::same_site::{SameSite, SameSiteOptions};
 use crate::x_content_type_options::XContentTypeOptions;
 use crate::x_frame_options::{XFrameOptions, XFrameOptionsOptions};
@@ -93,6 +94,15 @@ impl Shield {
 
     pub fn x_powered_by(mut self) -> Result<Self, ShieldError> {
         self.add_feature(X_POWERED_BY, Box::new(XPoweredBy::new()))?;
+
+        Ok(self)
+    }
+
+    pub fn referrer_policy(mut self, options: ReferrerPolicyOptions) -> Result<Self, ShieldError> {
+        self.add_feature(
+            REFERRER_POLICY,
+            Box::new(ReferrerPolicyExecutor::new(options)),
+        )?;
 
         Ok(self)
     }

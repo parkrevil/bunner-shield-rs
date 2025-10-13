@@ -6,6 +6,7 @@ pub mod header_keys {
     pub const STRICT_TRANSPORT_SECURITY: &str = "Strict-Transport-Security";
     pub const X_CONTENT_TYPE_OPTIONS: &str = "X-Content-Type-Options";
     pub const X_FRAME_OPTIONS: &str = "X-Frame-Options";
+    pub const REFERRER_POLICY: &str = "Referrer-Policy";
     pub const SET_COOKIE: &str = "Set-Cookie";
     pub const CSRF_TOKEN: &str = "X-CSRF-Token";
     pub const CROSS_ORIGIN_EMBEDDER_POLICY: &str = "Cross-Origin-Embedder-Policy";
@@ -28,6 +29,15 @@ pub mod header_values {
     pub const CORP_CROSS_ORIGIN: &str = "cross-origin";
     pub const X_FRAME_OPTIONS_DENY: &str = "DENY";
     pub const X_FRAME_OPTIONS_SAMEORIGIN: &str = "SAMEORIGIN";
+    pub const REFERRER_POLICY_NO_REFERRER: &str = "no-referrer";
+    pub const REFERRER_POLICY_NO_REFERRER_WHEN_DOWNGRADE: &str = "no-referrer-when-downgrade";
+    pub const REFERRER_POLICY_SAME_ORIGIN: &str = "same-origin";
+    pub const REFERRER_POLICY_ORIGIN: &str = "origin";
+    pub const REFERRER_POLICY_STRICT_ORIGIN: &str = "strict-origin";
+    pub const REFERRER_POLICY_ORIGIN_WHEN_CROSS_ORIGIN: &str = "origin-when-cross-origin";
+    pub const REFERRER_POLICY_STRICT_ORIGIN_WHEN_CROSS_ORIGIN: &str =
+        "strict-origin-when-cross-origin";
+    pub const REFERRER_POLICY_UNSAFE_URL: &str = "unsafe-url";
 }
 
 pub mod cookie {
@@ -45,4 +55,5 @@ pub mod executor_order {
     pub const CROSS_ORIGIN_OPENER_POLICY: u8 = 8;
     pub const CROSS_ORIGIN_RESOURCE_POLICY: u8 = 9;
     pub const X_FRAME_OPTIONS: u8 = 10;
+    pub const REFERRER_POLICY: u8 = 11;
 }
