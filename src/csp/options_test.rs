@@ -102,6 +102,73 @@ mod validate {
     }
 }
 
+mod helpers {
+    use super::*;
+
+    #[test]
+    fn given_nonce_helper_when_serialize_then_includes_trimmed_token() {
+        let options = CspOptions::new()
+            .script_src_nonce(" 'dGVzdE5vbmNlVmFsdWU=' ")
+            .directive("default-src", "'self'");
+
+        assert_eq!(
+            options.serialize(),
+            "script-src 'nonce-dGVzdE5vbmNlVmFsdWU='; default-src 'self'"
+        );
+    }
+
+    #[test]
+    fn given_duplicate_nonce_helper_when_serialize_then_deduplicates_token() {
+        let options = CspOptions::new()
+            .script_src_nonce("value")
+            .script_src_nonce("value")
+            .directive("default-src", "'self'");
+
+        assert_eq!(
+            options.serialize(),
+            "script-src 'nonce-value'; default-src 'self'"
+        );
+    }
+
+    #[test]
+    fn given_hash_helper_when_serialize_then_includes_prefixed_token() {
+        let options = CspOptions::new()
+            .script_src_hash(CspHashAlgorithm::Sha384, "abc==")
+            .directive("default-src", "'self'");
+
+        assert_eq!(
+            options.serialize(),
+            "script-src 'sha384-abc=='; default-src 'self'"
+        );
+    }
+
+    #[test]
+    fn given_strict_dynamic_helper_when_called_twice_then_adds_once() {
+        let options = CspOptions::new()
+            .enable_strict_dynamic()
+            .enable_strict_dynamic()
+            .directive("default-src", "'self'");
+
+        assert_eq!(
+            options.serialize(),
+            "script-src 'strict-dynamic'; default-src 'self'"
+        );
+    }
+
+    #[test]
+    fn given_trusted_types_helper_when_serialize_then_sets_directive() {
+        let options = CspOptions::new()
+            .require_trusted_types_for_scripts()
+            .require_trusted_types_for_scripts()
+            .directive("default-src", "'self'");
+
+        assert_eq!(
+            options.serialize(),
+            "require-trusted-types-for 'script'; default-src 'self'"
+        );
+    }
+}
+
 mod report_group {
     use super::*;
 

@@ -2,6 +2,23 @@ use crate::executor::FeatureOptions;
 use std::borrow::Cow;
 use thiserror::Error;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CspHashAlgorithm {
+    Sha256,
+    Sha384,
+    Sha512,
+}
+
+impl CspHashAlgorithm {
+    fn prefix(self) -> &'static str {
+        match self {
+            CspHashAlgorithm::Sha256 => "sha256-",
+            CspHashAlgorithm::Sha384 => "sha384-",
+            CspHashAlgorithm::Sha512 => "sha512-",
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CspReportGroup {
     name: String,
@@ -58,6 +75,38 @@ impl CspOptions {
         self
     }
 
+    pub fn script_src_nonce<S>(mut self, nonce: S) -> Self
+    where
+        S: Into<String>,
+    {
+        let token = format!("'nonce-{}'", sanitize_token_input(nonce.into()));
+        self.add_script_src_token(&token);
+        self
+    }
+
+    pub fn script_src_hash<S>(mut self, algorithm: CspHashAlgorithm, hash: S) -> Self
+    where
+        S: Into<String>,
+    {
+        let token = format!(
+            "'{}{}'",
+            algorithm.prefix(),
+            sanitize_token_input(hash.into())
+        );
+        self.add_script_src_token(&token);
+        self
+    }
+
+    pub fn enable_strict_dynamic(mut self) -> Self {
+        self.add_script_src_token("'strict-dynamic'");
+        self
+    }
+
+    pub fn require_trusted_types_for_scripts(mut self) -> Self {
+        self.set_directive("require-trusted-types-for", "'script'");
+        self
+    }
+
     fn is_valid_directive_name(name: &str) -> bool {
         let mut chars = name.chars();
 
@@ -75,6 +124,41 @@ impl CspOptions {
             .map(|(name, value)| format!("{} {}", name, value))
             .collect::<Vec<_>>()
             .join("; ")
+    }
+
+    fn add_script_src_token(&mut self, token: &str) {
+        self.add_directive_token("script-src", token);
+    }
+
+    fn add_directive_token(&mut self, directive: &str, token: &str) {
+        if let Some((_, value)) = self
+            .directives
+            .iter_mut()
+            .find(|(name, _)| name == directive)
+        {
+            if !contains_token(value, token) {
+                if !value.is_empty() {
+                    value.push(' ');
+                }
+                value.push_str(token);
+            }
+        } else {
+            self.directives
+                .push((directive.to_string(), token.to_string()));
+        }
+    }
+
+    fn set_directive(&mut self, directive: &str, value: &str) {
+        if let Some((_, existing)) = self
+            .directives
+            .iter_mut()
+            .find(|(name, _)| name == directive)
+        {
+            *existing = value.to_string();
+        } else {
+            self.directives
+                .push((directive.to_string(), value.to_string()));
+        }
     }
 }
 
@@ -110,6 +194,14 @@ impl FeatureOptions for CspOptions {
 
         Ok(())
     }
+}
+
+fn sanitize_token_input(input: String) -> String {
+    input.trim().trim_matches('\'').to_string()
+}
+
+fn contains_token(value: &str, token: &str) -> bool {
+    value.split_whitespace().any(|existing| existing == token)
 }
 
 impl CspOptions {
