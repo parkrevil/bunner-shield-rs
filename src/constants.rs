@@ -9,6 +9,7 @@ pub mod header_keys {
     pub const REFERRER_POLICY: &str = "Referrer-Policy";
     pub const X_DOWNLOAD_OPTIONS: &str = "X-Download-Options";
     pub const X_PERMITTED_CROSS_DOMAIN_POLICIES: &str = "X-Permitted-Cross-Domain-Policies";
+    pub const PERMISSIONS_POLICY: &str = "Permissions-Policy";
     pub const SET_COOKIE: &str = "Set-Cookie";
     pub const CSRF_TOKEN: &str = "X-CSRF-Token";
     pub const CROSS_ORIGIN_EMBEDDER_POLICY: &str = "Cross-Origin-Embedder-Policy";
@@ -69,4 +70,5 @@ pub mod executor_order {
     pub const ORIGIN_AGENT_CLUSTER: u8 = 12;
     pub const X_DOWNLOAD_OPTIONS: u8 = 13;
     pub const X_PERMITTED_CROSS_DOMAIN_POLICIES: u8 = 14;
+    pub const PERMISSIONS_POLICY: u8 = 15;
 }
