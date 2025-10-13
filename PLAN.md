@@ -38,21 +38,10 @@
 ## 파이프라인 실행 순서 개요
 | 순서 | 단계 | 기능 |
 | --- | --- | --- |
-| 14 | 2단계 | X-Download-Options |
 | 15 | 2단계 | X-Permitted-Cross-Domain-Policies |
 | 16 | 2단계 | Permissions-Policy |
 | 17 | 3단계 | X-DNS-Prefetch-Control |
 | 18 | 3단계 | Clear-Site-Data |
-
-## 14. X-Download-Options
-- **목표**: `noopen` 설정 제공.
-- **파이프라인 순서**: 14 (2단계)
-- **정적 상수**: `const HEADER_X_DOWNLOAD_OPTIONS`, `const VALUE_NOOPEN`
-- **구현 작업**
-  1. `src/x_download_options/mod.rs`에서 `XDownloadOptions` 모듈과 상수 정의.
-  2. `Shield::x_download_options()` 체인 메서드는 `noopen`을 적용하며, 추가 옵션이 필요 없는 경우에도 `NormalizedHeaders`와의 호환성을 유지합니다.
-- **주의/검증**: Internet Explorer 전용임을 주석으로 명시.
-- **참조 규격**: OWASP Secure Headers
 
 ## 15. X-Permitted-Cross-Domain-Policies
 - **목표**: Flash/PDF 대응 헤더 설정.
