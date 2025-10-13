@@ -21,7 +21,7 @@ impl FeatureExecutor for Hsts {
     }
 
     fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), ExecutorError> {
-        headers.insert(STRICT_TRANSPORT_SECURITY, self.options.serialize());
+        headers.insert(STRICT_TRANSPORT_SECURITY, self.options.header_value());
 
         Ok(())
     }

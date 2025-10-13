@@ -21,7 +21,7 @@ impl FeatureExecutor for XFrameOptions {
     }
 
     fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), ExecutorError> {
-        headers.insert(X_FRAME_OPTIONS, self.options.serialize());
+        headers.insert(X_FRAME_OPTIONS, self.options.header_value());
 
         Ok(())
     }

@@ -46,6 +46,6 @@ fn given_report_only_policy_when_secure_then_emits_report_headers() {
     );
     assert_eq!(
         result.get(header_keys::REPORT_TO).map(String::as_str),
-        Some(report_group.to_header_value().as_str())
+        Some(report_group.header_value().as_str())
     );
 }

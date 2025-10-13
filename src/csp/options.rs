@@ -35,7 +35,7 @@ impl CspReportGroup {
         }
     }
 
-    pub fn to_header_value(&self) -> String {
+    pub fn header_value(&self) -> String {
         format!(
             "{{\"group\":\"{}\",\"max_age\":{},\"endpoints\":[{{\"url\":\"{}\"}}]}}",
             self.name, self.max_age, self.endpoint
@@ -118,7 +118,7 @@ impl CspOptions {
         chars.all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '-')
     }
 
-    pub fn serialize(&self) -> String {
+    pub fn header_value(&self) -> String {
         self.directives
             .iter()
             .map(|(name, value)| format!("{} {}", name, value))

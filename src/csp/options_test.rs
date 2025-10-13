@@ -16,7 +16,7 @@ mod validate {
         assert!(!options.report_only);
         assert!(options.report_group.is_none());
         assert_eq!(
-            options.serialize(),
+            options.header_value(),
             "default-src 'self'; base-uri 'none'; frame-ancestors 'none'"
         );
     }
@@ -106,64 +106,64 @@ mod helpers {
     use super::*;
 
     #[test]
-    fn given_nonce_helper_when_serialize_then_includes_trimmed_token() {
+    fn given_nonce_helper_when_header_value_then_includes_trimmed_token() {
         let options = CspOptions::new()
             .script_src_nonce(" 'dGVzdE5vbmNlVmFsdWU=' ")
             .directive("default-src", "'self'");
 
         assert_eq!(
-            options.serialize(),
+            options.header_value(),
             "script-src 'nonce-dGVzdE5vbmNlVmFsdWU='; default-src 'self'"
         );
     }
 
     #[test]
-    fn given_duplicate_nonce_helper_when_serialize_then_deduplicates_token() {
+    fn given_duplicate_nonce_helper_when_header_value_then_deduplicates_token() {
         let options = CspOptions::new()
             .script_src_nonce("value")
             .script_src_nonce("value")
             .directive("default-src", "'self'");
 
         assert_eq!(
-            options.serialize(),
+            options.header_value(),
             "script-src 'nonce-value'; default-src 'self'"
         );
     }
 
     #[test]
-    fn given_hash_helper_when_serialize_then_includes_prefixed_token() {
+    fn given_hash_helper_when_header_value_then_includes_prefixed_token() {
         let options = CspOptions::new()
             .script_src_hash(CspHashAlgorithm::Sha384, "abc==")
             .directive("default-src", "'self'");
 
         assert_eq!(
-            options.serialize(),
+            options.header_value(),
             "script-src 'sha384-abc=='; default-src 'self'"
         );
     }
 
     #[test]
-    fn given_strict_dynamic_helper_when_called_twice_then_adds_once() {
+    fn given_strict_dynamic_helper_when_header_value_then_adds_once() {
         let options = CspOptions::new()
             .enable_strict_dynamic()
             .enable_strict_dynamic()
             .directive("default-src", "'self'");
 
         assert_eq!(
-            options.serialize(),
+            options.header_value(),
             "script-src 'strict-dynamic'; default-src 'self'"
         );
     }
 
     #[test]
-    fn given_trusted_types_helper_when_serialize_then_sets_directive() {
+    fn given_trusted_types_helper_when_header_value_then_sets_directive() {
         let options = CspOptions::new()
             .require_trusted_types_for_scripts()
             .require_trusted_types_for_scripts()
             .directive("default-src", "'self'");
 
         assert_eq!(
-            options.serialize(),
+            options.header_value(),
             "require-trusted-types-for 'script'; default-src 'self'"
         );
     }
@@ -173,10 +173,10 @@ mod report_group {
     use super::*;
 
     #[test]
-    fn given_valid_group_when_to_header_value_then_returns_serialized_json() {
+    fn given_valid_group_when_header_value_then_returns_serialized_json() {
         let group = CspReportGroup::new("default", "https://reports.example.com");
 
-        let header_value = group.to_header_value();
+        let header_value = group.header_value();
 
         assert_eq!(
             header_value,

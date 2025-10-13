@@ -31,7 +31,7 @@ impl XFrameOptionsOptions {
         self
     }
 
-    pub(crate) fn serialize(&self) -> &'static str {
+    pub(crate) fn header_value(&self) -> &'static str {
         self.policy.as_str()
     }
 }

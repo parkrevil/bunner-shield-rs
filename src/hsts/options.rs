@@ -30,7 +30,7 @@ impl HstsOptions {
         self
     }
 
-    pub fn serialize(&self) -> String {
+    pub fn header_value(&self) -> String {
         let mut parts = vec![format!("max-age={}", self.max_age)];
 
         if self.include_subdomains {

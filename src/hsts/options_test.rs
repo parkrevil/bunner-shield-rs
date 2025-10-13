@@ -60,7 +60,7 @@ mod validate {
 
         assert!(result.is_ok());
         assert_eq!(
-            options.serialize(),
+            options.header_value(),
             "max-age=31536000; includeSubDomains; preload"
         );
     }

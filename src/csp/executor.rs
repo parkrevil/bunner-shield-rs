@@ -29,10 +29,10 @@ impl FeatureExecutor for Csp {
             CONTENT_SECURITY_POLICY
         };
 
-        headers.insert(header_name, self.options.serialize());
+        headers.insert(header_name, self.options.header_value());
 
         if let Some(group) = &self.options.report_group {
-            headers.insert(REPORT_TO, group.to_header_value());
+            headers.insert(REPORT_TO, group.header_value());
         }
 
         Ok(())
