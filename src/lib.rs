@@ -13,6 +13,7 @@ mod referrer_policy;
 mod same_site;
 mod shield;
 mod x_content_type_options;
+mod x_dns_prefetch_control;
 mod x_download_options;
 mod x_frame_options;
 mod x_permitted_cross_domain_policies;
@@ -34,6 +35,9 @@ pub use crate::same_site::{
     CookieMeta, SameSite, SameSiteOptions, SameSiteOptionsError, SameSitePolicy,
 };
 pub use crate::shield::{Shield, ShieldError};
+pub use crate::x_dns_prefetch_control::{
+    XdnsPrefetchControl, XdnsPrefetchControlOptions, XdnsPrefetchControlPolicy,
+};
 pub use crate::x_download_options::XDownloadOptions;
 pub use crate::x_frame_options::{XFrameOptions, XFrameOptionsOptions, XFrameOptionsPolicy};
 pub use crate::x_permitted_cross_domain_policies::{

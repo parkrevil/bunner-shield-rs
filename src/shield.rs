@@ -3,7 +3,8 @@ use crate::constants::executor_order::{
     CONTENT_SECURITY_POLICY, CROSS_ORIGIN_EMBEDDER_POLICY, CROSS_ORIGIN_OPENER_POLICY,
     CROSS_ORIGIN_RESOURCE_POLICY, CSRF_TOKEN, ORIGIN_AGENT_CLUSTER, PERMISSIONS_POLICY,
     REFERRER_POLICY, SAME_SITE, STRICT_TRANSPORT_SECURITY, X_CONTENT_TYPE_OPTIONS,
-    X_DOWNLOAD_OPTIONS, X_FRAME_OPTIONS, X_PERMITTED_CROSS_DOMAIN_POLICIES, X_POWERED_BY,
+    X_DNS_PREFETCH_CONTROL, X_DOWNLOAD_OPTIONS, X_FRAME_OPTIONS, X_PERMITTED_CROSS_DOMAIN_POLICIES,
+    X_POWERED_BY,
 };
 use crate::coop::{Coop, CoopOptions};
 use crate::corp::{Corp, CorpOptions};
@@ -17,6 +18,7 @@ use crate::permissions_policy::{PermissionsPolicy, PermissionsPolicyOptions};
 use crate::referrer_policy::{ReferrerPolicy as ReferrerPolicyExecutor, ReferrerPolicyOptions};
 use crate::same_site::{SameSite, SameSiteOptions};
 use crate::x_content_type_options::XContentTypeOptions;
+use crate::x_dns_prefetch_control::{XdnsPrefetchControl, XdnsPrefetchControlOptions};
 use crate::x_download_options::XDownloadOptions;
 use crate::x_frame_options::{XFrameOptions, XFrameOptionsOptions};
 use crate::x_permitted_cross_domain_policies::{
@@ -107,6 +109,18 @@ impl Shield {
 
     pub fn x_download_options(mut self) -> Result<Self, ShieldError> {
         self.add_feature(X_DOWNLOAD_OPTIONS, Box::new(XDownloadOptions::new()))?;
+
+        Ok(self)
+    }
+
+    pub fn x_dns_prefetch_control(
+        mut self,
+        options: XdnsPrefetchControlOptions,
+    ) -> Result<Self, ShieldError> {
+        self.add_feature(
+            X_DNS_PREFETCH_CONTROL,
+            Box::new(XdnsPrefetchControl::new(options)),
+        )?;
 
         Ok(self)
     }
