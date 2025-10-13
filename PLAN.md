@@ -38,22 +38,11 @@
 ## 파이프라인 실행 순서 개요
 | 순서 | 단계 | 기능 |
 | --- | --- | --- |
-| 13 | 2단계 | Origin-Agent-Cluster |
 | 14 | 2단계 | X-Download-Options |
 | 15 | 2단계 | X-Permitted-Cross-Domain-Policies |
 | 16 | 2단계 | Permissions-Policy |
 | 17 | 3단계 | X-DNS-Prefetch-Control |
 | 18 | 3단계 | Clear-Site-Data |
-
-## 13. Origin-Agent-Cluster
-- **목표**: 헤더 `Origin-Agent-Cluster: ?1` 제공.
-- **파이프라인 순서**: 13 (2단계)
-- **정적 상수**: `const HEADER_ORIGIN_AGENT_CLUSTER`, `const VALUE_ENABLE_ORIGIN_AGENT_CLUSTER`, `const VALUE_DISABLE_ORIGIN_AGENT_CLUSTER`
-- **구현 작업**
-  1. `src/origin_agent_cluster/mod.rs`에서 `OriginAgentClusterOptions` 정의(`enable()`/`disable()`).
-  2. `Shield::origin_agent_cluster(options: OriginAgentClusterOptions)` 체인 메서드는 `?1` 또는 `?0` 중 하나를 설정합니다.
-- **주의/검증**: 비활성화 옵션 제공 (`?0`).
-- **참조 규격**: WHATWG HTML Standard
 
 ## 14. X-Download-Options
 - **목표**: `noopen` 설정 제공.
