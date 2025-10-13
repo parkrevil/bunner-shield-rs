@@ -38,20 +38,8 @@
 ## 파이프라인 실행 순서 개요
 | 순서 | 단계 | 기능 |
 | --- | --- | --- |
-| 16 | 2단계 | Permissions-Policy |
 | 17 | 3단계 | X-DNS-Prefetch-Control |
 | 18 | 3단계 | Clear-Site-Data |
-
-## 16. Permissions-Policy
-- **목표**: 브라우저 기능 제어 템플릿 제공.
-- **파이프라인 순서**: 16 (2단계)
-- **정적 상수**: `const HEADER_PERMISSIONS_POLICY`
-- **구현 작업**
-  1. `src/permissions_policy/` 디렉터리에서 선언형 DSL 구현(`policy!("geolocation" => self)`), 내부적으로 `PermissionsPolicyOptions`에 매핑합니다.
-  2. `PermissionsPolicyOptions`는 체이닝 메서드로 개별 기능 허용/차단을 구성하고, `validate()`에서 문법 오류를 검증합니다.
-  3. `Shield::permissions_policy(options: PermissionsPolicyOptions)` 체인 메서드에서 직렬화된 헤더를 적용합니다.
-- **주의/검증**: 브라우저별 지원 편차 문서화, 실험적 기능 플래그 분리.
-- **참조 규격**: WICG Permissions Policy
 
 ## 17. X-DNS-Prefetch-Control
 - **목표**: 프리페치 on/off 제어.
