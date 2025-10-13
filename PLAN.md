@@ -38,20 +38,9 @@
 ## 파이프라인 실행 순서 개요
 | 순서 | 단계 | 기능 |
 | --- | --- | --- |
-| 15 | 2단계 | X-Permitted-Cross-Domain-Policies |
 | 16 | 2단계 | Permissions-Policy |
 | 17 | 3단계 | X-DNS-Prefetch-Control |
 | 18 | 3단계 | Clear-Site-Data |
-
-## 15. X-Permitted-Cross-Domain-Policies
-- **목표**: Flash/PDF 대응 헤더 설정.
-- **파이프라인 순서**: 15 (2단계)
-- **정적 상수**: `const HEADER_X_PERMITTED_CROSS_DOMAIN_POLICIES`, `const VALUE_NONE`, `const VALUE_MASTER_ONLY`, `const VALUE_BY_CONTENT_TYPE`, `const VALUE_ALL`
-- **구현 작업**
-  1. `src/x_permitted_cross_domain_policies/mod.rs`에서 enum(`None`, `MasterOnly`, `ByContentType`, `All`)과 `XPermittedCrossDomainPoliciesOptions` 정의.
-  2. `Shield::x_permitted_cross_domain_policies(options: XPermittedCrossDomainPoliciesOptions)` 체인 메서드는 기본값을 `none()`으로 유지하고, 필요 시 다른 값을 선택할 수 있도록 합니다.
-- **주의/검증**: 현대 환경에서 영향이 제한적임을 문서화.
-- **참조 규격**: Adobe Cross-Domain Policy Spec
 
 ## 16. Permissions-Policy
 - **목표**: 브라우저 기능 제어 템플릿 제공.
