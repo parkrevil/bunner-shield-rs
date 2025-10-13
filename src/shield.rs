@@ -1,7 +1,7 @@
 use crate::coep::{Coep, CoepOptions};
 use crate::constants::executor_order::{
     CONTENT_SECURITY_POLICY, CROSS_ORIGIN_EMBEDDER_POLICY, CROSS_ORIGIN_OPENER_POLICY,
-    CROSS_ORIGIN_RESOURCE_POLICY, CSRF_TOKEN, REFERRER_POLICY, SAME_SITE,
+    CROSS_ORIGIN_RESOURCE_POLICY, CSRF_TOKEN, ORIGIN_AGENT_CLUSTER, REFERRER_POLICY, SAME_SITE,
     STRICT_TRANSPORT_SECURITY, X_CONTENT_TYPE_OPTIONS, X_FRAME_OPTIONS, X_POWERED_BY,
 };
 use crate::coop::{Coop, CoopOptions};
@@ -11,6 +11,7 @@ use crate::csrf::{Csrf, CsrfOptions};
 use crate::executor::{Executor, ExecutorError};
 use crate::hsts::{Hsts, HstsOptions};
 use crate::normalized_headers::NormalizedHeaders;
+use crate::origin_agent_cluster::{OriginAgentCluster, OriginAgentClusterOptions};
 use crate::referrer_policy::{ReferrerPolicy as ReferrerPolicyExecutor, ReferrerPolicyOptions};
 use crate::same_site::{SameSite, SameSiteOptions};
 use crate::x_content_type_options::XContentTypeOptions;
@@ -102,6 +103,18 @@ impl Shield {
         self.add_feature(
             REFERRER_POLICY,
             Box::new(ReferrerPolicyExecutor::new(options)),
+        )?;
+
+        Ok(self)
+    }
+
+    pub fn origin_agent_cluster(
+        mut self,
+        options: OriginAgentClusterOptions,
+    ) -> Result<Self, ShieldError> {
+        self.add_feature(
+            ORIGIN_AGENT_CLUSTER,
+            Box::new(OriginAgentCluster::new(options)),
         )?;
 
         Ok(self)

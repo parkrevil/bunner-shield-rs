@@ -12,6 +12,7 @@ pub mod header_keys {
     pub const CROSS_ORIGIN_EMBEDDER_POLICY: &str = "Cross-Origin-Embedder-Policy";
     pub const CROSS_ORIGIN_OPENER_POLICY: &str = "Cross-Origin-Opener-Policy";
     pub const CROSS_ORIGIN_RESOURCE_POLICY: &str = "Cross-Origin-Resource-Policy";
+    pub const ORIGIN_AGENT_CLUSTER: &str = "Origin-Agent-Cluster";
 }
 
 pub mod header_values {
@@ -38,6 +39,8 @@ pub mod header_values {
     pub const REFERRER_POLICY_STRICT_ORIGIN_WHEN_CROSS_ORIGIN: &str =
         "strict-origin-when-cross-origin";
     pub const REFERRER_POLICY_UNSAFE_URL: &str = "unsafe-url";
+    pub const ORIGIN_AGENT_CLUSTER_ENABLE: &str = "?1";
+    pub const ORIGIN_AGENT_CLUSTER_DISABLE: &str = "?0";
 }
 
 pub mod cookie {
@@ -56,4 +59,5 @@ pub mod executor_order {
     pub const CROSS_ORIGIN_RESOURCE_POLICY: u8 = 9;
     pub const X_FRAME_OPTIONS: u8 = 10;
     pub const REFERRER_POLICY: u8 = 11;
+    pub const ORIGIN_AGENT_CLUSTER: u8 = 12;
 }

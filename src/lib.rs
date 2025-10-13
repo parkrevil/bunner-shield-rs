@@ -7,6 +7,7 @@ pub mod csrf;
 mod executor;
 pub mod hsts;
 mod normalized_headers;
+mod origin_agent_cluster;
 mod referrer_policy;
 mod same_site;
 mod shield;
@@ -21,6 +22,7 @@ pub use crate::corp::{Corp, CorpOptions, CorpPolicy};
 pub use crate::csp::{CspHashAlgorithm, CspOptions, CspOptionsError, CspReportGroup};
 pub use crate::csrf::{CsrfOptions, CsrfOptionsError, CsrfTokenError, HmacCsrfService};
 pub use crate::hsts::{HstsOptions, HstsOptionsError};
+pub use crate::origin_agent_cluster::{OriginAgentCluster, OriginAgentClusterOptions};
 pub use crate::referrer_policy::{ReferrerPolicy, ReferrerPolicyOptions, ReferrerPolicyValue};
 pub use crate::same_site::{
     CookieMeta, SameSite, SameSiteOptions, SameSiteOptionsError, SameSitePolicy,
