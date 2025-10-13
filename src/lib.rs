@@ -10,6 +10,7 @@ mod normalized_headers;
 mod same_site;
 mod shield;
 mod x_content_type_options;
+mod x_frame_options;
 mod x_powered_by;
 
 pub use crate::coep::{Coep, CoepOptions, CoepPolicy};
@@ -23,3 +24,4 @@ pub use crate::same_site::{
     CookieMeta, SameSite, SameSiteOptions, SameSiteOptionsError, SameSitePolicy,
 };
 pub use crate::shield::{Shield, ShieldError};
+pub use crate::x_frame_options::{XFrameOptionsOptions, XFrameOptionsPolicy, XFrameOptions};

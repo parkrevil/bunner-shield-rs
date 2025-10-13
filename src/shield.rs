@@ -2,7 +2,7 @@ use crate::coep::{Coep, CoepOptions};
 use crate::constants::executor_order::{
     CONTENT_SECURITY_POLICY, CROSS_ORIGIN_EMBEDDER_POLICY, CROSS_ORIGIN_OPENER_POLICY,
     CROSS_ORIGIN_RESOURCE_POLICY, CSRF_TOKEN, SAME_SITE, STRICT_TRANSPORT_SECURITY,
-    X_CONTENT_TYPE_OPTIONS, X_POWERED_BY,
+    X_CONTENT_TYPE_OPTIONS, X_FRAME_OPTIONS, X_POWERED_BY,
 };
 use crate::coop::{Coop, CoopOptions};
 use crate::corp::{Corp, CorpOptions};
@@ -13,6 +13,7 @@ use crate::hsts::{Hsts, HstsOptions};
 use crate::normalized_headers::NormalizedHeaders;
 use crate::same_site::{SameSite, SameSiteOptions};
 use crate::x_content_type_options::XContentTypeOptions;
+use crate::x_frame_options::{XFrameOptionsOptions, XFrameOptions};
 use crate::x_powered_by::XPoweredBy;
 use std::collections::HashMap;
 use thiserror::Error;
@@ -80,6 +81,12 @@ impl Shield {
 
     pub fn x_content_type_options(mut self) -> Result<Self, ShieldError> {
         self.add_feature(X_CONTENT_TYPE_OPTIONS, Box::new(XContentTypeOptions::new()))?;
+
+        Ok(self)
+    }
+
+    pub fn x_frame_options(mut self, options: XFrameOptionsOptions) -> Result<Self, ShieldError> {
+        self.add_feature(X_FRAME_OPTIONS, Box::new(XFrameOptions::new(options)))?;
 
         Ok(self)
     }
