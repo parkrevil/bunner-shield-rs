@@ -14,6 +14,7 @@ mod shield;
 mod x_content_type_options;
 mod x_download_options;
 mod x_frame_options;
+mod x_permitted_cross_domain_policies;
 mod x_powered_by;
 
 pub use crate::coep::{Coep, CoepOptions, CoepPolicy};
@@ -31,3 +32,7 @@ pub use crate::same_site::{
 pub use crate::shield::{Shield, ShieldError};
 pub use crate::x_download_options::XDownloadOptions;
 pub use crate::x_frame_options::{XFrameOptions, XFrameOptionsOptions, XFrameOptionsPolicy};
+pub use crate::x_permitted_cross_domain_policies::{
+    XPermittedCrossDomainPolicies, XPermittedCrossDomainPoliciesOptions,
+    XPermittedCrossDomainPoliciesPolicy,
+};
