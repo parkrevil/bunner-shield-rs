@@ -38,18 +38,7 @@
 ## 파이프라인 실행 순서 개요
 | 순서 | 단계 | 기능 |
 | --- | --- | --- |
-| 17 | 3단계 | X-DNS-Prefetch-Control |
 | 18 | 3단계 | Clear-Site-Data |
-
-## 17. X-DNS-Prefetch-Control
-- **목표**: 프리페치 on/off 제어.
-- **파이프라인 순서**: 17 (3단계)
-- **정적 상수**: `const HEADER_X_DNS_PREFETCH_CONTROL`, `const VALUE_ON`, `const VALUE_OFF`
-- **구현 작업**
-  1. `src/x_dns_prefetch_control/mod.rs`에서 enum(`On`, `Off`)과 `XdnsPrefetchControlOptions` 정의, 기본값은 `off()`.
-  2. `Shield::x_dns_prefetch_control(options: XdnsPrefetchControlOptions)` 체인 메서드는 옵션을 검증 후 헤더를 적용합니다.
-- **주의/검증**: HTML `<meta>`와 동시 구성 시 우선순위 안내.
-- **참조 규격**: HTML dns-prefetch Hint, OWASP Secure Headers
 
 ## 18. Clear-Site-Data (선택)
 - **목표**: 보안 사고 대응 시 상태 초기화 지원.
