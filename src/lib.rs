@@ -24,4 +24,4 @@ pub use crate::same_site::{
     CookieMeta, SameSite, SameSiteOptions, SameSiteOptionsError, SameSitePolicy,
 };
 pub use crate::shield::{Shield, ShieldError};
-pub use crate::x_frame_options::{XFrameOptionsOptions, XFrameOptionsPolicy, XFrameOptions};
+pub use crate::x_frame_options::{XFrameOptions, XFrameOptionsOptions, XFrameOptionsPolicy};

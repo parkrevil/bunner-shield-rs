@@ -1,4 +1,4 @@
-use bunner_shield_rs::{XFrameOptionsOptions, XFrameOptionsPolicy, Shield, header_keys};
+use bunner_shield_rs::{Shield, XFrameOptionsOptions, XFrameOptionsPolicy, header_keys};
 use std::collections::HashMap;
 
 #[test]

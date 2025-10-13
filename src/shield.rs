@@ -13,7 +13,7 @@ use crate::hsts::{Hsts, HstsOptions};
 use crate::normalized_headers::NormalizedHeaders;
 use crate::same_site::{SameSite, SameSiteOptions};
 use crate::x_content_type_options::XContentTypeOptions;
-use crate::x_frame_options::{XFrameOptionsOptions, XFrameOptions};
+use crate::x_frame_options::{XFrameOptions, XFrameOptionsOptions};
 use crate::x_powered_by::XPoweredBy;
 use std::collections::HashMap;
 use thiserror::Error;
