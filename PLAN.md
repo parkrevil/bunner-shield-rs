@@ -38,7 +38,6 @@
 ## 파이프라인 실행 순서 개요
 | 순서 | 단계 | 기능 |
 | --- | --- | --- |
-| 11 | 2단계 | X-Frame-Options |
 | 12 | 2단계 | Referrer-Policy |
 | 13 | 2단계 | Origin-Agent-Cluster |
 | 14 | 2단계 | X-Download-Options |
@@ -46,17 +45,6 @@
 | 16 | 2단계 | Permissions-Policy |
 | 17 | 3단계 | X-DNS-Prefetch-Control |
 | 18 | 3단계 | Clear-Site-Data |
-
-## 11. X-Frame-Options (레거시 호환)
-- **목표**: 프레임 보호 레거시 지원.
-- **파이프라인 순서**: 11 (2단계)
-- **정적 상수**: `const HEADER_X_FRAME_OPTIONS`, `const VALUE_DENY`, `const VALUE_SAMEORIGIN`
-- **구현 작업**
-  1. `src/x_frame_options/mod.rs`에서 enum(`Deny`, `SameOrigin`), `XFrameOptions` 구조체 정의.
-  2. `Shield::x_frame_options(options: XFrameOptions)` 체인 메서드는 명시적으로 호출된 경우에만 헤더를 추가하고, CSP `frame-ancestors`와 충돌 시 경고 로그를 남깁니다.
-  3. 테스트: 지원하지 않는 값 입력 시 `ShieldError::InvalidXFrameOptions` 반환 여부 확인.
-- **주의/검증**: RFC 7034 요구사항(허용 값 검증).
-- **참조 규격**: RFC 7034
 
 ## 12. Referrer-Policy
 - **목표**: `strict-origin-when-cross-origin` 기본값 제공.
