@@ -11,6 +11,7 @@ pub mod header_keys {
     pub const X_PERMITTED_CROSS_DOMAIN_POLICIES: &str = "X-Permitted-Cross-Domain-Policies";
     pub const PERMISSIONS_POLICY: &str = "Permissions-Policy";
     pub const X_DNS_PREFETCH_CONTROL: &str = "X-DNS-Prefetch-Control";
+    pub const CLEAR_SITE_DATA: &str = "Clear-Site-Data";
     pub const SET_COOKIE: &str = "Set-Cookie";
     pub const CSRF_TOKEN: &str = "X-CSRF-Token";
     pub const CROSS_ORIGIN_EMBEDDER_POLICY: &str = "Cross-Origin-Embedder-Policy";
@@ -52,6 +53,10 @@ pub mod header_values {
     pub const X_PERMITTED_CROSS_DOMAIN_POLICIES_ALL: &str = "all";
     pub const X_DNS_PREFETCH_CONTROL_ON: &str = "on";
     pub const X_DNS_PREFETCH_CONTROL_OFF: &str = "off";
+    pub const CLEAR_SITE_DATA_CACHE: &str = "\"cache\"";
+    pub const CLEAR_SITE_DATA_COOKIES: &str = "\"cookies\"";
+    pub const CLEAR_SITE_DATA_STORAGE: &str = "\"storage\"";
+    pub const CLEAR_SITE_DATA_EXECUTION_CONTEXTS: &str = "\"executionContexts\"";
 }
 
 pub mod cookie {
@@ -75,4 +80,5 @@ pub mod executor_order {
     pub const X_PERMITTED_CROSS_DOMAIN_POLICIES: u8 = 14;
     pub const PERMISSIONS_POLICY: u8 = 15;
     pub const X_DNS_PREFETCH_CONTROL: u8 = 16;
+    pub const CLEAR_SITE_DATA: u8 = 17;
 }

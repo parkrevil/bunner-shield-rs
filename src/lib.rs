@@ -1,3 +1,4 @@
+mod clear_site_data;
 mod coep;
 mod constants;
 mod coop;
@@ -19,6 +20,7 @@ mod x_frame_options;
 mod x_permitted_cross_domain_policies;
 mod x_powered_by;
 
+pub use crate::clear_site_data::{ClearSiteData, ClearSiteDataOptions, ClearSiteDataOptionsError};
 pub use crate::coep::{Coep, CoepOptions, CoepPolicy};
 pub use crate::constants::{header_keys, header_values};
 pub use crate::coop::{Coop, CoopOptions, CoopPolicy};

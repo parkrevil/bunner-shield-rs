@@ -1,10 +1,11 @@
+use crate::clear_site_data::{ClearSiteData, ClearSiteDataOptions};
 use crate::coep::{Coep, CoepOptions};
 use crate::constants::executor_order::{
-    CONTENT_SECURITY_POLICY, CROSS_ORIGIN_EMBEDDER_POLICY, CROSS_ORIGIN_OPENER_POLICY,
-    CROSS_ORIGIN_RESOURCE_POLICY, CSRF_TOKEN, ORIGIN_AGENT_CLUSTER, PERMISSIONS_POLICY,
-    REFERRER_POLICY, SAME_SITE, STRICT_TRANSPORT_SECURITY, X_CONTENT_TYPE_OPTIONS,
-    X_DNS_PREFETCH_CONTROL, X_DOWNLOAD_OPTIONS, X_FRAME_OPTIONS, X_PERMITTED_CROSS_DOMAIN_POLICIES,
-    X_POWERED_BY,
+    CLEAR_SITE_DATA, CONTENT_SECURITY_POLICY, CROSS_ORIGIN_EMBEDDER_POLICY,
+    CROSS_ORIGIN_OPENER_POLICY, CROSS_ORIGIN_RESOURCE_POLICY, CSRF_TOKEN, ORIGIN_AGENT_CLUSTER,
+    PERMISSIONS_POLICY, REFERRER_POLICY, SAME_SITE, STRICT_TRANSPORT_SECURITY,
+    X_CONTENT_TYPE_OPTIONS, X_DNS_PREFETCH_CONTROL, X_DOWNLOAD_OPTIONS, X_FRAME_OPTIONS,
+    X_PERMITTED_CROSS_DOMAIN_POLICIES, X_POWERED_BY,
 };
 use crate::coop::{Coop, CoopOptions};
 use crate::corp::{Corp, CorpOptions};
@@ -121,6 +122,12 @@ impl Shield {
             X_DNS_PREFETCH_CONTROL,
             Box::new(XdnsPrefetchControl::new(options)),
         )?;
+
+        Ok(self)
+    }
+
+    pub fn clear_site_data(mut self, options: ClearSiteDataOptions) -> Result<Self, ShieldError> {
+        self.add_feature(CLEAR_SITE_DATA, Box::new(ClearSiteData::new(options)))?;
 
         Ok(self)
     }
