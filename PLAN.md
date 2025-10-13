@@ -38,7 +38,6 @@
 ## 파이프라인 실행 순서 개요
 | 순서 | 단계 | 기능 |
 | --- | --- | --- |
-| 10 | 2단계 | Strict CSP 고급 프로파일 |
 | 11 | 2단계 | X-Frame-Options |
 | 12 | 2단계 | Referrer-Policy |
 | 13 | 2단계 | Origin-Agent-Cluster |
@@ -47,17 +46,6 @@
 | 16 | 2단계 | Permissions-Policy |
 | 17 | 3단계 | X-DNS-Prefetch-Control |
 | 18 | 3단계 | Clear-Site-Data |
-
-## 10. Strict CSP 고급 프로파일 (2단계)
-- **목표**: nonce/hash + `strict-dynamic`를 포함한 강화 정책 지원.
-- **파이프라인 순서**: 10 (2단계)
-- **정적 상수**: `const DIRECTIVE_STRICT_DYNAMIC`, `const DIRECTIVE_REQUIRE_TRUSTED_TYPES`
-- **구현 작업**
-  1. `src/csp/advanced.rs`에 강화 정책 전용 헬퍼 추가(`with_nonce`, `with_hash`, `enable_strict_dynamic`).
-  2. `CspOptions`에 `enable_nonce_generation(NonceGenerator)` 등 체이닝 메서드를 확장하고, `validate()`에서 nonce 재사용 금지 룰을 확인합니다.
-  3. `Shield::content_security_policy` 호출 시 강화 옵션이 설정되어 있으면 `Content-Security-Policy`와 `Report-To`를 동시에 갱신하도록 합니다.
-- **주의/검증**: nonce 재사용 금지 정책(요청 단위) 문서화, 테스트에서 중복 감지.
-- **참조 규격**: Google Strict CSP, Trusted Types (Chromium)
 
 ## 11. X-Frame-Options (레거시 호환)
 - **목표**: 프레임 보호 레거시 지원.
