@@ -7,14 +7,13 @@
 ##### 1. CSP Level 3 고급 기능
 - webrtc 디렉티브
 - navigate-to 디렉티브
-- prefetch-src 디렉티브
 - worker-src 폴백 체인 검증 부재
 
 ##### 2. 보안 관련 누락 사항
 - 'strict-dynamic' 호환성 검증 없음
 - CSP 디렉티브 우선순위 검증 없음
 - 자동 Nonce 로테이션 부재
-- report-uri 디렉티브 누락
+- 레거시 report-uri 디렉티브는 의도적으로 미지원 (사양 폐기)
 
 ##### 3. DX 관련 누락
 - 사전 정의된 정책 템플릿 부재
@@ -24,15 +23,14 @@
 ### 개선 권장사항
 
 #### 우선순위 높음
-1. report-uri 디렉티브 추가 (Report-To와 병행)
-2. 디렉티브 열거형 타입화 도입 (`Directive` enum)
+1. 디렉티브 열거형 타입화 도입 (`Directive` enum)
 
 #### 우선순위 중간
 3. worker-src 폴백 로직 검증
 4. strict-dynamic 호환성 경고 추가
 
 #### 우선순위 낮음
-5. webrtc/navigate-to/prefetch-src 옵션 제공 (브라우저 지원 제한)
+5. webrtc/navigate-to 옵션 제공 (브라우저 지원 제한)
 
 ---
 

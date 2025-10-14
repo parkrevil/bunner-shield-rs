@@ -188,7 +188,6 @@ impl CspReportingEndpoint {
 pub enum CspDirective {
     BaseUri,
     BlockAllMixedContent,
-    ChildSrc,
     ConnectSrc,
     DefaultSrc,
     FontSrc,
@@ -200,8 +199,6 @@ pub enum CspDirective {
     MediaSrc,
     NavigateTo,
     ObjectSrc,
-    PrefetchSrc,
-    PluginTypes,
     ReportTo,
     Sandbox,
     ScriptSrc,
@@ -217,11 +214,38 @@ pub enum CspDirective {
 }
 
 impl CspDirective {
+    pub const ALL: [CspDirective; 25] = [
+        CspDirective::BaseUri,
+        CspDirective::BlockAllMixedContent,
+        CspDirective::ConnectSrc,
+        CspDirective::DefaultSrc,
+        CspDirective::FontSrc,
+        CspDirective::FormAction,
+        CspDirective::FrameAncestors,
+        CspDirective::FrameSrc,
+        CspDirective::ImgSrc,
+        CspDirective::ManifestSrc,
+        CspDirective::MediaSrc,
+        CspDirective::NavigateTo,
+        CspDirective::ObjectSrc,
+        CspDirective::ReportTo,
+        CspDirective::Sandbox,
+        CspDirective::ScriptSrc,
+        CspDirective::ScriptSrcAttr,
+        CspDirective::ScriptSrcElem,
+        CspDirective::StyleSrc,
+        CspDirective::StyleSrcAttr,
+        CspDirective::StyleSrcElem,
+        CspDirective::TrustedTypes,
+        CspDirective::RequireTrustedTypesFor,
+        CspDirective::UpgradeInsecureRequests,
+        CspDirective::WorkerSrc,
+    ];
+
     pub fn as_str(self) -> &'static str {
         match self {
             CspDirective::BaseUri => "base-uri",
             CspDirective::BlockAllMixedContent => "block-all-mixed-content",
-            CspDirective::ChildSrc => "child-src",
             CspDirective::ConnectSrc => "connect-src",
             CspDirective::DefaultSrc => "default-src",
             CspDirective::FontSrc => "font-src",
@@ -233,8 +257,6 @@ impl CspDirective {
             CspDirective::MediaSrc => "media-src",
             CspDirective::NavigateTo => "navigate-to",
             CspDirective::ObjectSrc => "object-src",
-            CspDirective::PrefetchSrc => "prefetch-src",
-            CspDirective::PluginTypes => "plugin-types",
             CspDirective::ReportTo => "report-to",
             CspDirective::Sandbox => "sandbox",
             CspDirective::ScriptSrc => "script-src",
@@ -600,15 +622,6 @@ impl CspOptions {
         self
     }
 
-    pub fn child_src<I, S>(mut self, sources: I) -> Self
-    where
-        I: IntoIterator<Item = S>,
-        S: Into<CspSource>,
-    {
-        self.set_directive_sources(CspDirective::ChildSrc, sources);
-        self
-    }
-
     pub fn font_src<I, S>(mut self, sources: I) -> Self
     where
         I: IntoIterator<Item = S>,
@@ -636,15 +649,6 @@ impl CspOptions {
         self
     }
 
-    pub fn prefetch_src<I, S>(mut self, sources: I) -> Self
-    where
-        I: IntoIterator<Item = S>,
-        S: Into<CspSource>,
-    {
-        self.set_directive_sources(CspDirective::PrefetchSrc, sources);
-        self
-    }
-
     pub fn navigate_to<I, S>(mut self, sources: I) -> Self
     where
         I: IntoIterator<Item = S>,
@@ -660,30 +664,6 @@ impl CspOptions {
         S: Into<CspSource>,
     {
         self.set_directive_sources(CspDirective::ObjectSrc, sources);
-        self
-    }
-
-    pub fn plugin_types<I, S>(mut self, types: I) -> Self
-    where
-        I: IntoIterator<Item = S>,
-        S: Into<String>,
-    {
-        let mut rendered = Vec::new();
-        let mut seen = HashSet::new();
-
-        for value in types.into_iter() {
-            let token = value.into().trim().to_string();
-            if token.is_empty() {
-                continue;
-            }
-
-            if seen.insert(token.clone()) {
-                rendered.push(token);
-            }
-        }
-
-        let value = rendered.join(" ");
-        self.set_directive(CspDirective::PluginTypes.as_str(), &value);
         self
     }
 
@@ -851,12 +831,6 @@ impl CspOptions {
     pub fn report_to(mut self, group: impl Into<String>) -> Self {
         let value = group.into().trim().to_string();
         self.set_directive(CspDirective::ReportTo.as_str(), &value);
-        self
-    }
-
-    pub fn report_uri(mut self, uri: impl Into<String>) -> Self {
-        let value = uri.into().trim().to_string();
-        self.set_directive("report-uri", &value);
         self
     }
 
@@ -1145,15 +1119,10 @@ impl CspOptions {
         self
     }
 
-    fn is_valid_directive_name(name: &str) -> bool {
-        let mut chars = name.chars();
-
-        match chars.next() {
-            Some(first) if first.is_ascii_lowercase() => {}
-            _ => return false,
-        }
-
-        chars.all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '-')
+    pub(crate) fn is_valid_directive_name(name: &str) -> bool {
+        CspDirective::ALL
+            .iter()
+            .any(|directive| directive.as_str() == name)
     }
 
     pub fn header_value(&self) -> String {
@@ -1272,16 +1241,6 @@ impl CspOptions {
             return Err(CspOptionsError::ReportOnlyMissingGroup);
         }
 
-        if self
-            .directive_value(CspDirective::PluginTypes.as_str())
-            .is_some()
-            && self
-                .directive_value(CspDirective::ObjectSrc.as_str())
-                .is_none()
-        {
-            return Err(CspOptionsError::PluginTypesRequireObjectSrc);
-        }
-
         if let Some(group) = &self.report_group {
             Self::validate_report_to_binding(self, group)?;
         }
@@ -1297,11 +1256,8 @@ impl CspOptions {
         Self::validate_worker_fallback(self, &mut warnings)?;
         self.emit_report_only_frame_ancestors_warning(&mut warnings);
 
-        self.emit_deprecated_directive_warnings(&mut warnings);
-        self.emit_reporting_conflict_warnings(&mut warnings);
         self.emit_reporting_endpoint_usage_warnings(&mut warnings);
         self.emit_report_group_warnings(&mut warnings);
-        self.emit_report_uri_warnings(&mut warnings);
         self.emit_mixed_content_dependency_warnings(&mut warnings);
         self.emit_risky_scheme_warnings(&mut warnings);
 
@@ -1359,14 +1315,6 @@ impl CspOptions {
 
         if name == CspDirective::Sandbox.as_str() {
             return Self::validate_sandbox_tokens(trimmed);
-        }
-
-        if name == CspDirective::PluginTypes.as_str() {
-            return Self::validate_plugin_types(trimmed);
-        }
-
-        if name == "report-uri" {
-            Self::validate_report_uri(trimmed)?;
         }
 
         let tokens: Vec<&str> = trimmed.split_whitespace().collect();
@@ -1600,12 +1548,10 @@ impl CspOptions {
                 | "connect-src"
                 | "font-src"
                 | "frame-src"
-                | "child-src"
                 | "worker-src"
                 | "media-src"
                 | "manifest-src"
                 | "object-src"
-                | "prefetch-src"
                 | "navigate-to"
                 | "base-uri"
                 | "form-action"
@@ -1710,27 +1656,6 @@ impl CspOptions {
         }
     }
 
-    fn validate_plugin_types(value: &str) -> Result<(), CspOptionsError> {
-        for token in value.split_whitespace() {
-            Self::validate_mime_type(token)?;
-        }
-
-        Ok(())
-    }
-
-    fn validate_report_uri(value: &str) -> Result<(), CspOptionsError> {
-        for token in value.split_whitespace() {
-            let parsed = Url::parse(token)
-                .map_err(|_| CspOptionsError::InvalidReportUri(token.to_string()))?;
-
-            if parsed.scheme() != "https" || parsed.host_str().is_none() {
-                return Err(CspOptionsError::InvalidReportUri(token.to_string()));
-            }
-        }
-
-        Ok(())
-    }
-
     fn enforce_scheme_restrictions(directive: &str, token: &str) -> Result<(), CspOptionsError> {
         if let Some(scheme) = token.strip_suffix(':') {
             if scheme.contains('/') {
@@ -1772,48 +1697,6 @@ impl CspOptions {
                 directive.to_string(),
             ))
         }
-    }
-
-    fn validate_mime_type(token: &str) -> Result<(), CspOptionsError> {
-        let mut parts = token.split('/');
-        let type_part = parts
-            .next()
-            .ok_or_else(|| CspOptionsError::InvalidPluginType(token.to_string()))?;
-        let subtype_part = parts
-            .next()
-            .ok_or_else(|| CspOptionsError::InvalidPluginType(token.to_string()))?;
-
-        if parts.next().is_some() {
-            return Err(CspOptionsError::InvalidPluginType(token.to_string()));
-        }
-
-        if !Self::is_valid_mime_component(type_part) || !Self::is_valid_mime_component(subtype_part)
-        {
-            return Err(CspOptionsError::InvalidPluginType(token.to_string()));
-        }
-
-        Ok(())
-    }
-
-    fn is_valid_mime_component(component: &str) -> bool {
-        if component.is_empty() {
-            return false;
-        }
-
-        let mut chars = component.chars();
-
-        match chars.next() {
-            Some(first) if first.is_ascii_alphanumeric() => {}
-            _ => return false,
-        }
-
-        chars.all(|ch| {
-            ch.is_ascii_alphanumeric()
-                || matches!(
-                    ch,
-                    '!' | '#' | '$' | '&' | '^' | '_' | '.' | '+' | '-' | '~'
-                )
-        })
     }
 
     fn validate_source_expression_cached(
@@ -2040,36 +1923,6 @@ impl CspOptions {
         }
     }
 
-    fn emit_deprecated_directive_warnings(&self, warnings: &mut Vec<CspOptionsWarning>) {
-        if self
-            .directive_value(CspDirective::PluginTypes.as_str())
-            .is_some()
-        {
-            warnings.push(CspOptionsWarning::warning(
-                CspOptionsWarningKind::PluginTypesDeprecated,
-            ));
-        }
-
-        if self
-            .directive_value(CspDirective::PrefetchSrc.as_str())
-            .is_some()
-        {
-            warnings.push(CspOptionsWarning::warning(
-                CspOptionsWarningKind::PrefetchSrcDeprecated,
-            ));
-        }
-    }
-
-    fn emit_reporting_conflict_warnings(&self, warnings: &mut Vec<CspOptionsWarning>) {
-        if self.directive_value("report-uri").is_some()
-            && (self.report_group.is_some() || !self.reporting_endpoints.is_empty())
-        {
-            warnings.push(CspOptionsWarning::warning(
-                CspOptionsWarningKind::ReportUriWithReportTo,
-            ));
-        }
-    }
-
     fn validate_worker_fallback(
         options: &CspOptions,
         warnings: &mut Vec<CspOptionsWarning>,
@@ -2078,13 +1931,6 @@ impl CspOptions {
             .directive_value(CspDirective::WorkerSrc.as_str())
             .is_some()
         {
-            return Ok(());
-        }
-
-        let has_child = options
-            .directive_value(CspDirective::ChildSrc.as_str())
-            .is_some();
-        if has_child {
             return Ok(());
         }
 
@@ -2209,14 +2055,6 @@ impl CspOptions {
         }
     }
 
-    fn emit_report_uri_warnings(&self, warnings: &mut Vec<CspOptionsWarning>) {
-        if self.directive_value("report-uri").is_some() {
-            warnings.push(CspOptionsWarning::info(
-                CspOptionsWarningKind::ReportUriDeprecated,
-            ));
-        }
-    }
-
     fn emit_mixed_content_dependency_warnings(&self, warnings: &mut Vec<CspOptionsWarning>) {
         let has_upgrade = self.has_directive(CspDirective::UpgradeInsecureRequests.as_str());
         let has_block = self.has_directive(CspDirective::BlockAllMixedContent.as_str());
@@ -2324,14 +2162,10 @@ pub enum CspOptionsError {
     InvalidSandboxToken(String),
     #[error("invalid source expression `{0}`")]
     InvalidSourceExpression(String),
-    #[error("invalid plugin type `{0}`")]
-    InvalidPluginType(String),
     #[error("invalid reporting endpoint name `{0}`")]
     InvalidReportingEndpointName(String),
     #[error("invalid reporting endpoint url `{0}`")]
     InvalidReportingEndpointUrl(String),
-    #[error("invalid report-uri `{0}`")]
-    InvalidReportUri(String),
     #[error("duplicate reporting endpoint name `{0}`")]
     DuplicateReportingEndpoint(String),
     #[error("token `{0}` is not allowed in directive `{1}`")]
@@ -2348,8 +2182,6 @@ pub enum CspOptionsError {
     DisallowedScheme(String, String),
     #[error("source expression `{0}` cannot use a wildcard port")]
     PortWildcardUnsupported(String),
-    #[error("plugin-types directive requires object-src to be defined")]
-    PluginTypesRequireObjectSrc,
     #[error("'strict-dynamic' cannot be combined with host or scheme sources")]
     StrictDynamicHostSourceConflict,
 }
@@ -2378,11 +2210,7 @@ pub enum CspOptionsWarningKind {
     MissingWorkerSrcFallback,
     WeakWorkerSrcFallback,
     ReportOnlyFrameAncestorsIgnored,
-    PluginTypesDeprecated,
-    PrefetchSrcDeprecated,
-    ReportUriWithReportTo,
     ReportingEndpointsWithoutDirective,
-    ReportUriDeprecated,
     ReportGroupMaxAgeTooHigh {
         max_age: u64,
     },

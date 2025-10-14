@@ -360,20 +360,6 @@ mod validate {
     }
 
     #[test]
-    fn given_report_uri_with_insecure_scheme_when_validate_then_returns_error() {
-        let options = CspOptions::new()
-            .default_src([CspSource::SelfKeyword])
-            .report_uri("http://reports.example.com/csp");
-
-        let result = options.validate();
-
-        assert!(matches!(
-            result,
-            Err(CspOptionsError::InvalidReportUri(uri)) if uri == "http://reports.example.com/csp"
-        ));
-    }
-
-    #[test]
     fn given_unsafe_inline_in_img_src_when_validate_then_returns_error() {
         let options = CspOptions::new()
             .img_src([CspSource::UnsafeInline])
@@ -523,30 +509,6 @@ mod validate {
     }
 
     #[test]
-    fn given_invalid_plugin_type_when_validate_then_returns_error() {
-        let options = CspOptions::new()
-            .plugin_types(["invalid-plugin"])
-            .default_src([CspSource::SelfKeyword]);
-
-        let result = options.validate();
-
-        assert!(matches!(
-            result,
-            Err(CspOptionsError::InvalidPluginType(token)) if token == "invalid-plugin"
-        ));
-    }
-
-    #[test]
-    fn given_valid_plugin_type_when_validate_then_accepts() {
-        let options = CspOptions::new()
-            .plugin_types(["application/pdf"])
-            .object_src([CspSource::None])
-            .default_src([CspSource::SelfKeyword]);
-
-        assert!(options.validate().is_ok());
-    }
-
-    #[test]
     fn given_reporting_endpoint_with_http_when_validate_then_returns_error() {
         let options = CspOptions::new()
             .default_src([CspSource::SelfKeyword])
@@ -631,82 +593,6 @@ mod validate {
     }
 
     #[test]
-    fn given_plugin_types_when_validate_with_warnings_then_warns() {
-        let warnings = CspOptions::new()
-            .default_src([CspSource::SelfKeyword])
-            .object_src([CspSource::None])
-            .plugin_types(["application/pdf"])
-            .validate_with_warnings()
-            .expect("validation succeeds");
-
-        assert!(warnings.contains(&CspOptionsWarning::warning(
-            CspOptionsWarningKind::PluginTypesDeprecated,
-        )));
-    }
-
-    #[test]
-    fn given_plugin_types_without_object_src_when_validate_then_returns_error() {
-        let options = CspOptions::new()
-            .default_src([CspSource::SelfKeyword])
-            .plugin_types(["application/pdf"]);
-
-        let result = options.validate();
-
-        assert!(matches!(
-            result,
-            Err(CspOptionsError::PluginTypesRequireObjectSrc)
-        ));
-    }
-
-    #[test]
-    fn given_prefetch_src_when_validate_with_warnings_then_warns() {
-        let warnings = CspOptions::new()
-            .default_src([CspSource::SelfKeyword])
-            .prefetch_src([CspSource::SelfKeyword])
-            .validate_with_warnings()
-            .expect("validation succeeds");
-
-        assert!(warnings.contains(&CspOptionsWarning::warning(
-            CspOptionsWarningKind::PrefetchSrcDeprecated,
-        )));
-    }
-
-    #[test]
-    fn given_report_uri_with_report_group_when_validate_with_warnings_then_warns() {
-        let options = CspOptions::new()
-            .default_src([CspSource::SelfKeyword])
-            .report_group(CspReportGroup::new(
-                "default",
-                "https://reports.example.com",
-            ))
-            .report_uri("https://legacy.example.com/csp");
-
-        let warnings = options
-            .validate_with_warnings()
-            .expect("validation succeeds");
-
-        assert!(warnings.contains(&CspOptionsWarning::warning(
-            CspOptionsWarningKind::ReportUriWithReportTo,
-        )));
-    }
-
-    #[test]
-    fn given_report_uri_with_reporting_endpoints_when_validate_with_warnings_then_warns() {
-        let options = CspOptions::new()
-            .default_src([CspSource::SelfKeyword])
-            .reporting_endpoint("default", "https://reports.example.com")
-            .report_uri("https://legacy.example.com/csp");
-
-        let warnings = options
-            .validate_with_warnings()
-            .expect("validation succeeds");
-
-        assert!(warnings.contains(&CspOptionsWarning::warning(
-            CspOptionsWarningKind::ReportUriWithReportTo,
-        )));
-    }
-
-    #[test]
     fn given_report_group_with_large_max_age_when_validate_with_warnings_then_warns() {
         let options = CspOptions::new()
             .default_src([CspSource::SelfKeyword])
@@ -723,21 +609,6 @@ mod validate {
             CspOptionsWarningKind::ReportGroupMaxAgeTooHigh {
                 max_age: 40_000_000
             },
-        )));
-    }
-
-    #[test]
-    fn given_report_uri_when_validate_with_warnings_then_warns_deprecation() {
-        let options = CspOptions::new()
-            .default_src([CspSource::SelfKeyword])
-            .report_uri("https://reports.example.com/csp");
-
-        let warnings = options
-            .validate_with_warnings()
-            .expect("validation succeeds");
-
-        assert!(warnings.contains(&CspOptionsWarning::info(
-            CspOptionsWarningKind::ReportUriDeprecated,
         )));
     }
 
@@ -818,6 +689,49 @@ mod validate {
                 schemes: vec!["data".to_string()],
             },
         )));
+    }
+}
+
+mod whitelist {
+    use super::*;
+    use std::collections::HashSet;
+
+    #[test]
+    fn whitelist_matches_enum_variants() {
+        let mut seen = HashSet::new();
+
+        for directive in CspDirective::ALL {
+            let name = directive.as_str();
+
+            assert!(
+                CspOptions::is_valid_directive_name(name),
+                "enum-derived directive `{name}` must be accepted"
+            );
+
+            assert!(
+                seen.insert(name),
+                "directive `{name}` appears multiple times in whitelist"
+            );
+        }
+
+        assert_eq!(
+            seen.len(),
+            CspDirective::ALL.len(),
+            "whitelist should contain every enum variant exactly once"
+        );
+
+        for name in [
+            "child-src",
+            "plugin-types",
+            "prefetch-src",
+            "report-uri",
+            "bogus-directive",
+        ] {
+            assert!(
+                !CspOptions::is_valid_directive_name(name),
+                "deprecated or unknown directive `{name}` must be rejected"
+            );
+        }
     }
 }
 
@@ -912,37 +826,6 @@ mod helpers {
         assert_eq!(
             options.header_value(),
             "script-src-elem 'self'; default-src 'self'"
-        );
-    }
-
-    #[test]
-    fn given_child_src_helper_when_header_value_then_formats_sources() {
-        let options = CspOptions::new()
-            .child_src([
-                CspSource::SelfKeyword,
-                CspSource::Host("https://cdn.example.com".into()),
-            ])
-            .default_src([CspSource::SelfKeyword]);
-
-        assert_eq!(
-            options.header_value(),
-            "child-src 'self' https://cdn.example.com; default-src 'self'"
-        );
-    }
-
-    #[test]
-    fn given_plugin_types_helper_when_header_value_then_formats_tokens_once() {
-        let options = CspOptions::new()
-            .plugin_types([
-                "application/pdf",
-                "application/pdf",
-                "application/x-shockwave-flash",
-            ])
-            .default_src([CspSource::SelfKeyword]);
-
-        assert_eq!(
-            options.header_value(),
-            "plugin-types application/pdf application/x-shockwave-flash; default-src 'self'"
         );
     }
 
@@ -1061,18 +944,6 @@ mod helpers {
         assert_eq!(
             options.header_value(),
             "default-src 'self'; sandbox allow-scripts allow-same-origin"
-        );
-    }
-
-    #[test]
-    fn given_report_uri_helper_when_header_value_then_sets_directive() {
-        let options = CspOptions::new()
-            .default_src([CspSource::SelfKeyword])
-            .report_uri("https://reports.example.com/csp");
-
-        assert_eq!(
-            options.header_value(),
-            "default-src 'self'; report-uri https://reports.example.com/csp"
         );
     }
 

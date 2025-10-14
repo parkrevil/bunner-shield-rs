@@ -11,15 +11,14 @@
 
 주요 디렉티브:
 - default-src, script-src, style-src, img-src, connect-src, font-src, object-src, media-src
-- child-src, worker-src, frame-src, frame-ancestors ⭐ (X-Frame-Options 대체)
+- worker-src, frame-src, frame-ancestors ⭐ (X-Frame-Options 대체)
 - base-uri, form-action ⭐, manifest-src (웹 앱 매니페스트)
 - upgrade-insecure-requests, sandbox
 - script-src-elem/style-src-elem, script-src-attr/style-src-attr (세분화)
 - require-trusted-types-for 'script', trusted-types (Chrome)
 
 보고/모니터링:
-- report-to (권장)
-- report-uri (⚠️ 폐기 예정, 레거시 호환)
+- report-to (권장, 레거시 report-uri 미지원)
 
 배포 전략:
 - Content-Security-Policy (강제)
@@ -28,6 +27,7 @@
 ⚠️ 중요 구현 지침:
 - 프로덕션 전 반드시 Report-Only로 충분히 관찰 후 강제 전환
 - report-to 우선 사용, frame-ancestors로 X-Frame-Options 대체
+- child-src, prefetch-src, report-uri 등 레거시 지시문은 미지원
 
  예시(강화 정책):
  Content-Security-Policy: script-src 'nonce-<BASE64_NONCE>' 'strict-dynamic'; object-src 'none'; base-uri 'none';
@@ -238,7 +238,7 @@ base-uri 'none';
 3단계 (선택):
 - X-DNS-Prefetch-Control, CSP 세밀 튜닝
 
-구현 원칙/주의: CSP frame-ancestors 우선, report-to 우선; COEP/COOP/CORP 함께 운영; CSRF 토큰 쿠키만 HttpOnly 예외; 레거시 report-uri는 폴백
+구현 원칙/주의: CSP frame-ancestors 우선, report-to 우선; COEP/COOP/CORP 함께 운영; CSRF 토큰 쿠키만 HttpOnly 예외; 레거시 report-uri는 지원하지 않음
 
 ---
 CSP 배포 전략:
