@@ -25,7 +25,11 @@ pub use crate::coep::{Coep, CoepOptions, CoepPolicy};
 pub use crate::constants::{header_keys, header_values};
 pub use crate::coop::{Coop, CoopOptions, CoopPolicy};
 pub use crate::corp::{Corp, CorpOptions, CorpPolicy};
-pub use crate::csp::{CspHashAlgorithm, CspOptions, CspOptionsError, CspReportGroup};
+pub use crate::csp::{
+    CspDirective, CspHashAlgorithm, CspNonce, CspNonceManager, CspNonceManagerError, CspOptions,
+    CspOptionsError, CspOptionsWarning, CspReportEndpoint, CspReportGroup, CspReportingEndpoint,
+    CspSource, SandboxToken, TrustedTypesPolicy, TrustedTypesPolicyError, TrustedTypesToken,
+};
 pub use crate::csrf::{CsrfOptions, CsrfOptionsError, CsrfTokenError, HmacCsrfService};
 pub use crate::hsts::{HstsOptions, HstsOptionsError};
 pub use crate::origin_agent_cluster::{OriginAgentCluster, OriginAgentClusterOptions};

@@ -1,6 +1,6 @@
 use super::CspOptions;
 use crate::constants::header_keys::{
-    CONTENT_SECURITY_POLICY, CONTENT_SECURITY_POLICY_REPORT_ONLY, REPORT_TO,
+    CONTENT_SECURITY_POLICY, CONTENT_SECURITY_POLICY_REPORT_ONLY, REPORT_TO, REPORTING_ENDPOINTS,
 };
 use crate::executor::{ExecutorError, FeatureExecutor};
 use crate::normalized_headers::NormalizedHeaders;
@@ -33,6 +33,17 @@ impl FeatureExecutor for Csp {
 
         if let Some(group) = &self.options.report_group {
             headers.insert(REPORT_TO, group.header_value());
+        }
+
+        if !self.options.reporting_endpoints.is_empty() {
+            let value = self
+                .options
+                .reporting_endpoints
+                .iter()
+                .map(|endpoint| endpoint.header_fragment())
+                .collect::<Vec<_>>()
+                .join(", ");
+            headers.insert(REPORTING_ENDPOINTS, value);
         }
 
         Ok(())

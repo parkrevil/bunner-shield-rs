@@ -2,7 +2,7 @@
 name = "bunner_shield_rs"
 version = "0.1.0"
 edition = "2024"
-license = "LICENSE.md"
+license = "MIT"
 description = "A lightweight HTTP security core library for Rust"
 repository = "https://github.com/parkrevil/bunner-shield-rs"
 documentation = "https://github.com/parkrevil/bunner-shield-rs"
@@ -16,6 +16,9 @@ readme = "README.md"
 thiserror = "2"
 hmac = "0.12"
 sha2 = "0.10"
+url = "2"
+rand = "0.8"
+base64 = "0.22"
 
 [dev-dependencies.cargo-husky]
 version = "1"

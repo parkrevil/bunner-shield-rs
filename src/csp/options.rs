@@ -1,6 +1,68 @@
 use crate::executor::FeatureOptions;
+use base64::Engine;
+use base64::engine::general_purpose;
+use rand::RngCore;
+use rand::rngs::OsRng;
 use std::borrow::Cow;
+use std::collections::{HashMap, HashSet};
+use std::fmt::{self, Write};
 use thiserror::Error;
+use url::Url;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CspReportEndpoint {
+    url: String,
+    priority: Option<u8>,
+    weight: Option<u8>,
+}
+
+impl CspReportEndpoint {
+    pub fn new<'a>(url: impl Into<Cow<'a, str>>) -> Self {
+        Self {
+            url: url.into().into_owned().trim().to_string(),
+            priority: None,
+            weight: None,
+        }
+    }
+
+    pub fn with_priority(mut self, priority: u8) -> Self {
+        self.priority = Some(priority);
+        self
+    }
+
+    pub fn with_weight(mut self, weight: u8) -> Self {
+        self.weight = Some(weight);
+        self
+    }
+
+    fn header_fragment(&self, buffer: &mut String) {
+        buffer.push_str("{\"url\":\"");
+        buffer.push_str(&self.url);
+        buffer.push('"');
+
+        if let Some(priority) = self.priority {
+            let _ = write!(buffer, ",\"priority\":{}", priority);
+        }
+
+        if let Some(weight) = self.weight {
+            let _ = write!(buffer, ",\"weight\":{}", weight);
+        }
+
+        buffer.push('}');
+    }
+
+    pub fn url(&self) -> &str {
+        &self.url
+    }
+
+    pub fn priority(&self) -> Option<u8> {
+        self.priority
+    }
+
+    pub fn weight(&self) -> Option<u8> {
+        self.weight
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CspHashAlgorithm {
@@ -22,25 +84,405 @@ impl CspHashAlgorithm {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CspReportGroup {
     name: String,
-    endpoint: String,
     max_age: u64,
+    include_subdomains: bool,
+    endpoints: Vec<CspReportEndpoint>,
 }
 
 impl CspReportGroup {
     pub fn new<'a>(name: impl Into<Cow<'a, str>>, endpoint: impl Into<Cow<'a, str>>) -> Self {
         Self {
-            name: name.into().into_owned(),
-            endpoint: endpoint.into().into_owned(),
+            name: name.into().into_owned().trim().to_string(),
             max_age: 10_886_400,
+            include_subdomains: false,
+            endpoints: vec![CspReportEndpoint::new(endpoint)],
         }
     }
 
-    pub fn header_value(&self) -> String {
-        format!(
-            "{{\"group\":\"{}\",\"max_age\":{},\"endpoints\":[{{\"url\":\"{}\"}}]}}",
-            self.name, self.max_age, self.endpoint
-        )
+    pub fn with_max_age(mut self, max_age: u64) -> Self {
+        self.max_age = max_age;
+        self
     }
+
+    pub fn include_subdomains(mut self) -> Self {
+        self.include_subdomains = true;
+        self
+    }
+
+    pub fn add_endpoint(mut self, endpoint: CspReportEndpoint) -> Self {
+        self.endpoints.push(endpoint);
+        self
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn max_age(&self) -> u64 {
+        self.max_age
+    }
+
+    pub fn includes_subdomains(&self) -> bool {
+        self.include_subdomains
+    }
+
+    pub fn endpoints(&self) -> &[CspReportEndpoint] {
+        &self.endpoints
+    }
+
+    pub fn header_value(&self) -> String {
+        let mut buffer = String::new();
+        let _ = write!(
+            buffer,
+            "{{\"group\":\"{}\",\"max_age\":{}",
+            self.name, self.max_age
+        );
+
+        if self.include_subdomains {
+            buffer.push_str(",\"include_subdomains\":true");
+        }
+
+        buffer.push_str(",\"endpoints\":[");
+
+        for (index, endpoint) in self.endpoints.iter().enumerate() {
+            if index > 0 {
+                buffer.push(',');
+            }
+
+            endpoint.header_fragment(&mut buffer);
+        }
+
+        buffer.push_str("]}");
+        buffer
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CspReportingEndpoint {
+    name: String,
+    url: String,
+}
+
+impl CspReportingEndpoint {
+    pub fn new<'a>(name: impl Into<Cow<'a, str>>, url: impl Into<Cow<'a, str>>) -> Self {
+        Self {
+            name: name.into().into_owned().trim().to_string(),
+            url: url.into().into_owned().trim().to_string(),
+        }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn url(&self) -> &str {
+        &self.url
+    }
+
+    pub(crate) fn header_fragment(&self) -> String {
+        format!("{}=\"{}\"", self.name, self.url)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CspDirective {
+    BaseUri,
+    BlockAllMixedContent,
+    ChildSrc,
+    ConnectSrc,
+    DefaultSrc,
+    FontSrc,
+    FormAction,
+    FrameAncestors,
+    FrameSrc,
+    ImgSrc,
+    ManifestSrc,
+    MediaSrc,
+    NavigateTo,
+    ObjectSrc,
+    PrefetchSrc,
+    PluginTypes,
+    ReportTo,
+    Sandbox,
+    ScriptSrc,
+    ScriptSrcAttr,
+    ScriptSrcElem,
+    StyleSrc,
+    StyleSrcAttr,
+    StyleSrcElem,
+    TrustedTypes,
+    RequireTrustedTypesFor,
+    UpgradeInsecureRequests,
+    WorkerSrc,
+}
+
+impl CspDirective {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            CspDirective::BaseUri => "base-uri",
+            CspDirective::BlockAllMixedContent => "block-all-mixed-content",
+            CspDirective::ChildSrc => "child-src",
+            CspDirective::ConnectSrc => "connect-src",
+            CspDirective::DefaultSrc => "default-src",
+            CspDirective::FontSrc => "font-src",
+            CspDirective::FormAction => "form-action",
+            CspDirective::FrameAncestors => "frame-ancestors",
+            CspDirective::FrameSrc => "frame-src",
+            CspDirective::ImgSrc => "img-src",
+            CspDirective::ManifestSrc => "manifest-src",
+            CspDirective::MediaSrc => "media-src",
+            CspDirective::NavigateTo => "navigate-to",
+            CspDirective::ObjectSrc => "object-src",
+            CspDirective::PrefetchSrc => "prefetch-src",
+            CspDirective::PluginTypes => "plugin-types",
+            CspDirective::ReportTo => "report-to",
+            CspDirective::Sandbox => "sandbox",
+            CspDirective::ScriptSrc => "script-src",
+            CspDirective::ScriptSrcAttr => "script-src-attr",
+            CspDirective::ScriptSrcElem => "script-src-elem",
+            CspDirective::StyleSrc => "style-src",
+            CspDirective::StyleSrcAttr => "style-src-attr",
+            CspDirective::StyleSrcElem => "style-src-elem",
+            CspDirective::TrustedTypes => "trusted-types",
+            CspDirective::RequireTrustedTypesFor => "require-trusted-types-for",
+            CspDirective::UpgradeInsecureRequests => "upgrade-insecure-requests",
+            CspDirective::WorkerSrc => "worker-src",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CspSource {
+    SelfKeyword,
+    None,
+    UnsafeInline,
+    UnsafeEval,
+    UnsafeHashes,
+    WasmUnsafeEval,
+    StrictDynamic,
+    ReportSample,
+    Wildcard,
+    Scheme(Cow<'static, str>),
+    Host(Cow<'static, str>),
+    Nonce(String),
+    Hash {
+        algorithm: CspHashAlgorithm,
+        value: String,
+    },
+    Custom(String),
+}
+
+impl CspSource {
+    pub fn scheme(scheme: impl Into<Cow<'static, str>>) -> Self {
+        Self::Scheme(scheme.into())
+    }
+
+    pub fn host(host: impl Into<Cow<'static, str>>) -> Self {
+        Self::Host(host.into())
+    }
+
+    pub fn raw(value: impl Into<String>) -> Self {
+        Self::Custom(value.into())
+    }
+}
+
+impl fmt::Display for CspSource {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CspSource::SelfKeyword => f.write_str("'self'"),
+            CspSource::None => f.write_str("'none'"),
+            CspSource::UnsafeInline => f.write_str("'unsafe-inline'"),
+            CspSource::UnsafeEval => f.write_str("'unsafe-eval'"),
+            CspSource::UnsafeHashes => f.write_str("'unsafe-hashes'"),
+            CspSource::WasmUnsafeEval => f.write_str("'wasm-unsafe-eval'"),
+            CspSource::StrictDynamic => f.write_str("'strict-dynamic'"),
+            CspSource::ReportSample => f.write_str("'report-sample'"),
+            CspSource::Wildcard => f.write_str("*"),
+            CspSource::Scheme(scheme) => write!(f, "{}:", scheme),
+            CspSource::Host(host) => f.write_str(host),
+            CspSource::Nonce(value) => {
+                let sanitized = sanitize_token_input(value.clone());
+                write!(f, "'nonce-{}'", sanitized)
+            }
+            CspSource::Hash { algorithm, value } => {
+                let sanitized = sanitize_token_input(value.clone());
+                write!(f, "'{}{}'", algorithm.prefix(), sanitized)
+            }
+            CspSource::Custom(value) => f.write_str(value),
+        }
+    }
+}
+
+impl From<&str> for CspSource {
+    fn from(value: &str) -> Self {
+        CspSource::Custom(value.to_string())
+    }
+}
+
+impl From<String> for CspSource {
+    fn from(value: String) -> Self {
+        CspSource::Custom(value)
+    }
+}
+
+impl From<CspNonce> for CspSource {
+    fn from(nonce: CspNonce) -> Self {
+        CspSource::Nonce(nonce.value)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SandboxToken {
+    AllowDownloads,
+    AllowForms,
+    AllowModals,
+    AllowOrientationLock,
+    AllowPointerLock,
+    AllowPopups,
+    AllowPopupsToEscapeSandbox,
+    AllowPresentation,
+    AllowSameOrigin,
+    AllowScripts,
+    AllowStorageAccessByUserActivation,
+    AllowTopNavigation,
+    AllowTopNavigationByUserActivation,
+    AllowTopNavigationToCustomProtocols,
+    AllowDownloadsWithoutUserActivation,
+}
+
+impl SandboxToken {
+    fn as_str(self) -> &'static str {
+        match self {
+            SandboxToken::AllowDownloads => "allow-downloads",
+            SandboxToken::AllowForms => "allow-forms",
+            SandboxToken::AllowModals => "allow-modals",
+            SandboxToken::AllowOrientationLock => "allow-orientation-lock",
+            SandboxToken::AllowPointerLock => "allow-pointer-lock",
+            SandboxToken::AllowPopups => "allow-popups",
+            SandboxToken::AllowPopupsToEscapeSandbox => "allow-popups-to-escape-sandbox",
+            SandboxToken::AllowPresentation => "allow-presentation",
+            SandboxToken::AllowSameOrigin => "allow-same-origin",
+            SandboxToken::AllowScripts => "allow-scripts",
+            SandboxToken::AllowStorageAccessByUserActivation => {
+                "allow-storage-access-by-user-activation"
+            }
+            SandboxToken::AllowTopNavigation => "allow-top-navigation",
+            SandboxToken::AllowTopNavigationByUserActivation => {
+                "allow-top-navigation-by-user-activation"
+            }
+            SandboxToken::AllowTopNavigationToCustomProtocols => {
+                "allow-top-navigation-to-custom-protocols"
+            }
+            SandboxToken::AllowDownloadsWithoutUserActivation => {
+                "allow-downloads-without-user-activation"
+            }
+        }
+    }
+
+    fn from_str(token: &str) -> Option<Self> {
+        match token {
+            "allow-downloads" => Some(SandboxToken::AllowDownloads),
+            "allow-forms" => Some(SandboxToken::AllowForms),
+            "allow-modals" => Some(SandboxToken::AllowModals),
+            "allow-orientation-lock" => Some(SandboxToken::AllowOrientationLock),
+            "allow-pointer-lock" => Some(SandboxToken::AllowPointerLock),
+            "allow-popups" => Some(SandboxToken::AllowPopups),
+            "allow-popups-to-escape-sandbox" => Some(SandboxToken::AllowPopupsToEscapeSandbox),
+            "allow-presentation" => Some(SandboxToken::AllowPresentation),
+            "allow-same-origin" => Some(SandboxToken::AllowSameOrigin),
+            "allow-scripts" => Some(SandboxToken::AllowScripts),
+            "allow-storage-access-by-user-activation" => {
+                Some(SandboxToken::AllowStorageAccessByUserActivation)
+            }
+            "allow-top-navigation" => Some(SandboxToken::AllowTopNavigation),
+            "allow-top-navigation-by-user-activation" => {
+                Some(SandboxToken::AllowTopNavigationByUserActivation)
+            }
+            "allow-top-navigation-to-custom-protocols" => {
+                Some(SandboxToken::AllowTopNavigationToCustomProtocols)
+            }
+            "allow-downloads-without-user-activation" => {
+                Some(SandboxToken::AllowDownloadsWithoutUserActivation)
+            }
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TrustedTypesPolicy {
+    name: String,
+}
+
+impl TrustedTypesPolicy {
+    pub fn new(name: impl Into<String>) -> Result<Self, TrustedTypesPolicyError> {
+        let name = name.into();
+        if name.is_empty() {
+            return Err(TrustedTypesPolicyError::Empty);
+        }
+
+        if !Self::is_valid(&name) {
+            return Err(TrustedTypesPolicyError::InvalidName(name));
+        }
+
+        Ok(Self { name })
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.name
+    }
+
+    pub fn into_string(self) -> String {
+        self.name
+    }
+
+    fn is_valid(value: &str) -> bool {
+        let mut chars = value.chars();
+
+        match chars.next() {
+            Some(first) if first.is_ascii_alphabetic() => {}
+            _ => return false,
+        }
+
+        chars.all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '-' | '_' | ':' | '.'))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum TrustedTypesToken {
+    Policy(TrustedTypesPolicy),
+    AllowDuplicates,
+}
+
+impl TrustedTypesToken {
+    pub fn policy(policy: TrustedTypesPolicy) -> Self {
+        Self::Policy(policy)
+    }
+
+    pub fn allow_duplicates() -> Self {
+        Self::AllowDuplicates
+    }
+
+    fn into_string(self) -> String {
+        match self {
+            TrustedTypesToken::Policy(policy) => policy.into_string(),
+            TrustedTypesToken::AllowDuplicates => "'allow-duplicates'".to_string(),
+        }
+    }
+}
+
+impl From<TrustedTypesPolicy> for TrustedTypesToken {
+    fn from(policy: TrustedTypesPolicy) -> Self {
+        TrustedTypesToken::Policy(policy)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum TrustedTypesPolicyError {
+    #[error("trusted types policy must not be empty")]
+    Empty,
+    #[error("trusted types policy `{0}` contains invalid characters")]
+    InvalidName(String),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -48,6 +490,64 @@ pub struct CspOptions {
     pub(crate) directives: Vec<(String, String)>,
     pub(crate) report_only: bool,
     pub(crate) report_group: Option<CspReportGroup>,
+    pub(crate) reporting_endpoints: Vec<CspReportingEndpoint>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CspNonce {
+    value: String,
+}
+
+impl CspNonce {
+    pub fn as_str(&self) -> &str {
+        &self.value
+    }
+
+    pub fn header_value(&self) -> String {
+        format!("'nonce-{}'", self.value)
+    }
+
+    pub fn into_inner(self) -> String {
+        self.value
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CspNonceManager {
+    byte_len: usize,
+}
+
+impl CspNonceManager {
+    pub fn new() -> Self {
+        Self { byte_len: 32 }
+    }
+
+    pub fn with_size(byte_len: usize) -> Result<Self, CspNonceManagerError> {
+        if byte_len == 0 {
+            return Err(CspNonceManagerError::InvalidLength);
+        }
+
+        Ok(Self { byte_len })
+    }
+
+    pub fn issue(&self) -> CspNonce {
+        let value = CspOptions::generate_nonce_with_size(self.byte_len);
+        CspNonce { value }
+    }
+
+    pub fn issue_header_value(&self) -> String {
+        self.issue().header_value()
+    }
+
+    pub fn byte_len(&self) -> usize {
+        self.byte_len
+    }
+}
+
+impl Default for CspNonceManager {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl CspOptions {
@@ -55,7 +555,420 @@ impl CspOptions {
         Self::default()
     }
 
-    pub fn directive<'a>(
+    pub fn default_src<I, S>(mut self, sources: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<CspSource>,
+    {
+        self.set_directive_sources(CspDirective::DefaultSrc, sources);
+        self
+    }
+
+    pub fn script_src<I, S>(mut self, sources: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<CspSource>,
+    {
+        self.set_directive_sources(CspDirective::ScriptSrc, sources);
+        self
+    }
+
+    pub fn style_src<I, S>(mut self, sources: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<CspSource>,
+    {
+        self.set_directive_sources(CspDirective::StyleSrc, sources);
+        self
+    }
+
+    pub fn img_src<I, S>(mut self, sources: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<CspSource>,
+    {
+        self.set_directive_sources(CspDirective::ImgSrc, sources);
+        self
+    }
+
+    pub fn connect_src<I, S>(mut self, sources: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<CspSource>,
+    {
+        self.set_directive_sources(CspDirective::ConnectSrc, sources);
+        self
+    }
+
+    pub fn child_src<I, S>(mut self, sources: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<CspSource>,
+    {
+        self.set_directive_sources(CspDirective::ChildSrc, sources);
+        self
+    }
+
+    pub fn font_src<I, S>(mut self, sources: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<CspSource>,
+    {
+        self.set_directive_sources(CspDirective::FontSrc, sources);
+        self
+    }
+
+    pub fn frame_src<I, S>(mut self, sources: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<CspSource>,
+    {
+        self.set_directive_sources(CspDirective::FrameSrc, sources);
+        self
+    }
+
+    pub fn worker_src<I, S>(mut self, sources: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<CspSource>,
+    {
+        self.set_directive_sources(CspDirective::WorkerSrc, sources);
+        self
+    }
+
+    pub fn prefetch_src<I, S>(mut self, sources: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<CspSource>,
+    {
+        self.set_directive_sources(CspDirective::PrefetchSrc, sources);
+        self
+    }
+
+    pub fn navigate_to<I, S>(mut self, sources: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<CspSource>,
+    {
+        self.set_directive_sources(CspDirective::NavigateTo, sources);
+        self
+    }
+
+    pub fn object_src<I, S>(mut self, sources: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<CspSource>,
+    {
+        self.set_directive_sources(CspDirective::ObjectSrc, sources);
+        self
+    }
+
+    pub fn plugin_types<I, S>(mut self, types: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        let mut rendered = Vec::new();
+        let mut seen = HashSet::new();
+
+        for value in types.into_iter() {
+            let token = value.into().trim().to_string();
+            if token.is_empty() {
+                continue;
+            }
+
+            if seen.insert(token.clone()) {
+                rendered.push(token);
+            }
+        }
+
+        let value = rendered.join(" ");
+        self.set_directive(CspDirective::PluginTypes.as_str(), &value);
+        self
+    }
+
+    pub fn media_src<I, S>(mut self, sources: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<CspSource>,
+    {
+        self.set_directive_sources(CspDirective::MediaSrc, sources);
+        self
+    }
+
+    pub fn manifest_src<I, S>(mut self, sources: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<CspSource>,
+    {
+        self.set_directive_sources(CspDirective::ManifestSrc, sources);
+        self
+    }
+
+    pub fn frame_ancestors<I, S>(mut self, sources: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<CspSource>,
+    {
+        self.set_directive_sources(CspDirective::FrameAncestors, sources);
+        self
+    }
+
+    pub fn base_uri<I, S>(mut self, sources: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<CspSource>,
+    {
+        self.set_directive_sources(CspDirective::BaseUri, sources);
+        self
+    }
+
+    pub fn form_action<I, S>(mut self, sources: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<CspSource>,
+    {
+        self.set_directive_sources(CspDirective::FormAction, sources);
+        self
+    }
+
+    pub fn script_src_elem<I, S>(mut self, sources: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<CspSource>,
+    {
+        self.set_directive_sources(CspDirective::ScriptSrcElem, sources);
+        self
+    }
+
+    pub fn script_src_attr<I, S>(mut self, sources: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<CspSource>,
+    {
+        self.set_directive_sources(CspDirective::ScriptSrcAttr, sources);
+        self
+    }
+
+    pub fn style_src_elem<I, S>(mut self, sources: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<CspSource>,
+    {
+        self.set_directive_sources(CspDirective::StyleSrcElem, sources);
+        self
+    }
+
+    pub fn style_src_attr<I, S>(mut self, sources: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<CspSource>,
+    {
+        self.set_directive_sources(CspDirective::StyleSrcAttr, sources);
+        self
+    }
+
+    pub fn trusted_types_tokens<I>(mut self, tokens: I) -> Self
+    where
+        I: IntoIterator<Item = TrustedTypesToken>,
+    {
+        let mut rendered: Vec<String> = Vec::new();
+        let mut seen = HashSet::new();
+
+        for token in tokens.into_iter() {
+            let value = token.into_string();
+            if seen.insert(value.clone()) {
+                rendered.push(value);
+            }
+        }
+
+        let value = rendered.join(" ");
+        self.set_directive(CspDirective::TrustedTypes.as_str(), &value);
+        self
+    }
+
+    pub fn trusted_types_policies<I>(self, policies: I) -> Self
+    where
+        I: IntoIterator<Item = TrustedTypesPolicy>,
+    {
+        self.trusted_types_tokens(policies.into_iter().map(TrustedTypesToken::from))
+    }
+
+    pub fn trusted_types_none(mut self) -> Self {
+        self.set_directive(CspDirective::TrustedTypes.as_str(), "'none'");
+        self
+    }
+
+    pub fn upgrade_insecure_requests(mut self) -> Self {
+        self.set_flag_directive(CspDirective::UpgradeInsecureRequests);
+        self
+    }
+
+    pub fn block_all_mixed_content(mut self) -> Self {
+        self.set_flag_directive(CspDirective::BlockAllMixedContent);
+        self
+    }
+
+    pub fn sandbox(mut self) -> Self {
+        self.set_flag_directive(CspDirective::Sandbox);
+        self
+    }
+
+    pub fn reporting_endpoint<'a>(
+        mut self,
+        name: impl Into<Cow<'a, str>>,
+        url: impl Into<Cow<'a, str>>,
+    ) -> Self {
+        self.reporting_endpoints
+            .push(CspReportingEndpoint::new(name, url));
+        self
+    }
+
+    pub fn add_reporting_endpoint(mut self, endpoint: CspReportingEndpoint) -> Self {
+        self.reporting_endpoints.push(endpoint);
+        self
+    }
+
+    pub fn sandbox_with<I>(mut self, tokens: I) -> Self
+    where
+        I: IntoIterator<Item = SandboxToken>,
+    {
+        let mut rendered = Vec::new();
+        let mut seen = HashSet::new();
+
+        for token in tokens.into_iter() {
+            let value = token.as_str();
+            if seen.insert(value) {
+                rendered.push(value);
+            }
+        }
+
+        let value = rendered.join(" ");
+        self.set_directive(CspDirective::Sandbox.as_str(), &value);
+        self
+    }
+
+    pub fn report_to(mut self, group: impl Into<String>) -> Self {
+        let value = group.into().trim().to_string();
+        self.set_directive(CspDirective::ReportTo.as_str(), &value);
+        self
+    }
+
+    pub fn report_uri(mut self, uri: impl Into<String>) -> Self {
+        let value = uri.into().trim().to_string();
+        self.set_directive("report-uri", &value);
+        self
+    }
+
+    pub fn add_source<S>(mut self, directive: CspDirective, source: S) -> Self
+    where
+        S: Into<CspSource>,
+    {
+        let token_string = source.into().to_string();
+        let trimmed = token_string.trim();
+
+        if trimmed.is_empty() {
+            return self;
+        }
+
+        self.add_directive_token(directive.as_str(), trimmed);
+        self
+    }
+
+    pub fn merge(mut self, other: &CspOptions) -> Self {
+        for (name, value) in &other.directives {
+            if name == CspDirective::ReportTo.as_str() {
+                if self.directives.iter().all(|(existing, _)| existing != name) {
+                    self.set_directive(name, value);
+                }
+                continue;
+            }
+
+            let trimmed = value.trim();
+            if trimmed.is_empty() {
+                if self.directives.iter().all(|(existing, _)| existing != name) {
+                    self.set_directive(name, value);
+                }
+                continue;
+            }
+
+            for token in trimmed.split_whitespace() {
+                self.add_directive_token(name, token);
+            }
+        }
+
+        if other.report_only {
+            self.report_only = true;
+        }
+
+        if let Some(other_group) = &other.report_group {
+            match self.report_group.as_mut() {
+                Some(current) if current.name == other_group.name => {
+                    if other_group.max_age < current.max_age {
+                        current.max_age = other_group.max_age;
+                    }
+
+                    if other_group.include_subdomains {
+                        current.include_subdomains = true;
+                    }
+
+                    let mut existing_urls: HashSet<String> = current
+                        .endpoints
+                        .iter()
+                        .map(|endpoint| endpoint.url.clone())
+                        .collect();
+
+                    for endpoint in &other_group.endpoints {
+                        if existing_urls.insert(endpoint.url.clone()) {
+                            current.endpoints.push(endpoint.clone());
+                        }
+                    }
+                }
+                None => {
+                    self.report_group = Some(other_group.clone());
+                }
+                _ => {}
+            }
+        }
+
+        if !other.reporting_endpoints.is_empty() {
+            let mut existing: HashSet<String> = self
+                .reporting_endpoints
+                .iter()
+                .map(|endpoint| endpoint.name.to_ascii_lowercase())
+                .collect();
+
+            for endpoint in &other.reporting_endpoints {
+                let lowered = endpoint.name.to_ascii_lowercase();
+                if existing.insert(lowered) {
+                    self.reporting_endpoints.push(endpoint.clone());
+                }
+            }
+        }
+
+        self
+    }
+
+    fn set_directive_sources<I, S>(&mut self, directive: CspDirective, sources: I)
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<CspSource>,
+    {
+        let value = format_sources(sources);
+        self.set_directive(directive.as_str(), &value);
+    }
+
+    fn set_flag_directive(&mut self, directive: CspDirective) {
+        self.set_directive(directive.as_str(), "");
+    }
+
+    pub fn report_only(mut self) -> Self {
+        self.report_only = true;
+        self
+    }
+
+    #[cfg(test)]
+    pub(crate) fn directive<'a>(
         mut self,
         name: impl Into<Cow<'a, str>>,
         value: impl Into<Cow<'a, str>>,
@@ -65,12 +978,9 @@ impl CspOptions {
         self
     }
 
-    pub fn report_only(mut self) -> Self {
-        self.report_only = true;
-        self
-    }
-
     pub fn report_group(mut self, group: CspReportGroup) -> Self {
+        let group_name = group.name().to_string();
+        self.set_directive(CspDirective::ReportTo.as_str(), &group_name);
         self.report_group = Some(group);
         self
     }
@@ -82,6 +992,10 @@ impl CspOptions {
         let token = format!("'nonce-{}'", sanitize_token_input(nonce.into()));
         self.add_script_src_token(&token);
         self
+    }
+
+    pub fn script_src_with_nonce(self, nonce: CspNonce) -> Self {
+        self.script_src_nonce(nonce.into_inner())
     }
 
     pub fn script_src_hash<S>(mut self, algorithm: CspHashAlgorithm, hash: S) -> Self
@@ -103,7 +1017,131 @@ impl CspOptions {
     }
 
     pub fn require_trusted_types_for_scripts(mut self) -> Self {
-        self.set_directive("require-trusted-types-for", "'script'");
+        self.set_directive(CspDirective::RequireTrustedTypesFor.as_str(), "'script'");
+        self
+    }
+
+    pub fn generate_nonce() -> String {
+        Self::generate_nonce_with_size(32)
+    }
+
+    pub fn generate_nonce_with_size(byte_len: usize) -> String {
+        if byte_len == 0 {
+            return String::new();
+        }
+
+        let mut buffer = vec![0u8; byte_len];
+        OsRng.fill_bytes(&mut buffer);
+        general_purpose::STANDARD.encode(buffer)
+    }
+
+    pub fn script_src_elem_nonce<S>(mut self, nonce: S) -> Self
+    where
+        S: Into<String>,
+    {
+        let token = format!("'nonce-{}'", sanitize_token_input(nonce.into()));
+        self.add_directive_token(CspDirective::ScriptSrcElem.as_str(), &token);
+        self
+    }
+
+    pub fn script_src_elem_hash<S>(mut self, algorithm: CspHashAlgorithm, hash: S) -> Self
+    where
+        S: Into<String>,
+    {
+        let token = format!(
+            "'{}{}'",
+            algorithm.prefix(),
+            sanitize_token_input(hash.into())
+        );
+        self.add_directive_token(CspDirective::ScriptSrcElem.as_str(), &token);
+        self
+    }
+
+    pub fn script_src_attr_nonce<S>(mut self, nonce: S) -> Self
+    where
+        S: Into<String>,
+    {
+        let token = format!("'nonce-{}'", sanitize_token_input(nonce.into()));
+        self.add_directive_token(CspDirective::ScriptSrcAttr.as_str(), &token);
+        self
+    }
+
+    pub fn script_src_attr_hash<S>(mut self, algorithm: CspHashAlgorithm, hash: S) -> Self
+    where
+        S: Into<String>,
+    {
+        let token = format!(
+            "'{}{}'",
+            algorithm.prefix(),
+            sanitize_token_input(hash.into())
+        );
+        self.add_directive_token(CspDirective::ScriptSrcAttr.as_str(), &token);
+        self
+    }
+
+    pub fn style_src_nonce<S>(mut self, nonce: S) -> Self
+    where
+        S: Into<String>,
+    {
+        let token = format!("'nonce-{}'", sanitize_token_input(nonce.into()));
+        self.add_directive_token(CspDirective::StyleSrc.as_str(), &token);
+        self
+    }
+
+    pub fn style_src_hash<S>(mut self, algorithm: CspHashAlgorithm, hash: S) -> Self
+    where
+        S: Into<String>,
+    {
+        let token = format!(
+            "'{}{}'",
+            algorithm.prefix(),
+            sanitize_token_input(hash.into())
+        );
+        self.add_directive_token(CspDirective::StyleSrc.as_str(), &token);
+        self
+    }
+
+    pub fn style_src_elem_nonce<S>(mut self, nonce: S) -> Self
+    where
+        S: Into<String>,
+    {
+        let token = format!("'nonce-{}'", sanitize_token_input(nonce.into()));
+        self.add_directive_token(CspDirective::StyleSrcElem.as_str(), &token);
+        self
+    }
+
+    pub fn style_src_elem_hash<S>(mut self, algorithm: CspHashAlgorithm, hash: S) -> Self
+    where
+        S: Into<String>,
+    {
+        let token = format!(
+            "'{}{}'",
+            algorithm.prefix(),
+            sanitize_token_input(hash.into())
+        );
+        self.add_directive_token(CspDirective::StyleSrcElem.as_str(), &token);
+        self
+    }
+
+    pub fn style_src_attr_nonce<S>(mut self, nonce: S) -> Self
+    where
+        S: Into<String>,
+    {
+        let token = format!("'nonce-{}'", sanitize_token_input(nonce.into()));
+        self.add_directive_token(CspDirective::StyleSrcAttr.as_str(), &token);
+        self
+    }
+
+    pub fn style_src_attr_hash<S>(mut self, algorithm: CspHashAlgorithm, hash: S) -> Self
+    where
+        S: Into<String>,
+    {
+        let token = format!(
+            "'{}{}'",
+            algorithm.prefix(),
+            sanitize_token_input(hash.into())
+        );
+        self.add_directive_token(CspDirective::StyleSrcAttr.as_str(), &token);
         self
     }
 
@@ -121,13 +1159,19 @@ impl CspOptions {
     pub fn header_value(&self) -> String {
         self.directives
             .iter()
-            .map(|(name, value)| format!("{} {}", name, value))
+            .map(|(name, value)| {
+                if value.is_empty() {
+                    name.clone()
+                } else {
+                    format!("{} {}", name, value)
+                }
+            })
             .collect::<Vec<_>>()
             .join("; ")
     }
 
     fn add_script_src_token(&mut self, token: &str) {
-        self.add_directive_token("script-src", token);
+        self.add_directive_token(CspDirective::ScriptSrc.as_str(), token);
     }
 
     fn add_directive_token(&mut self, directive: &str, token: &str) {
@@ -166,34 +1210,30 @@ impl FeatureOptions for CspOptions {
     type Error = CspOptionsError;
 
     fn validate(&self) -> Result<(), Self::Error> {
-        if self.directives.is_empty() {
-            return Err(CspOptionsError::MissingDirectives);
-        }
-
-        for (name, value) in &self.directives {
-            if !Self::is_valid_directive_name(name) {
-                return Err(CspOptionsError::InvalidDirectiveName);
-            }
-
-            Self::validate_directive_value(value)?;
-        }
-
-        if self.report_only && self.report_group.is_none() {
-            return Err(CspOptionsError::ReportOnlyMissingGroup);
-        }
-
-        if let Some(group) = &self.report_group {
-            if Self::has_invalid_header_text(&group.name) || group.name.trim().is_empty() {
-                return Err(CspOptionsError::InvalidReportGroup);
-            }
-
-            if Self::has_invalid_header_text(&group.endpoint) || group.endpoint.trim().is_empty() {
-                return Err(CspOptionsError::InvalidReportGroup);
-            }
-        }
-
-        Ok(())
+        self.validate_with_warnings().map(|_| ())
     }
+}
+
+fn format_sources<I, S>(sources: I) -> String
+where
+    I: IntoIterator<Item = S>,
+    S: Into<CspSource>,
+{
+    let mut parts: Vec<String> = Vec::new();
+    let mut seen = HashSet::new();
+
+    for source in sources.into_iter() {
+        let rendered = source.into().to_string();
+        if rendered.is_empty() {
+            continue;
+        }
+
+        if seen.insert(rendered.clone()) {
+            parts.push(rendered);
+        }
+    }
+
+    parts.join(" ")
 }
 
 fn sanitize_token_input(input: String) -> String {
@@ -204,13 +1244,100 @@ fn contains_token(value: &str, token: &str) -> bool {
     value.split_whitespace().any(|existing| existing == token)
 }
 
+type TokenValidationCache = HashMap<String, Result<(), CspOptionsError>>;
+
 impl CspOptions {
+    pub fn validate_with_warnings(&self) -> Result<Vec<CspOptionsWarning>, CspOptionsError> {
+        if self.directives.is_empty() {
+            return Err(CspOptionsError::MissingDirectives);
+        }
+
+        if let Some(group) = &self.report_group {
+            Self::validate_report_group(group)?;
+        }
+
+        Self::validate_reporting_endpoints(&self.reporting_endpoints)?;
+
+        let mut token_cache = TokenValidationCache::new();
+
+        for (name, value) in &self.directives {
+            if !Self::is_valid_directive_name(name) {
+                return Err(CspOptionsError::InvalidDirectiveName);
+            }
+
+            Self::validate_directive_value(name, value, &mut token_cache)?;
+        }
+
+        if self.report_only && self.report_group.is_none() {
+            return Err(CspOptionsError::ReportOnlyMissingGroup);
+        }
+
+        if self
+            .directive_value(CspDirective::PluginTypes.as_str())
+            .is_some()
+            && self
+                .directive_value(CspDirective::ObjectSrc.as_str())
+                .is_none()
+        {
+            return Err(CspOptionsError::PluginTypesRequireObjectSrc);
+        }
+
+        if let Some(group) = &self.report_group {
+            Self::validate_report_to_binding(self, group)?;
+        }
+
+        Self::validate_report_to_endpoints_binding(self)?;
+
+        let script_src = self.directive_value(CspDirective::ScriptSrc.as_str());
+        let script_src_elem = self.directive_value(CspDirective::ScriptSrcElem.as_str());
+        Self::validate_strict_dynamic_rules(script_src, script_src_elem)?;
+        Self::validate_strict_dynamic_host_sources(script_src, script_src_elem)?;
+
+        let mut warnings = Vec::new();
+        Self::validate_worker_fallback(self, &mut warnings)?;
+        self.emit_report_only_frame_ancestors_warning(&mut warnings);
+
+        self.emit_deprecated_directive_warnings(&mut warnings);
+        self.emit_reporting_conflict_warnings(&mut warnings);
+        self.emit_reporting_endpoint_usage_warnings(&mut warnings);
+        self.emit_report_group_warnings(&mut warnings);
+        self.emit_report_uri_warnings(&mut warnings);
+        self.emit_mixed_content_dependency_warnings(&mut warnings);
+        self.emit_risky_scheme_warnings(&mut warnings);
+
+        Ok(warnings)
+    }
+
+    fn directive_value(&self, name: &str) -> Option<&str> {
+        self.directives
+            .iter()
+            .find(|(directive, _)| directive == name)
+            .map(|(_, value)| value.as_str())
+            .filter(|value| !value.trim().is_empty())
+    }
+
+    fn has_directive(&self, name: &str) -> bool {
+        self.directives
+            .iter()
+            .any(|(directive, _)| directive == name)
+    }
+
     fn has_invalid_header_text(value: &str) -> bool {
         value.contains(['\r', '\n'])
     }
 
-    fn validate_directive_value(value: &str) -> Result<(), CspOptionsError> {
-        if value.trim().is_empty() {
+    fn validate_directive_value(
+        name: &str,
+        value: &str,
+        cache: &mut TokenValidationCache,
+    ) -> Result<(), CspOptionsError> {
+        let trimmed = value.trim();
+
+        if trimmed.is_empty() {
+            if Self::allows_empty_value(name) {
+                return Ok(());
+            }
+
             return Err(CspOptionsError::InvalidDirectiveValue);
         }
 
@@ -218,31 +1345,92 @@ impl CspOptions {
             return Err(CspOptionsError::InvalidDirectiveToken);
         }
 
-        for token in value.split_whitespace() {
-            Self::validate_token(token)?;
+        if name == CspDirective::ReportTo.as_str() && trimmed.split_whitespace().count() != 1 {
+            return Err(CspOptionsError::MultipleReportToValues);
         }
+
+        if name == CspDirective::ReportTo.as_str()
+            && !trimmed
+                .chars()
+                .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '_' | '-' | '.'))
+        {
+            return Err(CspOptionsError::InvalidReportToToken(trimmed.to_string()));
+        }
+
+        if name == CspDirective::Sandbox.as_str() {
+            return Self::validate_sandbox_tokens(trimmed);
+        }
+
+        if name == CspDirective::PluginTypes.as_str() {
+            return Self::validate_plugin_types(trimmed);
+        }
+
+        if name == "report-uri" {
+            Self::validate_report_uri(trimmed)?;
+        }
+
+        let tokens: Vec<&str> = trimmed.split_whitespace().collect();
+
+        if Self::directive_expects_sources(name) && Self::contains_conflicting_none(&tokens) {
+            return Err(CspOptionsError::ConflictingNoneToken);
+        }
+
+        for &token in &tokens {
+            Self::validate_token(name, token)?;
+
+            if Self::directive_expects_sources(name) && !token.starts_with('\'') {
+                Self::validate_source_expression_cached(token, cache)?;
+                Self::enforce_scheme_restrictions(name, token)?;
+            }
+        }
+
+        Self::validate_unsafe_hashes_semantics(name, &tokens)?;
 
         Ok(())
     }
 
-    fn validate_token(token: &str) -> Result<(), CspOptionsError> {
+    fn validate_token(directive: &str, token: &str) -> Result<(), CspOptionsError> {
         if token.is_empty() {
             return Err(CspOptionsError::InvalidDirectiveValue);
         }
 
         if let Some(rest) = token.strip_prefix("'nonce-") {
+            if !Self::directive_supports_nonces(directive) {
+                return Err(CspOptionsError::TokenNotAllowedForDirective(
+                    token.to_string(),
+                    directive.to_string(),
+                ));
+            }
             return Self::validate_nonce(rest);
         }
 
         if let Some(rest) = token.strip_prefix("'sha256-") {
+            if !Self::directive_supports_hashes(directive) {
+                return Err(CspOptionsError::TokenNotAllowedForDirective(
+                    token.to_string(),
+                    directive.to_string(),
+                ));
+            }
             return Self::validate_hash(rest, 44);
         }
 
         if let Some(rest) = token.strip_prefix("'sha384-") {
+            if !Self::directive_supports_hashes(directive) {
+                return Err(CspOptionsError::TokenNotAllowedForDirective(
+                    token.to_string(),
+                    directive.to_string(),
+                ));
+            }
             return Self::validate_hash(rest, 64);
         }
 
         if let Some(rest) = token.strip_prefix("'sha512-") {
+            if !Self::directive_supports_hashes(directive) {
+                return Err(CspOptionsError::TokenNotAllowedForDirective(
+                    token.to_string(),
+                    directive.to_string(),
+                ));
+            }
             return Self::validate_hash(rest, 88);
         }
 
@@ -256,6 +1444,57 @@ impl CspOptions {
 
         if token.chars().any(|ch| ch.is_control()) {
             return Err(CspOptionsError::InvalidDirectiveToken);
+        }
+
+        match token {
+            "'unsafe-inline'" => {
+                if !Self::directive_supports_unsafe_inline(directive) {
+                    return Err(CspOptionsError::TokenNotAllowedForDirective(
+                        token.to_string(),
+                        directive.to_string(),
+                    ));
+                }
+            }
+            "'unsafe-eval'" => {
+                if !Self::directive_supports_unsafe_eval(directive) {
+                    return Err(CspOptionsError::TokenNotAllowedForDirective(
+                        token.to_string(),
+                        directive.to_string(),
+                    ));
+                }
+            }
+            "'unsafe-hashes'" => {
+                if !Self::directive_supports_unsafe_hashes(directive) {
+                    return Err(CspOptionsError::TokenNotAllowedForDirective(
+                        token.to_string(),
+                        directive.to_string(),
+                    ));
+                }
+            }
+            "'wasm-unsafe-eval'" => {
+                if !Self::directive_supports_wasm_unsafe_eval(directive) {
+                    return Err(CspOptionsError::TokenNotAllowedForDirective(
+                        token.to_string(),
+                        directive.to_string(),
+                    ));
+                }
+            }
+            "'report-sample'" => {
+                if !Self::directive_supports_report_sample(directive) {
+                    return Err(CspOptionsError::TokenNotAllowedForDirective(
+                        token.to_string(),
+                        directive.to_string(),
+                    ));
+                }
+            }
+            _ => {}
+        }
+
+        if token == "'strict-dynamic'" && !Self::directive_supports_strict_dynamic(directive) {
+            return Err(CspOptionsError::TokenNotAllowedForDirective(
+                token.to_string(),
+                directive.to_string(),
+            ));
         }
 
         Ok(())
@@ -298,6 +1537,759 @@ impl CspOptions {
 
         Ok(())
     }
+
+    fn directive_supports_nonces(name: &str) -> bool {
+        matches!(
+            name,
+            "script-src"
+                | "script-src-elem"
+                | "script-src-attr"
+                | "style-src"
+                | "style-src-elem"
+                | "style-src-attr"
+        )
+    }
+
+    fn directive_supports_hashes(name: &str) -> bool {
+        Self::directive_supports_nonces(name)
+    }
+
+    fn directive_supports_strict_dynamic(name: &str) -> bool {
+        matches!(name, "script-src" | "script-src-elem")
+    }
+
+    fn directive_supports_unsafe_inline(name: &str) -> bool {
+        Self::directive_is_script_family(name) || Self::directive_is_style_family(name)
+    }
+
+    fn directive_supports_unsafe_eval(name: &str) -> bool {
+        matches!(name, "script-src" | "script-src-elem")
+    }
+
+    fn directive_supports_unsafe_hashes(name: &str) -> bool {
+        matches!(name, "script-src" | "style-src")
+    }
+
+    fn directive_supports_wasm_unsafe_eval(name: &str) -> bool {
+        matches!(name, "script-src" | "script-src-elem")
+    }
+
+    fn directive_supports_report_sample(name: &str) -> bool {
+        Self::directive_is_script_family(name) || Self::directive_is_style_family(name)
+    }
+
+    fn directive_is_script_family(name: &str) -> bool {
+        matches!(name, "script-src" | "script-src-elem" | "script-src-attr")
+    }
+
+    fn directive_is_style_family(name: &str) -> bool {
+        matches!(name, "style-src" | "style-src-elem" | "style-src-attr")
+    }
+
+    fn directive_expects_sources(name: &str) -> bool {
+        matches!(
+            name,
+            "default-src"
+                | "script-src"
+                | "script-src-elem"
+                | "script-src-attr"
+                | "style-src"
+                | "style-src-elem"
+                | "style-src-attr"
+                | "img-src"
+                | "connect-src"
+                | "font-src"
+                | "frame-src"
+                | "child-src"
+                | "worker-src"
+                | "media-src"
+                | "manifest-src"
+                | "object-src"
+                | "prefetch-src"
+                | "navigate-to"
+                | "base-uri"
+                | "form-action"
+                | "frame-ancestors"
+        )
+    }
+
+    fn allows_empty_value(name: &str) -> bool {
+        matches!(
+            name,
+            "upgrade-insecure-requests" | "block-all-mixed-content" | "sandbox"
+        )
+    }
+
+    fn contains_conflicting_none(tokens: &[&str]) -> bool {
+        tokens.contains(&"'none'") && tokens.len() > 1
+    }
+
+    fn validate_sandbox_tokens(value: &str) -> Result<(), CspOptionsError> {
+        for token in value.split_whitespace() {
+            if SandboxToken::from_str(token).is_none() {
+                return Err(CspOptionsError::InvalidSandboxToken(token.to_string()));
+            }
+        }
+
+        Ok(())
+    }
+
+    fn validate_strict_dynamic_rules(
+        script_src: Option<&str>,
+        script_src_elem: Option<&str>,
+    ) -> Result<(), CspOptionsError> {
+        let mut has_strict_dynamic = false;
+        let mut has_nonce_or_hash = false;
+        let mut has_conflicts = false;
+
+        for directive in [script_src, script_src_elem].into_iter().flatten() {
+            for token in directive.split_whitespace() {
+                match token {
+                    "'strict-dynamic'" => has_strict_dynamic = true,
+                    "'unsafe-inline'" | "'unsafe-eval'" | "'unsafe-hashes'" => has_conflicts = true,
+                    _ => {
+                        if token.starts_with("'nonce-")
+                            || token.starts_with("'sha256-")
+                            || token.starts_with("'sha384-")
+                            || token.starts_with("'sha512-")
+                        {
+                            has_nonce_or_hash = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        if has_strict_dynamic {
+            if !has_nonce_or_hash {
+                return Err(CspOptionsError::StrictDynamicRequiresNonceOrHash);
+            }
+
+            if has_conflicts {
+                return Err(CspOptionsError::StrictDynamicConflicts);
+            }
+        }
+
+        Ok(())
+    }
+
+    fn strict_dynamic_has_host_sources(
+        script_src: Option<&str>,
+        script_src_elem: Option<&str>,
+    ) -> bool {
+        let mut has_strict_dynamic = false;
+        let mut has_host_like_tokens = false;
+
+        for directive in [script_src, script_src_elem].into_iter().flatten() {
+            for token in directive.split_whitespace() {
+                match token {
+                    "'strict-dynamic'" => has_strict_dynamic = true,
+                    _ if token.starts_with("'nonce-") || token.starts_with("'sha256-") => {}
+                    _ if token.starts_with("'sha384-") || token.starts_with("'sha512-") => {}
+                    "'unsafe-inline'" | "'unsafe-eval'" | "'unsafe-hashes'"
+                    | "'wasm-unsafe-eval'" => {}
+                    "'report-sample'" => {}
+                    "'self'" => has_host_like_tokens = true,
+                    _ if token.starts_with('\'') => {}
+                    _ => has_host_like_tokens = true,
+                }
+            }
+        }
+
+        has_strict_dynamic && has_host_like_tokens
+    }
+
+    fn validate_strict_dynamic_host_sources(
+        script_src: Option<&str>,
+        script_src_elem: Option<&str>,
+    ) -> Result<(), CspOptionsError> {
+        if Self::strict_dynamic_has_host_sources(script_src, script_src_elem) {
+            Err(CspOptionsError::StrictDynamicHostSourceConflict)
+        } else {
+            Ok(())
+        }
+    }
+
+    fn validate_plugin_types(value: &str) -> Result<(), CspOptionsError> {
+        for token in value.split_whitespace() {
+            Self::validate_mime_type(token)?;
+        }
+
+        Ok(())
+    }
+
+    fn validate_report_uri(value: &str) -> Result<(), CspOptionsError> {
+        for token in value.split_whitespace() {
+            let parsed = Url::parse(token)
+                .map_err(|_| CspOptionsError::InvalidReportUri(token.to_string()))?;
+
+            if parsed.scheme() != "https" || parsed.host_str().is_none() {
+                return Err(CspOptionsError::InvalidReportUri(token.to_string()));
+            }
+        }
+
+        Ok(())
+    }
+
+    fn enforce_scheme_restrictions(directive: &str, token: &str) -> Result<(), CspOptionsError> {
+        if let Some(scheme) = token.strip_suffix(':') {
+            if scheme.contains('/') {
+                return Ok(());
+            }
+
+            let lowered = scheme.to_ascii_lowercase();
+            const DISALLOWED_SCHEMES: [&str; 2] = ["javascript", "vbscript"];
+
+            if DISALLOWED_SCHEMES.contains(&lowered.as_str()) {
+                return Err(CspOptionsError::DisallowedScheme(
+                    directive.to_string(),
+                    lowered,
+                ));
+            }
+        }
+
+        Ok(())
+    }
+
+    fn validate_unsafe_hashes_semantics(
+        directive: &str,
+        tokens: &[&str],
+    ) -> Result<(), CspOptionsError> {
+        if !tokens.contains(&"'unsafe-hashes'") {
+            return Ok(());
+        }
+
+        let has_hash_token = tokens.iter().any(|token| {
+            token.starts_with("'sha256-")
+                || token.starts_with("'sha384-")
+                || token.starts_with("'sha512-")
+        });
+
+        if has_hash_token {
+            Ok(())
+        } else {
+            Err(CspOptionsError::UnsafeHashesRequireHashes(
+                directive.to_string(),
+            ))
+        }
+    }
+
+    fn validate_mime_type(token: &str) -> Result<(), CspOptionsError> {
+        let mut parts = token.split('/');
+        let type_part = parts
+            .next()
+            .ok_or_else(|| CspOptionsError::InvalidPluginType(token.to_string()))?;
+        let subtype_part = parts
+            .next()
+            .ok_or_else(|| CspOptionsError::InvalidPluginType(token.to_string()))?;
+
+        if parts.next().is_some() {
+            return Err(CspOptionsError::InvalidPluginType(token.to_string()));
+        }
+
+        if !Self::is_valid_mime_component(type_part) || !Self::is_valid_mime_component(subtype_part)
+        {
+            return Err(CspOptionsError::InvalidPluginType(token.to_string()));
+        }
+
+        Ok(())
+    }
+
+    fn is_valid_mime_component(component: &str) -> bool {
+        if component.is_empty() {
+            return false;
+        }
+
+        let mut chars = component.chars();
+
+        match chars.next() {
+            Some(first) if first.is_ascii_alphanumeric() => {}
+            _ => return false,
+        }
+
+        chars.all(|ch| {
+            ch.is_ascii_alphanumeric()
+                || matches!(
+                    ch,
+                    '!' | '#' | '$' | '&' | '^' | '_' | '.' | '+' | '-' | '~'
+                )
+        })
+    }
+
+    fn validate_source_expression_cached(
+        token: &str,
+        cache: &mut TokenValidationCache,
+    ) -> Result<(), CspOptionsError> {
+        if let Some(result) = cache.get(token) {
+            return result.clone();
+        }
+
+        let result = Self::validate_source_expression(token);
+        cache.insert(token.to_string(), result.clone());
+        result
+    }
+
+    fn validate_source_expression(token: &str) -> Result<(), CspOptionsError> {
+        if token == "*" {
+            return Ok(());
+        }
+
+        if token
+            .chars()
+            .any(|ch| ch.is_control() || ch.is_whitespace())
+        {
+            return Err(CspOptionsError::InvalidSourceExpression(token.to_string()));
+        }
+
+        if token.ends_with(':') && !token.contains('/') {
+            return Self::validate_scheme_source(token);
+        }
+
+        if token.starts_with('/') {
+            return Self::validate_path_source(token);
+        }
+
+        if token.starts_with("*.") {
+            return Self::validate_wildcard_host(token);
+        }
+
+        Self::validate_host_source(token)
+    }
+
+    fn validate_scheme_source(token: &str) -> Result<(), CspOptionsError> {
+        let scheme = token.trim_end_matches(':');
+
+        let mut chars = scheme.chars();
+
+        match chars.next() {
+            Some(first) if first.is_ascii_alphabetic() => {}
+            _ => return Err(CspOptionsError::InvalidSourceExpression(token.to_string())),
+        }
+
+        if chars.all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '+' | '-' | '.')) {
+            Ok(())
+        } else {
+            Err(CspOptionsError::InvalidSourceExpression(token.to_string()))
+        }
+    }
+
+    fn validate_host_source(token: &str) -> Result<(), CspOptionsError> {
+        Self::validate_host_like_source(token, token)
+    }
+
+    fn validate_host_like_source(value: &str, original: &str) -> Result<(), CspOptionsError> {
+        let base_candidate = if value.contains("//") {
+            value.to_string()
+        } else {
+            format!("https://{}", value)
+        };
+
+        let candidate = Self::normalize_port_wildcard(base_candidate, original)?;
+
+        let parsed = Url::parse(&candidate)
+            .map_err(|_| CspOptionsError::InvalidSourceExpression(original.to_string()))?;
+
+        if !parsed.username().is_empty() || parsed.password().is_some() {
+            return Err(CspOptionsError::InvalidSourceExpression(
+                original.to_string(),
+            ));
+        }
+
+        if parsed.query().is_some() || parsed.fragment().is_some() {
+            return Err(CspOptionsError::InvalidSourceExpression(
+                original.to_string(),
+            ));
+        }
+
+        if let Some(host) = parsed.host_str() {
+            if host.is_empty() {
+                return Err(CspOptionsError::InvalidSourceExpression(
+                    original.to_string(),
+                ));
+            }
+        } else {
+            return Err(CspOptionsError::InvalidSourceExpression(
+                original.to_string(),
+            ));
+        }
+
+        let path = parsed.path();
+        if !path.is_empty()
+            && path != "/"
+            && (!path.starts_with('/') || path.chars().any(|ch| ch.is_control()))
+        {
+            return Err(CspOptionsError::InvalidSourceExpression(
+                original.to_string(),
+            ));
+        }
+
+        Ok(())
+    }
+
+    fn normalize_port_wildcard(
+        candidate: String,
+        original: &str,
+    ) -> Result<String, CspOptionsError> {
+        if let Some(index) = candidate.find(":*") {
+            let after = &candidate[index + 2..];
+            if after.is_empty() || after.starts_with('/') {
+                Err(CspOptionsError::PortWildcardUnsupported(
+                    original.to_string(),
+                ))
+            } else {
+                Err(CspOptionsError::InvalidSourceExpression(
+                    original.to_string(),
+                ))
+            }
+        } else {
+            Ok(candidate)
+        }
+    }
+
+    fn validate_wildcard_host(token: &str) -> Result<(), CspOptionsError> {
+        let rest = &token[2..];
+        if rest.is_empty() {
+            return Err(CspOptionsError::InvalidSourceExpression(token.to_string()));
+        }
+
+        if rest.contains('*') {
+            return Err(CspOptionsError::InvalidSourceExpression(token.to_string()));
+        }
+
+        Self::validate_host_like_source(rest, token)
+    }
+
+    fn validate_path_source(token: &str) -> Result<(), CspOptionsError> {
+        if token
+            .chars()
+            .any(|ch| ch.is_control() || ch.is_whitespace())
+        {
+            return Err(CspOptionsError::InvalidSourceExpression(token.to_string()));
+        }
+
+        if token.starts_with('/') {
+            Ok(())
+        } else {
+            Err(CspOptionsError::InvalidSourceExpression(token.to_string()))
+        }
+    }
+
+    fn is_permissive_default_source(value: &str) -> bool {
+        value.split_whitespace().any(|token| token == "*")
+    }
+
+    fn validate_reporting_endpoints(
+        endpoints: &[CspReportingEndpoint],
+    ) -> Result<(), CspOptionsError> {
+        let mut seen = HashSet::new();
+
+        for endpoint in endpoints {
+            let name = endpoint.name();
+            let url = endpoint.url();
+
+            if name.trim().is_empty() || Self::has_invalid_header_text(name) {
+                return Err(CspOptionsError::InvalidReportingEndpointName(
+                    name.to_string(),
+                ));
+            }
+
+            if !name
+                .chars()
+                .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '_' | '-' | '.'))
+            {
+                return Err(CspOptionsError::InvalidReportingEndpointName(
+                    name.to_string(),
+                ));
+            }
+
+            let lowered = name.to_ascii_lowercase();
+            if !seen.insert(lowered) {
+                return Err(CspOptionsError::DuplicateReportingEndpoint(
+                    name.to_string(),
+                ));
+            }
+
+            if url.trim().is_empty() || Self::has_invalid_header_text(url) {
+                return Err(CspOptionsError::InvalidReportingEndpointUrl(
+                    url.to_string(),
+                ));
+            }
+
+            let parsed = Url::parse(url)
+                .map_err(|_| CspOptionsError::InvalidReportingEndpointUrl(url.to_string()))?;
+
+            if parsed.scheme() != "https" || parsed.host_str().is_none() {
+                return Err(CspOptionsError::InvalidReportingEndpointUrl(
+                    url.to_string(),
+                ));
+            }
+        }
+
+        Ok(())
+    }
+
+    fn emit_report_only_frame_ancestors_warning(&self, warnings: &mut Vec<CspOptionsWarning>) {
+        if self.report_only
+            && self
+                .directive_value(CspDirective::FrameAncestors.as_str())
+                .is_some()
+        {
+            warnings.push(CspOptionsWarning::warning(
+                CspOptionsWarningKind::ReportOnlyFrameAncestorsIgnored,
+            ));
+        }
+    }
+
+    fn emit_deprecated_directive_warnings(&self, warnings: &mut Vec<CspOptionsWarning>) {
+        if self
+            .directive_value(CspDirective::PluginTypes.as_str())
+            .is_some()
+        {
+            warnings.push(CspOptionsWarning::warning(
+                CspOptionsWarningKind::PluginTypesDeprecated,
+            ));
+        }
+
+        if self
+            .directive_value(CspDirective::PrefetchSrc.as_str())
+            .is_some()
+        {
+            warnings.push(CspOptionsWarning::warning(
+                CspOptionsWarningKind::PrefetchSrcDeprecated,
+            ));
+        }
+    }
+
+    fn emit_reporting_conflict_warnings(&self, warnings: &mut Vec<CspOptionsWarning>) {
+        if self.directive_value("report-uri").is_some()
+            && (self.report_group.is_some() || !self.reporting_endpoints.is_empty())
+        {
+            warnings.push(CspOptionsWarning::warning(
+                CspOptionsWarningKind::ReportUriWithReportTo,
+            ));
+        }
+    }
+
+    fn validate_worker_fallback(
+        options: &CspOptions,
+        warnings: &mut Vec<CspOptionsWarning>,
+    ) -> Result<(), CspOptionsError> {
+        if options
+            .directive_value(CspDirective::WorkerSrc.as_str())
+            .is_some()
+        {
+            return Ok(());
+        }
+
+        let has_child = options
+            .directive_value(CspDirective::ChildSrc.as_str())
+            .is_some();
+        if has_child {
+            return Ok(());
+        }
+
+        let has_script = options
+            .directive_value(CspDirective::ScriptSrc.as_str())
+            .is_some();
+        if has_script {
+            return Ok(());
+        }
+
+        if let Some(default_value) = options.directive_value(CspDirective::DefaultSrc.as_str()) {
+            if Self::is_permissive_default_source(default_value) {
+                warnings.push(CspOptionsWarning::warning(
+                    CspOptionsWarningKind::WeakWorkerSrcFallback,
+                ));
+            }
+            return Ok(());
+        }
+
+        warnings.push(CspOptionsWarning::critical(
+            CspOptionsWarningKind::MissingWorkerSrcFallback,
+        ));
+        Ok(())
+    }
+
+    fn validate_report_group(group: &CspReportGroup) -> Result<(), CspOptionsError> {
+        if Self::has_invalid_header_text(group.name()) || group.name().trim().is_empty() {
+            return Err(CspOptionsError::InvalidReportGroup);
+        }
+
+        if group.endpoints().is_empty() {
+            return Err(CspOptionsError::InvalidReportGroup);
+        }
+
+        for endpoint in group.endpoints() {
+            if Self::has_invalid_header_text(endpoint.url()) || endpoint.url().trim().is_empty() {
+                return Err(CspOptionsError::InvalidReportGroup);
+            }
+
+            let parsed =
+                Url::parse(endpoint.url()).map_err(|_| CspOptionsError::InvalidReportGroup)?;
+
+            if parsed.scheme() != "https" || parsed.host_str().is_none() {
+                return Err(CspOptionsError::InvalidReportGroup);
+            }
+        }
+
+        Ok(())
+    }
+
+    fn validate_report_to_binding(
+        options: &CspOptions,
+        group: &CspReportGroup,
+    ) -> Result<(), CspOptionsError> {
+        match options
+            .directives
+            .iter()
+            .find(|(name, _)| name == CspDirective::ReportTo.as_str())
+        {
+            Some((_, value)) if value.trim() == group.name() => Ok(()),
+            Some(_) => Err(CspOptionsError::ReportToGroupMismatch),
+            None => Err(CspOptionsError::MissingReportToDirective),
+        }
+    }
+
+    fn validate_report_to_endpoints_binding(options: &CspOptions) -> Result<(), CspOptionsError> {
+        if options.reporting_endpoints.is_empty() {
+            return Ok(());
+        }
+
+        match options.directive_value(CspDirective::ReportTo.as_str()) {
+            Some(value) => {
+                let defined: HashSet<&str> = options
+                    .reporting_endpoints
+                    .iter()
+                    .map(|endpoint| endpoint.name())
+                    .collect();
+                let token = value.trim();
+
+                if token.is_empty() {
+                    return Err(CspOptionsError::MultipleReportToValues);
+                }
+
+                if !defined.contains(token) {
+                    return Err(CspOptionsError::UndefinedReportingEndpoint(
+                        token.to_string(),
+                    ));
+                }
+
+                Ok(())
+            }
+            None => Ok(()),
+        }
+    }
+
+    fn emit_reporting_endpoint_usage_warnings(&self, warnings: &mut Vec<CspOptionsWarning>) {
+        if self.reporting_endpoints.is_empty() {
+            return;
+        }
+
+        if self
+            .directive_value(CspDirective::ReportTo.as_str())
+            .is_none()
+        {
+            warnings.push(CspOptionsWarning::warning(
+                CspOptionsWarningKind::ReportingEndpointsWithoutDirective,
+            ));
+        }
+    }
+
+    fn emit_report_group_warnings(&self, warnings: &mut Vec<CspOptionsWarning>) {
+        const MAX_RECOMMENDED_MAX_AGE: u64 = 31_536_000;
+
+        if let Some(group) = &self.report_group
+            && group.max_age() > MAX_RECOMMENDED_MAX_AGE
+        {
+            warnings.push(CspOptionsWarning::warning(
+                CspOptionsWarningKind::ReportGroupMaxAgeTooHigh {
+                    max_age: group.max_age(),
+                },
+            ));
+        }
+    }
+
+    fn emit_report_uri_warnings(&self, warnings: &mut Vec<CspOptionsWarning>) {
+        if self.directive_value("report-uri").is_some() {
+            warnings.push(CspOptionsWarning::info(
+                CspOptionsWarningKind::ReportUriDeprecated,
+            ));
+        }
+    }
+
+    fn emit_mixed_content_dependency_warnings(&self, warnings: &mut Vec<CspOptionsWarning>) {
+        let has_upgrade = self.has_directive(CspDirective::UpgradeInsecureRequests.as_str());
+        let has_block = self.has_directive(CspDirective::BlockAllMixedContent.as_str());
+
+        if has_upgrade && !has_block {
+            warnings.push(CspOptionsWarning::warning(
+                CspOptionsWarningKind::UpgradeInsecureRequestsWithoutBlockAllMixedContent,
+            ));
+        }
+
+        if has_block && !has_upgrade {
+            warnings.push(CspOptionsWarning::warning(
+                CspOptionsWarningKind::BlockAllMixedContentWithoutUpgradeInsecureRequests,
+            ));
+        }
+    }
+
+    fn emit_risky_scheme_warnings(&self, warnings: &mut Vec<CspOptionsWarning>) {
+        const RISKY_SCHEMES: [(&str, CspWarningSeverity); 3] = [
+            ("data:", CspWarningSeverity::Critical),
+            ("blob:", CspWarningSeverity::Warning),
+            ("filesystem:", CspWarningSeverity::Critical),
+        ];
+
+        struct SchemeAggregation {
+            schemes: HashSet<String>,
+            severity: CspWarningSeverity,
+        }
+
+        let mut aggregated: HashMap<String, SchemeAggregation> = HashMap::new();
+
+        for (directive, value) in &self.directives {
+            if !Self::directive_expects_sources(directive) {
+                continue;
+            }
+
+            for token in value.split_whitespace() {
+                let lowered = token.to_ascii_lowercase();
+
+                for &(scheme, severity) in RISKY_SCHEMES.iter() {
+                    if lowered.starts_with(scheme) {
+                        let entry = aggregated.entry(directive.clone()).or_insert_with(|| {
+                            SchemeAggregation {
+                                schemes: HashSet::new(),
+                                severity: CspWarningSeverity::Info,
+                            }
+                        });
+                        entry.severity = entry.severity.max(severity);
+                        entry
+                            .schemes
+                            .insert(scheme.trim_end_matches(':').to_string());
+                    }
+                }
+            }
+        }
+
+        let mut aggregated_entries: Vec<_> = aggregated.into_iter().collect();
+        aggregated_entries.sort_by(|a, b| a.0.cmp(&b.0));
+
+        for (directive, entry) in aggregated_entries {
+            let mut schemes: Vec<String> = entry.schemes.into_iter().collect();
+            schemes.sort();
+
+            let kind = CspOptionsWarningKind::RiskySchemes { directive, schemes };
+            let warning = match entry.severity {
+                CspWarningSeverity::Critical => CspOptionsWarning::critical(kind),
+                CspWarningSeverity::Warning => CspOptionsWarning::warning(kind),
+                CspWarningSeverity::Info => CspOptionsWarning::info(kind),
+            };
+
+            warnings.push(warning);
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
@@ -318,6 +2310,123 @@ pub enum CspOptionsError {
     ReportOnlyMissingGroup,
     #[error("invalid report group")]
     InvalidReportGroup,
+    #[error("report-to directive must match configured report group name")]
+    ReportToGroupMismatch,
+    #[error("report-to directive is required when a report group is configured")]
+    MissingReportToDirective,
+    #[error("'strict-dynamic' requires at least one nonce or hash source")]
+    StrictDynamicRequiresNonceOrHash,
+    #[error("'strict-dynamic' cannot be combined with unsafe-inline/unsafe-eval/unsafe-hashes")]
+    StrictDynamicConflicts,
+    #[error("'none' token cannot be combined with other sources")]
+    ConflictingNoneToken,
+    #[error("sandbox directive contains invalid token `{0}`")]
+    InvalidSandboxToken(String),
+    #[error("invalid source expression `{0}`")]
+    InvalidSourceExpression(String),
+    #[error("invalid plugin type `{0}`")]
+    InvalidPluginType(String),
+    #[error("invalid reporting endpoint name `{0}`")]
+    InvalidReportingEndpointName(String),
+    #[error("invalid reporting endpoint url `{0}`")]
+    InvalidReportingEndpointUrl(String),
+    #[error("invalid report-uri `{0}`")]
+    InvalidReportUri(String),
+    #[error("duplicate reporting endpoint name `{0}`")]
+    DuplicateReportingEndpoint(String),
+    #[error("token `{0}` is not allowed in directive `{1}`")]
+    TokenNotAllowedForDirective(String, String),
+    #[error("report-to directive references undefined reporting endpoint `{0}`")]
+    UndefinedReportingEndpoint(String),
+    #[error("'unsafe-hashes' in `{0}` requires at least one hash source expression")]
+    UnsafeHashesRequireHashes(String),
+    #[error("report-to directive must contain exactly one group name")]
+    MultipleReportToValues,
+    #[error("report-to value `{0}` contains invalid characters")]
+    InvalidReportToToken(String),
+    #[error("scheme `{1}` is not permitted in directive `{0}`")]
+    DisallowedScheme(String, String),
+    #[error("source expression `{0}` cannot use a wildcard port")]
+    PortWildcardUnsupported(String),
+    #[error("plugin-types directive requires object-src to be defined")]
+    PluginTypesRequireObjectSrc,
+    #[error("'strict-dynamic' cannot be combined with host or scheme sources")]
+    StrictDynamicHostSourceConflict,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CspWarningSeverity {
+    Info,
+    Warning,
+    Critical,
+}
+
+impl CspWarningSeverity {
+    fn max(self, other: Self) -> Self {
+        use CspWarningSeverity::*;
+
+        match (self, other) {
+            (Critical, _) | (_, Critical) => Critical,
+            (Warning, _) | (_, Warning) => Warning,
+            _ => Info,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CspOptionsWarningKind {
+    MissingWorkerSrcFallback,
+    WeakWorkerSrcFallback,
+    ReportOnlyFrameAncestorsIgnored,
+    PluginTypesDeprecated,
+    PrefetchSrcDeprecated,
+    ReportUriWithReportTo,
+    ReportingEndpointsWithoutDirective,
+    ReportUriDeprecated,
+    ReportGroupMaxAgeTooHigh {
+        max_age: u64,
+    },
+    UpgradeInsecureRequestsWithoutBlockAllMixedContent,
+    BlockAllMixedContentWithoutUpgradeInsecureRequests,
+    RiskySchemes {
+        directive: String,
+        schemes: Vec<String>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CspOptionsWarning {
+    pub severity: CspWarningSeverity,
+    pub kind: CspOptionsWarningKind,
+}
+
+impl CspOptionsWarning {
+    pub(crate) fn info(kind: CspOptionsWarningKind) -> Self {
+        Self {
+            severity: CspWarningSeverity::Info,
+            kind,
+        }
+    }
+
+    pub(crate) fn warning(kind: CspOptionsWarningKind) -> Self {
+        Self {
+            severity: CspWarningSeverity::Warning,
+            kind,
+        }
+    }
+
+    pub(crate) fn critical(kind: CspOptionsWarningKind) -> Self {
+        Self {
+            severity: CspWarningSeverity::Critical,
+            kind,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Error)]
+pub enum CspNonceManagerError {
+    #[error("nonce length must be greater than zero")]
+    InvalidLength,
 }
 
 #[cfg(test)]
