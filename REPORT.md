@@ -1,17 +1,5 @@
 # 보안 헤더 라이브러리 표준 준수 분석 보고서
 
-## 2. Strict-Transport-Security (HSTS)
-
-#### ⚠️ 경미한 누락 사항
-- 권장 최소 max-age(6개월) 미만 설정 시 경고 없음
-- max-age=0 비활성화를 위한 명시적 메서드 없음 (`disable()`)
-
-### 개선 권장사항
-- `validate()`에서 권장치 미만 경고 로그 추가
-- `HstsOptions::disable()` 유틸 메서드 추가
-
----
-
 ## 7. X-Frame-Options
 
 #### ❌ 누락된 기능 (및 이슈)

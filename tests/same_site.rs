@@ -11,26 +11,12 @@ fn given_cookie_without_attributes_when_secure_then_sets_defaults() {
         "session=abc".to_string(),
     );
 
-    let validation_reports = shield.take_report_entries();
-    assert!(validation_reports.iter().any(|entry| {
-        entry.feature == "same-site"
-            && entry.kind == bunner_shield_rs::ReportKind::Validation
-            && entry.message.contains("Configured SameSite cookie policy")
-    }));
-
     let result = shield.secure(headers).expect("secure");
 
     assert_eq!(
         result.get(header_keys::SET_COOKIE).map(String::as_str),
         Some("session=abc; Secure; HttpOnly; SameSite=Lax")
     );
-
-    let runtime_reports = shield.report_entries();
-    assert!(runtime_reports.iter().any(|entry| {
-        entry.feature == "same-site"
-            && entry.kind == bunner_shield_rs::ReportKind::Runtime
-            && entry.message.contains("Applied SameSite policy")
-    }));
 }
 
 #[test]
@@ -45,26 +31,12 @@ fn given_cookie_with_attributes_when_secure_then_overwrites_policy() {
         "session=abc; SameSite=None; Secure".to_string(),
     );
 
-    let validation_reports = shield.take_report_entries();
-    assert!(validation_reports.iter().any(|entry| {
-        entry.feature == "same-site"
-            && entry.kind == bunner_shield_rs::ReportKind::Validation
-            && entry.message.contains("Configured SameSite cookie policy")
-    }));
-
     let result = shield.secure(headers).expect("secure");
 
     assert_eq!(
         result.get(header_keys::SET_COOKIE).map(String::as_str),
         Some("session=abc; Secure; SameSite=Strict")
     );
-
-    let runtime_reports = shield.report_entries();
-    assert!(runtime_reports.iter().any(|entry| {
-        entry.feature == "same-site"
-            && entry.kind == bunner_shield_rs::ReportKind::Runtime
-            && entry.message.contains("Applied SameSite policy")
-    }));
 }
 
 #[test]

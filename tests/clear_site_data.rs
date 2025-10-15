@@ -7,29 +7,12 @@ fn given_cache_section_when_secure_then_sets_header() {
     let shield = Shield::new().clear_site_data(options).expect("feature");
     let headers = HashMap::new();
 
-    let validation_reports = shield.take_report_entries();
-
-    assert!(validation_reports.iter().any(|entry| {
-        entry.feature == "clear-site-data"
-            && entry.kind == bunner_shield_rs::ReportKind::Validation
-            && entry
-                .message
-                .contains("Configured Clear-Site-Data sections")
-    }));
-
     let result = shield.secure(headers).expect("secure");
 
     assert_eq!(
         result.get(header_keys::CLEAR_SITE_DATA).map(String::as_str),
         Some(header_values::CLEAR_SITE_DATA_CACHE)
     );
-
-    let runtime_reports = shield.report_entries();
-    assert!(runtime_reports.iter().any(|entry| {
-        entry.feature == "clear-site-data"
-            && entry.kind == bunner_shield_rs::ReportKind::Runtime
-            && entry.message.contains("Emitted Clear-Site-Data header")
-    }));
 }
 
 #[test]

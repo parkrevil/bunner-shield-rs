@@ -1,5 +1,5 @@
 use crate::constants::header_values::{X_DNS_PREFETCH_CONTROL_OFF, X_DNS_PREFETCH_CONTROL_ON};
-use crate::executor::{FeatureOptions, ReportContext};
+use crate::executor::FeatureOptions;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum XdnsPrefetchControlPolicy {
@@ -49,16 +49,6 @@ impl FeatureOptions for XdnsPrefetchControlOptions {
 
     fn validate(&self) -> Result<(), Self::Error> {
         Ok(())
-    }
-
-    fn emit_validation_reports(&self, context: &ReportContext) {
-        context.push_validation_info(
-            "x-dns-prefetch-control",
-            format!(
-                "Configured X-DNS-Prefetch-Control policy: {}",
-                self.header_value()
-            ),
-        );
     }
 }
 

@@ -1,68 +1,13 @@
-use crate::executor::{FeatureOptions, ReportContext, ReportEntry, ReportSeverity};
+use crate::executor::FeatureOptions;
 use base64::Engine;
 use base64::engine::general_purpose;
 use rand::RngCore;
 use rand::rngs::OsRng;
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
-use std::fmt::{self, Write};
+use std::fmt;
 use thiserror::Error;
 use url::Url;
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CspReportEndpoint {
-    url: String,
-    priority: Option<u8>,
-    weight: Option<u8>,
-}
-
-impl CspReportEndpoint {
-    pub fn new<'a>(url: impl Into<Cow<'a, str>>) -> Self {
-        Self {
-            url: url.into().into_owned().trim().to_string(),
-            priority: None,
-            weight: None,
-        }
-    }
-
-    pub fn with_priority(mut self, priority: u8) -> Self {
-        self.priority = Some(priority);
-        self
-    }
-
-    pub fn with_weight(mut self, weight: u8) -> Self {
-        self.weight = Some(weight);
-        self
-    }
-
-    fn header_fragment(&self, buffer: &mut String) {
-        buffer.push_str("{\"url\":\"");
-        buffer.push_str(&self.url);
-        buffer.push('"');
-
-        if let Some(priority) = self.priority {
-            let _ = write!(buffer, ",\"priority\":{}", priority);
-        }
-
-        if let Some(weight) = self.weight {
-            let _ = write!(buffer, ",\"weight\":{}", weight);
-        }
-
-        buffer.push('}');
-    }
-
-    pub fn url(&self) -> &str {
-        &self.url
-    }
-
-    pub fn priority(&self) -> Option<u8> {
-        self.priority
-    }
-
-    pub fn weight(&self) -> Option<u8> {
-        self.weight
-    }
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CspHashAlgorithm {
@@ -78,109 +23,6 @@ impl CspHashAlgorithm {
             CspHashAlgorithm::Sha384 => "sha384-",
             CspHashAlgorithm::Sha512 => "sha512-",
         }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CspReportGroup {
-    name: String,
-    max_age: u64,
-    include_subdomains: bool,
-    endpoints: Vec<CspReportEndpoint>,
-}
-
-impl CspReportGroup {
-    pub fn new<'a>(name: impl Into<Cow<'a, str>>, endpoint: impl Into<Cow<'a, str>>) -> Self {
-        Self {
-            name: name.into().into_owned().trim().to_string(),
-            max_age: 10_886_400,
-            include_subdomains: false,
-            endpoints: vec![CspReportEndpoint::new(endpoint)],
-        }
-    }
-
-    pub fn with_max_age(mut self, max_age: u64) -> Self {
-        self.max_age = max_age;
-        self
-    }
-
-    pub fn include_subdomains(mut self) -> Self {
-        self.include_subdomains = true;
-        self
-    }
-
-    pub fn add_endpoint(mut self, endpoint: CspReportEndpoint) -> Self {
-        self.endpoints.push(endpoint);
-        self
-    }
-
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    pub fn max_age(&self) -> u64 {
-        self.max_age
-    }
-
-    pub fn includes_subdomains(&self) -> bool {
-        self.include_subdomains
-    }
-
-    pub fn endpoints(&self) -> &[CspReportEndpoint] {
-        &self.endpoints
-    }
-
-    pub fn header_value(&self) -> String {
-        let mut buffer = String::new();
-        let _ = write!(
-            buffer,
-            "{{\"group\":\"{}\",\"max_age\":{}",
-            self.name, self.max_age
-        );
-
-        if self.include_subdomains {
-            buffer.push_str(",\"include_subdomains\":true");
-        }
-
-        buffer.push_str(",\"endpoints\":[");
-
-        for (index, endpoint) in self.endpoints.iter().enumerate() {
-            if index > 0 {
-                buffer.push(',');
-            }
-
-            endpoint.header_fragment(&mut buffer);
-        }
-
-        buffer.push_str("]}");
-        buffer
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CspReportingEndpoint {
-    name: String,
-    url: String,
-}
-
-impl CspReportingEndpoint {
-    pub fn new<'a>(name: impl Into<Cow<'a, str>>, url: impl Into<Cow<'a, str>>) -> Self {
-        Self {
-            name: name.into().into_owned().trim().to_string(),
-            url: url.into().into_owned().trim().to_string(),
-        }
-    }
-
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    pub fn url(&self) -> &str {
-        &self.url
-    }
-
-    pub(crate) fn header_fragment(&self) -> String {
-        format!("{}=\"{}\"", self.name, self.url)
     }
 }
 
@@ -510,9 +352,6 @@ pub enum TrustedTypesPolicyError {
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct CspOptions {
     pub(crate) directives: Vec<(String, String)>,
-    pub(crate) report_only: bool,
-    pub(crate) report_group: Option<CspReportGroup>,
-    pub(crate) reporting_endpoints: Vec<CspReportingEndpoint>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -794,21 +633,6 @@ impl CspOptions {
         self
     }
 
-    pub fn reporting_endpoint<'a>(
-        mut self,
-        name: impl Into<Cow<'a, str>>,
-        url: impl Into<Cow<'a, str>>,
-    ) -> Self {
-        self.reporting_endpoints
-            .push(CspReportingEndpoint::new(name, url));
-        self
-    }
-
-    pub fn add_reporting_endpoint(mut self, endpoint: CspReportingEndpoint) -> Self {
-        self.reporting_endpoints.push(endpoint);
-        self
-    }
-
     pub fn sandbox_with<I>(mut self, tokens: I) -> Self
     where
         I: IntoIterator<Item = SandboxToken>,
@@ -871,55 +695,6 @@ impl CspOptions {
             }
         }
 
-        if other.report_only {
-            self.report_only = true;
-        }
-
-        if let Some(other_group) = &other.report_group {
-            match self.report_group.as_mut() {
-                Some(current) if current.name == other_group.name => {
-                    if other_group.max_age < current.max_age {
-                        current.max_age = other_group.max_age;
-                    }
-
-                    if other_group.include_subdomains {
-                        current.include_subdomains = true;
-                    }
-
-                    let mut existing_urls: HashSet<String> = current
-                        .endpoints
-                        .iter()
-                        .map(|endpoint| endpoint.url.clone())
-                        .collect();
-
-                    for endpoint in &other_group.endpoints {
-                        if existing_urls.insert(endpoint.url.clone()) {
-                            current.endpoints.push(endpoint.clone());
-                        }
-                    }
-                }
-                None => {
-                    self.report_group = Some(other_group.clone());
-                }
-                _ => {}
-            }
-        }
-
-        if !other.reporting_endpoints.is_empty() {
-            let mut existing: HashSet<String> = self
-                .reporting_endpoints
-                .iter()
-                .map(|endpoint| endpoint.name.to_ascii_lowercase())
-                .collect();
-
-            for endpoint in &other.reporting_endpoints {
-                let lowered = endpoint.name.to_ascii_lowercase();
-                if existing.insert(lowered) {
-                    self.reporting_endpoints.push(endpoint.clone());
-                }
-            }
-        }
-
         self
     }
 
@@ -936,11 +711,6 @@ impl CspOptions {
         self.set_directive(directive.as_str(), "");
     }
 
-    pub fn report_only(mut self) -> Self {
-        self.report_only = true;
-        self
-    }
-
     #[cfg(test)]
     pub(crate) fn directive<'a>(
         mut self,
@@ -949,13 +719,6 @@ impl CspOptions {
     ) -> Self {
         self.directives
             .push((name.into().into_owned(), value.into().into_owned()));
-        self
-    }
-
-    pub fn report_group(mut self, group: CspReportGroup) -> Self {
-        let group_name = group.name().to_string();
-        self.set_directive(CspDirective::ReportTo.as_str(), &group_name);
-        self.report_group = Some(group);
         self
     }
 
@@ -1181,71 +944,6 @@ impl FeatureOptions for CspOptions {
     fn validate(&self) -> Result<(), Self::Error> {
         self.validate_with_warnings().map(|_| ())
     }
-
-    fn emit_validation_reports(&self, context: &ReportContext) {
-        if let Some(group) = &self.report_group {
-            let mut message = format!(
-                "Configured Report-To group `{}` (max_age={}, endpoints={})",
-                group.name(),
-                group.max_age(),
-                group.endpoints().len()
-            );
-
-            if group.includes_subdomains() {
-                message.push_str(", include_subdomains=true");
-            }
-
-            context.push(ReportEntry::validation(
-                "csp",
-                ReportSeverity::Info,
-                message,
-            ));
-        }
-
-        if !self.reporting_endpoints.is_empty() {
-            let endpoint_summary = self
-                .reporting_endpoints
-                .iter()
-                .map(|endpoint| format!("{} -> {}", endpoint.name(), endpoint.url()))
-                .collect::<Vec<_>>()
-                .join(", ");
-
-            let has_report_to = self
-                .directive_value(CspDirective::ReportTo.as_str())
-                .is_some();
-
-            let severity = if has_report_to {
-                ReportSeverity::Info
-            } else {
-                ReportSeverity::Warning
-            };
-
-            let message = if has_report_to {
-                format!("Configured Reporting-Endpoints: {}", endpoint_summary)
-            } else {
-                format!(
-                    "Reporting-Endpoints configured without a matching report-to directive: {}",
-                    endpoint_summary
-                )
-            };
-
-            context.push(ReportEntry::validation("csp", severity, message));
-        }
-
-        if self.report_only {
-            let message = if self.report_group.is_some() {
-                "Report-Only mode enabled (Report-To group attached)".to_string()
-            } else {
-                "Report-Only mode enabled".to_string()
-            };
-
-            context.push(ReportEntry::validation(
-                "csp",
-                ReportSeverity::Info,
-                message,
-            ));
-        }
-    }
 }
 
 fn format_sources<I, S>(sources: I) -> String
@@ -1286,12 +984,6 @@ impl CspOptions {
             return Err(CspOptionsError::MissingDirectives);
         }
 
-        if let Some(group) = &self.report_group {
-            Self::validate_report_group(group)?;
-        }
-
-        Self::validate_reporting_endpoints(&self.reporting_endpoints)?;
-
         let mut token_cache = TokenValidationCache::new();
 
         for (name, value) in &self.directives {
@@ -1302,16 +994,6 @@ impl CspOptions {
             Self::validate_directive_value(name, value, &mut token_cache)?;
         }
 
-        if self.report_only && self.report_group.is_none() {
-            return Err(CspOptionsError::ReportOnlyMissingGroup);
-        }
-
-        if let Some(group) = &self.report_group {
-            Self::validate_report_to_binding(self, group)?;
-        }
-
-        Self::validate_report_to_endpoints_binding(self)?;
-
         let script_src = self.directive_value(CspDirective::ScriptSrc.as_str());
         let script_src_elem = self.directive_value(CspDirective::ScriptSrcElem.as_str());
         Self::validate_strict_dynamic_rules(script_src, script_src_elem)?;
@@ -1319,10 +1001,6 @@ impl CspOptions {
 
         let mut warnings = Vec::new();
         Self::validate_worker_fallback(self, &mut warnings)?;
-        self.emit_report_only_frame_ancestors_warning(&mut warnings);
-
-        self.emit_reporting_endpoint_usage_warnings(&mut warnings);
-        self.emit_report_group_warnings(&mut warnings);
         self.emit_mixed_content_dependency_warnings(&mut warnings);
         self.emit_risky_scheme_warnings(&mut warnings);
 
@@ -1364,18 +1042,6 @@ impl CspOptions {
 
         if Self::has_invalid_header_text(value) {
             return Err(CspOptionsError::InvalidDirectiveToken);
-        }
-
-        if name == CspDirective::ReportTo.as_str() && trimmed.split_whitespace().count() != 1 {
-            return Err(CspOptionsError::MultipleReportToValues);
-        }
-
-        if name == CspDirective::ReportTo.as_str()
-            && !trimmed
-                .chars()
-                .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '_' | '-' | '.'))
-        {
-            return Err(CspOptionsError::InvalidReportToToken(trimmed.to_string()));
         }
 
         if name == CspDirective::Sandbox.as_str() {
@@ -1926,68 +1592,6 @@ impl CspOptions {
         value.split_whitespace().any(|token| token == "*")
     }
 
-    fn validate_reporting_endpoints(
-        endpoints: &[CspReportingEndpoint],
-    ) -> Result<(), CspOptionsError> {
-        let mut seen = HashSet::new();
-
-        for endpoint in endpoints {
-            let name = endpoint.name();
-            let url = endpoint.url();
-
-            if name.trim().is_empty() || Self::has_invalid_header_text(name) {
-                return Err(CspOptionsError::InvalidReportingEndpointName(
-                    name.to_string(),
-                ));
-            }
-
-            if !name
-                .chars()
-                .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '_' | '-' | '.'))
-            {
-                return Err(CspOptionsError::InvalidReportingEndpointName(
-                    name.to_string(),
-                ));
-            }
-
-            let lowered = name.to_ascii_lowercase();
-            if !seen.insert(lowered) {
-                return Err(CspOptionsError::DuplicateReportingEndpoint(
-                    name.to_string(),
-                ));
-            }
-
-            if url.trim().is_empty() || Self::has_invalid_header_text(url) {
-                return Err(CspOptionsError::InvalidReportingEndpointUrl(
-                    url.to_string(),
-                ));
-            }
-
-            let parsed = Url::parse(url)
-                .map_err(|_| CspOptionsError::InvalidReportingEndpointUrl(url.to_string()))?;
-
-            if parsed.scheme() != "https" || parsed.host_str().is_none() {
-                return Err(CspOptionsError::InvalidReportingEndpointUrl(
-                    url.to_string(),
-                ));
-            }
-        }
-
-        Ok(())
-    }
-
-    fn emit_report_only_frame_ancestors_warning(&self, warnings: &mut Vec<CspOptionsWarning>) {
-        if self.report_only
-            && self
-                .directive_value(CspDirective::FrameAncestors.as_str())
-                .is_some()
-        {
-            warnings.push(CspOptionsWarning::warning(
-                CspOptionsWarningKind::ReportOnlyFrameAncestorsIgnored,
-            ));
-        }
-    }
-
     fn validate_worker_fallback(
         options: &CspOptions,
         warnings: &mut Vec<CspOptionsWarning>,
@@ -2019,105 +1623,6 @@ impl CspOptions {
             CspOptionsWarningKind::MissingWorkerSrcFallback,
         ));
         Ok(())
-    }
-
-    fn validate_report_group(group: &CspReportGroup) -> Result<(), CspOptionsError> {
-        if Self::has_invalid_header_text(group.name()) || group.name().trim().is_empty() {
-            return Err(CspOptionsError::InvalidReportGroup);
-        }
-
-        if group.endpoints().is_empty() {
-            return Err(CspOptionsError::InvalidReportGroup);
-        }
-
-        for endpoint in group.endpoints() {
-            if Self::has_invalid_header_text(endpoint.url()) || endpoint.url().trim().is_empty() {
-                return Err(CspOptionsError::InvalidReportGroup);
-            }
-
-            let parsed =
-                Url::parse(endpoint.url()).map_err(|_| CspOptionsError::InvalidReportGroup)?;
-
-            if parsed.scheme() != "https" || parsed.host_str().is_none() {
-                return Err(CspOptionsError::InvalidReportGroup);
-            }
-        }
-
-        Ok(())
-    }
-
-    fn validate_report_to_binding(
-        options: &CspOptions,
-        group: &CspReportGroup,
-    ) -> Result<(), CspOptionsError> {
-        match options
-            .directives
-            .iter()
-            .find(|(name, _)| name == CspDirective::ReportTo.as_str())
-        {
-            Some((_, value)) if value.trim() == group.name() => Ok(()),
-            Some(_) => Err(CspOptionsError::ReportToGroupMismatch),
-            None => Err(CspOptionsError::MissingReportToDirective),
-        }
-    }
-
-    fn validate_report_to_endpoints_binding(options: &CspOptions) -> Result<(), CspOptionsError> {
-        if options.reporting_endpoints.is_empty() {
-            return Ok(());
-        }
-
-        match options.directive_value(CspDirective::ReportTo.as_str()) {
-            Some(value) => {
-                let defined: HashSet<&str> = options
-                    .reporting_endpoints
-                    .iter()
-                    .map(|endpoint| endpoint.name())
-                    .collect();
-                let token = value.trim();
-
-                if token.is_empty() {
-                    return Err(CspOptionsError::MultipleReportToValues);
-                }
-
-                if !defined.contains(token) {
-                    return Err(CspOptionsError::UndefinedReportingEndpoint(
-                        token.to_string(),
-                    ));
-                }
-
-                Ok(())
-            }
-            None => Ok(()),
-        }
-    }
-
-    fn emit_reporting_endpoint_usage_warnings(&self, warnings: &mut Vec<CspOptionsWarning>) {
-        if self.reporting_endpoints.is_empty() {
-            return;
-        }
-
-        if self
-            .directive_value(CspDirective::ReportTo.as_str())
-            .is_none()
-        {
-            warnings.push(CspOptionsWarning::warning(
-                CspOptionsWarningKind::ReportingEndpointsWithoutDirective,
-            ));
-        }
-    }
-
-    fn emit_report_group_warnings(&self, warnings: &mut Vec<CspOptionsWarning>) {
-        const MAX_RECOMMENDED_MAX_AGE: u64 = 31_536_000;
-
-        if let Some(group) = &self.report_group
-            && group.max_age() > MAX_RECOMMENDED_MAX_AGE
-        {
-            warnings.push(CspOptionsWarning::warning(
-                CspOptionsWarningKind::ReportGroupMaxAgeTooHigh {
-                    max_age: group.max_age(),
-                },
-            ));
-        }
     }
 
     fn emit_mixed_content_dependency_warnings(&self, warnings: &mut Vec<CspOptionsWarning>) {
@@ -2209,14 +1714,6 @@ pub enum CspOptionsError {
     InvalidNonce,
     #[error("invalid hash source expression")]
     InvalidHash,
-    #[error("report-only mode requires report group")]
-    ReportOnlyMissingGroup,
-    #[error("invalid report group")]
-    InvalidReportGroup,
-    #[error("report-to directive must match configured report group name")]
-    ReportToGroupMismatch,
-    #[error("report-to directive is required when a report group is configured")]
-    MissingReportToDirective,
     #[error("'strict-dynamic' requires at least one nonce or hash source")]
     StrictDynamicRequiresNonceOrHash,
     #[error("'strict-dynamic' cannot be combined with unsafe-inline/unsafe-eval/unsafe-hashes")]
@@ -2227,22 +1724,10 @@ pub enum CspOptionsError {
     InvalidSandboxToken(String),
     #[error("invalid source expression `{0}`")]
     InvalidSourceExpression(String),
-    #[error("invalid reporting endpoint name `{0}`")]
-    InvalidReportingEndpointName(String),
-    #[error("invalid reporting endpoint url `{0}`")]
-    InvalidReportingEndpointUrl(String),
-    #[error("duplicate reporting endpoint name `{0}`")]
-    DuplicateReportingEndpoint(String),
     #[error("token `{0}` is not allowed in directive `{1}`")]
     TokenNotAllowedForDirective(String, String),
-    #[error("report-to directive references undefined reporting endpoint `{0}`")]
-    UndefinedReportingEndpoint(String),
     #[error("'unsafe-hashes' in `{0}` requires at least one hash source expression")]
     UnsafeHashesRequireHashes(String),
-    #[error("report-to directive must contain exactly one group name")]
-    MultipleReportToValues,
-    #[error("report-to value `{0}` contains invalid characters")]
-    InvalidReportToToken(String),
     #[error("scheme `{1}` is not permitted in directive `{0}`")]
     DisallowedScheme(String, String),
     #[error("source expression `{0}` cannot use a wildcard port")]
@@ -2274,11 +1759,6 @@ impl CspWarningSeverity {
 pub enum CspOptionsWarningKind {
     MissingWorkerSrcFallback,
     WeakWorkerSrcFallback,
-    ReportOnlyFrameAncestorsIgnored,
-    ReportingEndpointsWithoutDirective,
-    ReportGroupMaxAgeTooHigh {
-        max_age: u64,
-    },
     UpgradeInsecureRequestsWithoutBlockAllMixedContent,
     BlockAllMixedContentWithoutUpgradeInsecureRequests,
     RiskySchemes {

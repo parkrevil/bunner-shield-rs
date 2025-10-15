@@ -7,15 +7,6 @@ fn given_csrf_feature_when_secure_then_sets_cookie_and_header() {
     let shield = Shield::new().csrf(options).expect("feature");
     let headers = HashMap::new();
 
-    let validation_reports = shield.take_report_entries();
-    assert!(validation_reports.iter().any(|entry| {
-        entry.feature == "csrf"
-            && entry.kind == bunner_shield_rs::ReportKind::Validation
-            && entry
-                .message
-                .contains("Configured CSRF cookie `__Host-csrf-token`")
-    }));
-
     let result = shield.secure(headers).expect("secure");
 
     assert!(result.contains_key(header_keys::CSRF_TOKEN));
@@ -25,18 +16,6 @@ fn given_csrf_feature_when_secure_then_sets_cookie_and_header() {
             .expect("cookie")
             .contains("__Host-")
     );
-
-    let runtime_reports = shield.report_entries();
-    assert!(runtime_reports.iter().any(|entry| {
-        entry.feature == "csrf"
-            && entry.kind == bunner_shield_rs::ReportKind::Runtime
-            && entry.message.contains("Issued X-CSRF-Token header")
-    }));
-    assert!(runtime_reports.iter().any(|entry| {
-        entry.feature == "csrf"
-            && entry.kind == bunner_shield_rs::ReportKind::Runtime
-            && entry.message.contains("Issued Set-Cookie for CSRF token")
-    }));
 }
 
 #[test]

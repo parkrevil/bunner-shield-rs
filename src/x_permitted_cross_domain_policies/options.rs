@@ -2,7 +2,7 @@ use crate::constants::header_values::{
     X_PERMITTED_CROSS_DOMAIN_POLICIES_ALL, X_PERMITTED_CROSS_DOMAIN_POLICIES_BY_CONTENT_TYPE,
     X_PERMITTED_CROSS_DOMAIN_POLICIES_MASTER_ONLY, X_PERMITTED_CROSS_DOMAIN_POLICIES_NONE,
 };
-use crate::executor::{FeatureOptions, ReportContext};
+use crate::executor::FeatureOptions;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum XPermittedCrossDomainPoliciesPolicy {
@@ -60,16 +60,6 @@ impl FeatureOptions for XPermittedCrossDomainPoliciesOptions {
 
     fn validate(&self) -> Result<(), Self::Error> {
         Ok(())
-    }
-
-    fn emit_validation_reports(&self, context: &ReportContext) {
-        context.push_validation_info(
-            "x-permitted-cross-domain-policies",
-            format!(
-                "Configured X-Permitted-Cross-Domain-Policies: {}",
-                self.policy.as_str()
-            ),
-        );
     }
 }
 

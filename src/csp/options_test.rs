@@ -1,5 +1,4 @@
 use super::*;
-use crate::executor::{FeatureOptions, ReportContext, ReportKind, ReportSeverity};
 
 mod validate {
     use super::*;
@@ -12,9 +11,6 @@ mod validate {
             .frame_ancestors([CspSource::None]);
 
         options.validate().expect("policy");
-
-        assert!(!options.report_only);
-        assert!(options.report_group.is_none());
         assert_eq!(
             options.header_value(),
             "default-src 'self'; base-uri 'none'; frame-ancestors 'none'"
@@ -29,32 +25,6 @@ mod validate {
         let result = options.validate();
 
         assert!(matches!(result, Err(CspOptionsError::InvalidDirectiveName)));
-    }
-
-    #[test]
-    fn given_report_only_without_group_when_validate_then_returns_error() {
-        let options = CspOptions::new()
-            .default_src([CspSource::SelfKeyword])
-            .report_only();
-
-        let result = options.validate();
-
-        assert!(matches!(
-            result,
-            Err(CspOptionsError::ReportOnlyMissingGroup)
-        ));
-    }
-
-    #[test]
-    fn given_invalid_group_when_validate_then_returns_error() {
-        let group = CspReportGroup::new("", "https://reports.example.com");
-        let options = CspOptions::new()
-            .default_src([CspSource::SelfKeyword])
-            .report_group(group);
-
-        let result = options.validate();
-
-        assert!(matches!(result, Err(CspOptionsError::InvalidReportGroup)));
     }
 
     #[test]
@@ -268,98 +238,6 @@ mod validate {
     }
 
     #[test]
-    fn given_report_group_without_report_to_when_validate_then_returns_error() {
-        let mut options = CspOptions::new().default_src([CspSource::SelfKeyword]);
-        options.report_group = Some(CspReportGroup::new(
-            "default",
-            "https://reports.example.com",
-        ));
-
-        let result = options.validate();
-
-        assert!(matches!(
-            result,
-            Err(CspOptionsError::MissingReportToDirective)
-        ));
-    }
-
-    #[test]
-    fn given_report_group_with_mismatched_report_to_when_validate_then_returns_error() {
-        let group = CspReportGroup::new("default", "https://reports.example.com");
-        let mut options = CspOptions::new()
-            .default_src([CspSource::SelfKeyword])
-            .report_group(group);
-
-        if let Some((_, value)) = options
-            .directives
-            .iter_mut()
-            .find(|(name, _)| name == "report-to")
-        {
-            *value = "other".to_string();
-        }
-
-        let result = options.validate();
-
-        assert!(matches!(
-            result,
-            Err(CspOptionsError::ReportToGroupMismatch)
-        ));
-    }
-
-    #[test]
-    fn given_report_group_with_non_https_endpoint_when_validate_then_returns_error() {
-        let group = CspReportGroup::new("default", "http://reports.example.com");
-        let options = CspOptions::new()
-            .default_src([CspSource::SelfKeyword])
-            .report_group(group);
-
-        let result = options.validate();
-
-        assert!(matches!(result, Err(CspOptionsError::InvalidReportGroup)));
-    }
-
-    #[test]
-    fn given_report_group_with_additional_endpoint_when_validate_then_accepts() {
-        let group = CspReportGroup::new("default", "https://reports.example.com")
-            .add_endpoint(CspReportEndpoint::new("https://backup.example.com"));
-        let options = CspOptions::new()
-            .default_src([CspSource::SelfKeyword])
-            .report_group(group);
-
-        let result = options.validate();
-
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    fn given_report_to_with_multiple_values_when_validate_then_returns_error() {
-        let options = CspOptions::new()
-            .default_src([CspSource::SelfKeyword])
-            .report_to("group another");
-
-        let result = options.validate();
-
-        assert!(matches!(
-            result,
-            Err(CspOptionsError::MultipleReportToValues)
-        ));
-    }
-
-    #[test]
-    fn given_report_to_with_invalid_characters_when_validate_then_returns_error() {
-        let options = CspOptions::new()
-            .default_src([CspSource::SelfKeyword])
-            .report_to("group!");
-
-        let result = options.validate();
-
-        assert!(matches!(
-            result,
-            Err(CspOptionsError::InvalidReportToToken(token)) if token == "group!"
-        ));
-    }
-
-    #[test]
     fn given_unsafe_inline_in_img_src_when_validate_then_returns_error() {
         let options = CspOptions::new()
             .img_src([CspSource::UnsafeInline])
@@ -509,35 +387,6 @@ mod validate {
     }
 
     #[test]
-    fn given_reporting_endpoint_with_http_when_validate_then_returns_error() {
-        let options = CspOptions::new()
-            .default_src([CspSource::SelfKeyword])
-            .reporting_endpoint("default", "http://reports.example.com");
-
-        let result = options.validate();
-
-        assert!(matches!(
-            result,
-            Err(CspOptionsError::InvalidReportingEndpointUrl(url)) if url == "http://reports.example.com"
-        ));
-    }
-
-    #[test]
-    fn given_duplicate_reporting_endpoint_names_when_validate_then_returns_error() {
-        let options = CspOptions::new()
-            .default_src([CspSource::SelfKeyword])
-            .reporting_endpoint("csp", "https://reports.example.com")
-            .reporting_endpoint("CSP", "https://backup.example.com");
-
-        let result = options.validate();
-
-        assert!(matches!(
-            result,
-            Err(CspOptionsError::DuplicateReportingEndpoint(name)) if name == "CSP"
-        ));
-    }
-
-    #[test]
     fn given_missing_worker_fallback_when_validate_with_warnings_then_reports_warning() {
         let options = CspOptions::new().base_uri([CspSource::SelfKeyword]);
 
@@ -552,26 +401,6 @@ mod validate {
             )]
         );
         assert!(options.validate().is_ok());
-    }
-
-    #[test]
-    fn given_report_only_with_frame_ancestors_when_validate_with_warnings_then_warns() {
-        let options = CspOptions::new()
-            .default_src([CspSource::SelfKeyword])
-            .frame_ancestors([CspSource::None])
-            .report_only()
-            .report_group(CspReportGroup::new(
-                "default",
-                "https://reports.example.com",
-            ));
-
-        let warnings = options
-            .validate_with_warnings()
-            .expect("validation succeeds");
-
-        assert!(warnings.contains(&CspOptionsWarning::warning(
-            CspOptionsWarningKind::ReportOnlyFrameAncestorsIgnored,
-        )));
     }
 
     #[test]
@@ -590,26 +419,6 @@ mod validate {
             result,
             Err(CspOptionsError::StrictDynamicHostSourceConflict)
         ));
-    }
-
-    #[test]
-    fn given_report_group_with_large_max_age_when_validate_with_warnings_then_warns() {
-        let options = CspOptions::new()
-            .default_src([CspSource::SelfKeyword])
-            .report_group(
-                CspReportGroup::new("default", "https://reports.example.com")
-                    .with_max_age(40_000_000),
-            );
-
-        let warnings = options
-            .validate_with_warnings()
-            .expect("validation succeeds");
-
-        assert!(warnings.contains(&CspOptionsWarning::warning(
-            CspOptionsWarningKind::ReportGroupMaxAgeTooHigh {
-                max_age: 40_000_000
-            },
-        )));
     }
 
     #[test]
@@ -639,21 +448,6 @@ mod validate {
 
         assert!(warnings.contains(&CspOptionsWarning::warning(
             CspOptionsWarningKind::BlockAllMixedContentWithoutUpgradeInsecureRequests,
-        )));
-    }
-
-    #[test]
-    fn given_reporting_endpoints_without_report_to_when_validate_with_warnings_then_warns() {
-        let options = CspOptions::new()
-            .default_src([CspSource::SelfKeyword])
-            .reporting_endpoint("default", "https://reports.example.com");
-
-        let warnings = options
-            .validate_with_warnings()
-            .expect("validation succeeds");
-
-        assert!(warnings.contains(&CspOptionsWarning::warning(
-            CspOptionsWarningKind::ReportingEndpointsWithoutDirective,
         )));
     }
 
@@ -968,41 +762,6 @@ mod helpers {
     }
 }
 
-mod reporting {
-    use super::*;
-
-    #[test]
-    fn given_reporting_configuration_when_emit_validation_reports_then_records_entries() {
-        let options = CspOptions::new()
-            .default_src([CspSource::SelfKeyword])
-            .report_to("default")
-            .report_group(CspReportGroup::new(
-                "default",
-                "https://reports.example.com",
-            ))
-            .reporting_endpoint("default", "https://reports.example.com")
-            .reporting_endpoint("backup", "https://backup.example.com");
-
-        let context = ReportContext::default();
-        FeatureOptions::emit_validation_reports(&options, &context);
-
-        let reports = context.entries();
-
-        assert!(reports.iter().any(|entry| {
-            entry.feature == "csp"
-                && entry.kind == ReportKind::Validation
-                && entry.severity == ReportSeverity::Info
-                && entry.message.contains("Reporting-Endpoints")
-        }));
-
-        assert!(reports.iter().any(|entry| {
-            entry.feature == "csp"
-                && entry.kind == ReportKind::Validation
-                && entry.message.contains("Report-To group")
-        }));
-    }
-}
-
 mod composition {
     use super::*;
 
@@ -1029,105 +788,6 @@ mod composition {
         assert_eq!(
             merged.directive_value(CspDirective::ReportTo.as_str()),
             Some("primary")
-        );
-    }
-
-    #[test]
-    fn given_merge_with_reporting_endpoints_when_merge_then_deduplicates_and_sets_report_only() {
-        let options = CspOptions::new()
-            .default_src([CspSource::SelfKeyword])
-            .reporting_endpoint("primary", "https://reports.example.com");
-
-        let other = CspOptions::new()
-            .reporting_endpoint("PRIMARY", "https://duplicate.example.com")
-            .reporting_endpoint("backup", "https://backup.example.com")
-            .report_only();
-
-        let merged = options.merge(&other);
-
-        let endpoint_names: Vec<_> = merged
-            .reporting_endpoints
-            .iter()
-            .map(|endpoint| endpoint.name())
-            .collect();
-
-        assert_eq!(endpoint_names, vec!["primary", "backup"]);
-        assert!(merged.report_only);
-    }
-
-    #[test]
-    fn given_merge_with_report_group_when_merge_then_combines_endpoints() {
-        let group = CspReportGroup::new("default", "https://reports.example.com");
-        let options = CspOptions::new()
-            .default_src([CspSource::SelfKeyword])
-            .report_group(group);
-
-        let merged = options.merge(
-            &CspOptions::new().report_group(
-                CspReportGroup::new("default", "https://reports.example.com")
-                    .with_max_age(60)
-                    .include_subdomains()
-                    .add_endpoint(CspReportEndpoint::new("https://backup.example.com")),
-            ),
-        );
-
-        let merged_group = merged.report_group.as_ref().expect("report group");
-        assert_eq!(merged_group.max_age(), 60);
-        assert!(merged_group.includes_subdomains());
-        let urls: Vec<_> = merged_group
-            .endpoints()
-            .iter()
-            .map(|endpoint| endpoint.url())
-            .collect();
-        assert_eq!(
-            urls,
-            vec!["https://reports.example.com", "https://backup.example.com",]
-        );
-    }
-}
-
-mod report_group {
-    use super::*;
-
-    #[test]
-    fn given_valid_group_when_header_value_then_returns_serialized_json() {
-        let group = CspReportGroup::new("default", "https://reports.example.com");
-
-        let header_value = group.header_value();
-
-        assert_eq!(
-            header_value,
-            "{\"group\":\"default\",\"max_age\":10886400,\"endpoints\":[{\"url\":\"https://reports.example.com\"}]}"
-        );
-    }
-
-    #[test]
-    fn given_report_group_when_header_value_then_sets_report_to_directive() {
-        let group = CspReportGroup::new("default", "https://reports.example.com");
-        let options = CspOptions::new()
-            .default_src([CspSource::SelfKeyword])
-            .report_group(group);
-
-        assert_eq!(
-            options.header_value(),
-            "default-src 'self'; report-to default"
-        );
-    }
-
-    #[test]
-    fn given_group_with_multiple_endpoints_when_header_value_then_serializes_all() {
-        let group = CspReportGroup::new("default", "https://reports.example.com")
-            .with_max_age(300)
-            .include_subdomains()
-            .add_endpoint(
-                CspReportEndpoint::new("https://backup.example.com")
-                    .with_priority(10)
-                    .with_weight(2),
-            );
-
-        assert_eq!(
-            group.header_value(),
-            "{\"group\":\"default\",\"max_age\":300,\"include_subdomains\":true,\"endpoints\":[{\"url\":\"https://reports.example.com\"},{\"url\":\"https://backup.example.com\",\"priority\":10,\"weight\":2}]}"
         );
     }
 }

@@ -1,5 +1,5 @@
 use crate::constants::header_values::{X_FRAME_OPTIONS_DENY, X_FRAME_OPTIONS_SAMEORIGIN};
-use crate::executor::{FeatureOptions, ReportContext};
+use crate::executor::FeatureOptions;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum XFrameOptionsPolicy {
@@ -49,16 +49,6 @@ impl FeatureOptions for XFrameOptionsOptions {
 
     fn validate(&self) -> Result<(), Self::Error> {
         Ok(())
-    }
-
-    fn emit_validation_reports(&self, context: &ReportContext) {
-        context.push_validation_info(
-            "x-frame-options",
-            format!(
-                "Configured X-Frame-Options policy: {}",
-                self.policy.as_str()
-            ),
-        );
     }
 }
 

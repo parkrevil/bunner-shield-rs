@@ -1,5 +1,5 @@
 use crate::constants::cookie::COOKIE_PREFIX_SECURE;
-use crate::executor::{FeatureOptions, ReportContext};
+use crate::executor::FeatureOptions;
 use thiserror::Error;
 
 const DEFAULT_COOKIE_NAME: &str = "__Host-csrf-token";
@@ -50,16 +50,6 @@ impl FeatureOptions for CsrfOptions {
         }
 
         Ok(())
-    }
-
-    fn emit_validation_reports(&self, context: &ReportContext) {
-        context.push_validation_info(
-            "csrf",
-            format!(
-                "Configured CSRF cookie `{}` with token length {}",
-                self.cookie_name, self.token_length
-            ),
-        );
     }
 }
 

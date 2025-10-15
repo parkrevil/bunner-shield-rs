@@ -4,7 +4,7 @@ use crate::constants::header_values::{
     REFERRER_POLICY_STRICT_ORIGIN, REFERRER_POLICY_STRICT_ORIGIN_WHEN_CROSS_ORIGIN,
     REFERRER_POLICY_UNSAFE_URL,
 };
-use crate::executor::{FeatureOptions, ReportContext};
+use crate::executor::FeatureOptions;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReferrerPolicyValue {
@@ -70,13 +70,6 @@ impl FeatureOptions for ReferrerPolicyOptions {
 
     fn validate(&self) -> Result<(), Self::Error> {
         Ok(())
-    }
-
-    fn emit_validation_reports(&self, context: &ReportContext) {
-        context.push_validation_info(
-            "referrer-policy",
-            format!("Configured Referrer-Policy: {}", self.policy.as_str()),
-        );
     }
 }
 

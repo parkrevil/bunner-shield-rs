@@ -2,4 +2,4 @@ mod executor;
 mod options;
 
 pub use executor::Coop;
-pub use options::{CoopOptions, CoopOptionsError, CoopPolicy};
+pub use options::{CoopOptions, CoopPolicy};

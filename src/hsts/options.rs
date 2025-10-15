@@ -1,4 +1,4 @@
-use crate::executor::{FeatureOptions, ReportContext};
+use crate::executor::FeatureOptions;
 use thiserror::Error;
 
 const PRELOAD_MIN_MAX_AGE: u64 = 31_536_000;
@@ -72,16 +72,6 @@ impl FeatureOptions for HstsOptions {
         }
 
         Ok(())
-    }
-
-    fn emit_validation_reports(&self, context: &ReportContext) {
-        context.push_validation_info(
-            "hsts",
-            format!(
-                "Configured HSTS policy: max-age={}, includeSubDomains={}, preload={}",
-                self.max_age, self.include_subdomains, self.preload
-            ),
-        );
     }
 }
 
