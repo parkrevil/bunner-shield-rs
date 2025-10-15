@@ -5,8 +5,6 @@ pub mod header_keys {
     pub const X_CONTENT_TYPE_OPTIONS: &str = "X-Content-Type-Options";
     pub const X_FRAME_OPTIONS: &str = "X-Frame-Options";
     pub const REFERRER_POLICY: &str = "Referrer-Policy";
-    pub const X_DOWNLOAD_OPTIONS: &str = "X-Download-Options";
-    pub const X_PERMITTED_CROSS_DOMAIN_POLICIES: &str = "X-Permitted-Cross-Domain-Policies";
     pub const PERMISSIONS_POLICY: &str = "Permissions-Policy";
     pub const X_DNS_PREFETCH_CONTROL: &str = "X-DNS-Prefetch-Control";
     pub const CLEAR_SITE_DATA: &str = "Clear-Site-Data";
@@ -44,11 +42,6 @@ pub mod header_values {
     pub const REFERRER_POLICY_UNSAFE_URL: &str = "unsafe-url";
     pub const ORIGIN_AGENT_CLUSTER_ENABLE: &str = "?1";
     pub const ORIGIN_AGENT_CLUSTER_DISABLE: &str = "?0";
-    pub const X_DOWNLOAD_OPTIONS_NOOPEN: &str = "noopen";
-    pub const X_PERMITTED_CROSS_DOMAIN_POLICIES_NONE: &str = "none";
-    pub const X_PERMITTED_CROSS_DOMAIN_POLICIES_MASTER_ONLY: &str = "master-only";
-    pub const X_PERMITTED_CROSS_DOMAIN_POLICIES_BY_CONTENT_TYPE: &str = "by-content-type";
-    pub const X_PERMITTED_CROSS_DOMAIN_POLICIES_ALL: &str = "all";
     pub const X_DNS_PREFETCH_CONTROL_ON: &str = "on";
     pub const X_DNS_PREFETCH_CONTROL_OFF: &str = "off";
     pub const CLEAR_SITE_DATA_CACHE: &str = "\"cache\"";
@@ -74,9 +67,7 @@ pub mod executor_order {
     pub const X_FRAME_OPTIONS: u8 = 10;
     pub const REFERRER_POLICY: u8 = 11;
     pub const ORIGIN_AGENT_CLUSTER: u8 = 12;
-    pub const X_DOWNLOAD_OPTIONS: u8 = 13;
-    pub const X_PERMITTED_CROSS_DOMAIN_POLICIES: u8 = 14;
-    pub const PERMISSIONS_POLICY: u8 = 15;
-    pub const X_DNS_PREFETCH_CONTROL: u8 = 16;
-    pub const CLEAR_SITE_DATA: u8 = 17;
+    pub const PERMISSIONS_POLICY: u8 = 13;
+    pub const X_DNS_PREFETCH_CONTROL: u8 = 14;
+    pub const CLEAR_SITE_DATA: u8 = 15;
 }
