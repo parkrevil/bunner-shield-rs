@@ -1,5 +1,5 @@
 use crate::constants::header_values::{CORP_CROSS_ORIGIN, CORP_SAME_ORIGIN, CORP_SAME_SITE};
-use crate::executor::FeatureOptions;
+use crate::executor::{FeatureOptions, ReportContext};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CorpPolicy {
@@ -47,5 +47,15 @@ impl FeatureOptions for CorpOptions {
 
     fn validate(&self) -> Result<(), Self::Error> {
         Ok(())
+    }
+
+    fn emit_validation_reports(&self, context: &ReportContext) {
+        context.push_validation_info(
+            "corp",
+            format!(
+                "Configured Cross-Origin-Resource-Policy: {}",
+                self.policy.as_str()
+            ),
+        );
     }
 }

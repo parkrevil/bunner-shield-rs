@@ -1,7 +1,7 @@
 use crate::constants::header_values::{
     COOP_SAME_ORIGIN, COOP_SAME_ORIGIN_ALLOW_POPUPS, COOP_UNSAFE_NONE,
 };
-use crate::executor::FeatureOptions;
+use crate::executor::{FeatureOptions, ReportContext};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CoopPolicy {
@@ -49,5 +49,15 @@ impl FeatureOptions for CoopOptions {
 
     fn validate(&self) -> Result<(), Self::Error> {
         Ok(())
+    }
+
+    fn emit_validation_reports(&self, context: &ReportContext) {
+        context.push_validation_info(
+            "coop",
+            format!(
+                "Configured Cross-Origin-Opener-Policy: {}",
+                self.policy.as_str()
+            ),
+        );
     }
 }

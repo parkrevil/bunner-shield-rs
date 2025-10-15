@@ -3,6 +3,7 @@ pub mod header_keys {
     pub const CONTENT_SECURITY_POLICY_REPORT_ONLY: &str = "Content-Security-Policy-Report-Only";
     pub const REPORT_TO: &str = "Report-To";
     pub const REPORTING_ENDPOINTS: &str = "Reporting-Endpoints";
+    pub const NEL: &str = "NEL";
     pub const X_POWERED_BY: &str = "X-Powered-By";
     pub const STRICT_TRANSPORT_SECURITY: &str = "Strict-Transport-Security";
     pub const X_CONTENT_TYPE_OPTIONS: &str = "X-Content-Type-Options";
@@ -82,4 +83,5 @@ pub mod executor_order {
     pub const PERMISSIONS_POLICY: u8 = 15;
     pub const X_DNS_PREFETCH_CONTROL: u8 = 16;
     pub const CLEAR_SITE_DATA: u8 = 17;
+    pub const NETWORK_ERROR_LOGGING: u8 = 18;
 }

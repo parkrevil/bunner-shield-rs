@@ -7,6 +7,7 @@ pub mod csp;
 pub mod csrf;
 mod executor;
 pub mod hsts;
+mod nel;
 mod normalized_headers;
 mod origin_agent_cluster;
 mod permissions_policy;
@@ -31,7 +32,9 @@ pub use crate::csp::{
     CspSource, SandboxToken, TrustedTypesPolicy, TrustedTypesPolicyError, TrustedTypesToken,
 };
 pub use crate::csrf::{CsrfOptions, CsrfOptionsError, CsrfTokenError, HmacCsrfService};
+pub use crate::executor::{ReportContext, ReportEntry, ReportKind, ReportSeverity};
 pub use crate::hsts::{HstsOptions, HstsOptionsError};
+pub use crate::nel::{Nel, NelOptions, NelOptionsError};
 pub use crate::origin_agent_cluster::{OriginAgentCluster, OriginAgentClusterOptions};
 pub use crate::permissions_policy::{
     PermissionsPolicy, PermissionsPolicyOptions, PermissionsPolicyOptionsError,

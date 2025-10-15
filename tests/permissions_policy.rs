@@ -7,6 +7,13 @@ fn given_policy_when_secure_then_sets_permissions_policy_header() {
     let shield = Shield::new().permissions_policy(options).expect("feature");
     let headers = HashMap::new();
 
+    let validation_reports = shield.take_report_entries();
+    assert!(validation_reports.iter().any(|entry| {
+        entry.feature == "permissions-policy"
+            && entry.kind == bunner_shield_rs::ReportKind::Validation
+            && entry.message.contains("Configured Permissions-Policy")
+    }));
+
     let result = shield.secure(headers).expect("secure");
 
     assert_eq!(
@@ -15,6 +22,13 @@ fn given_policy_when_secure_then_sets_permissions_policy_header() {
             .map(String::as_str),
         Some("geolocation=()")
     );
+
+    let runtime_reports = shield.report_entries();
+    assert!(runtime_reports.iter().any(|entry| {
+        entry.feature == "permissions-policy"
+            && entry.kind == bunner_shield_rs::ReportKind::Runtime
+            && entry.message.contains("Emitted Permissions-Policy header")
+    }));
 }
 
 #[test]

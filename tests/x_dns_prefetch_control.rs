@@ -10,6 +10,15 @@ fn given_default_options_when_secure_then_sets_off() {
         .expect("feature");
     let headers = HashMap::new();
 
+    let validation_reports = shield.take_report_entries();
+    assert!(validation_reports.iter().any(|entry| {
+        entry.feature == "x-dns-prefetch-control"
+            && entry.kind == bunner_shield_rs::ReportKind::Validation
+            && entry
+                .message
+                .contains("Configured X-DNS-Prefetch-Control policy")
+    }));
+
     let result = shield.secure(headers).expect("secure");
 
     assert_eq!(
@@ -18,6 +27,15 @@ fn given_default_options_when_secure_then_sets_off() {
             .map(String::as_str),
         Some(header_values::X_DNS_PREFETCH_CONTROL_OFF)
     );
+
+    let runtime_reports = shield.report_entries();
+    assert!(runtime_reports.iter().any(|entry| {
+        entry.feature == "x-dns-prefetch-control"
+            && entry.kind == bunner_shield_rs::ReportKind::Runtime
+            && entry
+                .message
+                .contains("Emitted X-DNS-Prefetch-Control header")
+    }));
 }
 
 #[test]
@@ -29,6 +47,15 @@ fn given_on_policy_when_secure_then_sets_on() {
         .expect("feature");
     let headers = HashMap::new();
 
+    let validation_reports = shield.take_report_entries();
+    assert!(validation_reports.iter().any(|entry| {
+        entry.feature == "x-dns-prefetch-control"
+            && entry.kind == bunner_shield_rs::ReportKind::Validation
+            && entry
+                .message
+                .contains("Configured X-DNS-Prefetch-Control policy")
+    }));
+
     let result = shield.secure(headers).expect("secure");
 
     assert_eq!(
@@ -37,4 +64,13 @@ fn given_on_policy_when_secure_then_sets_on() {
             .map(String::as_str),
         Some(header_values::X_DNS_PREFETCH_CONTROL_ON)
     );
+
+    let runtime_reports = shield.report_entries();
+    assert!(runtime_reports.iter().any(|entry| {
+        entry.feature == "x-dns-prefetch-control"
+            && entry.kind == bunner_shield_rs::ReportKind::Runtime
+            && entry
+                .message
+                .contains("Emitted X-DNS-Prefetch-Control header")
+    }));
 }

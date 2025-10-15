@@ -1,6 +1,6 @@
 use super::options::CoepOptions;
 use crate::constants::header_keys::CROSS_ORIGIN_EMBEDDER_POLICY;
-use crate::executor::{ExecutorError, FeatureExecutor};
+use crate::executor::{ExecutorError, FeatureExecutor, ReportContext};
 use crate::normalized_headers::NormalizedHeaders;
 
 pub struct Coep {
@@ -24,6 +24,21 @@ impl FeatureExecutor for Coep {
         let header_value = self.options.policy.as_str();
 
         headers.insert(CROSS_ORIGIN_EMBEDDER_POLICY, header_value);
+
+        Ok(())
+    }
+
+    fn emit_runtime_report(
+        &self,
+        context: &ReportContext,
+        headers: &NormalizedHeaders,
+    ) -> Result<(), ExecutorError> {
+        if let Some(value) = headers.get(CROSS_ORIGIN_EMBEDDER_POLICY) {
+            context.push_runtime_info(
+                "coep",
+                format!("Emitted Cross-Origin-Embedder-Policy header: {value}"),
+            );
+        }
 
         Ok(())
     }

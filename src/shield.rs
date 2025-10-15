@@ -2,17 +2,18 @@ use crate::clear_site_data::{ClearSiteData, ClearSiteDataOptions};
 use crate::coep::{Coep, CoepOptions};
 use crate::constants::executor_order::{
     CLEAR_SITE_DATA, CONTENT_SECURITY_POLICY, CROSS_ORIGIN_EMBEDDER_POLICY,
-    CROSS_ORIGIN_OPENER_POLICY, CROSS_ORIGIN_RESOURCE_POLICY, CSRF_TOKEN, ORIGIN_AGENT_CLUSTER,
-    PERMISSIONS_POLICY, REFERRER_POLICY, SAME_SITE, STRICT_TRANSPORT_SECURITY,
-    X_CONTENT_TYPE_OPTIONS, X_DNS_PREFETCH_CONTROL, X_DOWNLOAD_OPTIONS, X_FRAME_OPTIONS,
-    X_PERMITTED_CROSS_DOMAIN_POLICIES, X_POWERED_BY,
+    CROSS_ORIGIN_OPENER_POLICY, CROSS_ORIGIN_RESOURCE_POLICY, CSRF_TOKEN, NETWORK_ERROR_LOGGING,
+    ORIGIN_AGENT_CLUSTER, PERMISSIONS_POLICY, REFERRER_POLICY, SAME_SITE,
+    STRICT_TRANSPORT_SECURITY, X_CONTENT_TYPE_OPTIONS, X_DNS_PREFETCH_CONTROL, X_DOWNLOAD_OPTIONS,
+    X_FRAME_OPTIONS, X_PERMITTED_CROSS_DOMAIN_POLICIES, X_POWERED_BY,
 };
 use crate::coop::{Coop, CoopOptions};
 use crate::corp::{Corp, CorpOptions};
 use crate::csp::{Csp, CspOptions};
 use crate::csrf::{Csrf, CsrfOptions};
-use crate::executor::{Executor, ExecutorError};
+use crate::executor::{Executor, ExecutorError, ReportContext, ReportEntry};
 use crate::hsts::{Hsts, HstsOptions};
+use crate::nel::{Nel, NelOptions};
 use crate::normalized_headers::NormalizedHeaders;
 use crate::origin_agent_cluster::{OriginAgentCluster, OriginAgentClusterOptions};
 use crate::permissions_policy::{PermissionsPolicy, PermissionsPolicyOptions};
@@ -37,11 +38,29 @@ struct PipelineEntry {
 #[derive(Default)]
 pub struct Shield {
     pipeline: Vec<PipelineEntry>,
+    report_context: ReportContext,
 }
 
 impl Shield {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn with_report_context(mut self, context: ReportContext) -> Self {
+        self.report_context = context;
+        self
+    }
+
+    pub fn report_entries(&self) -> Vec<ReportEntry> {
+        self.report_context.entries()
+    }
+
+    pub fn take_report_entries(&self) -> Vec<ReportEntry> {
+        self.report_context.drain()
+    }
+
+    pub fn report_context(&self) -> ReportContext {
+        self.report_context.clone()
     }
 
     pub fn secure(
@@ -55,6 +74,11 @@ impl Shield {
                 .executor
                 .execute(&mut normalized)
                 .map_err(ShieldError::ExecutionFailed)?;
+
+            entry
+                .executor
+                .emit_runtime_report(&self.report_context, &normalized)
+                .map_err(ShieldError::ExecutionFailed)?;
         }
 
         Ok(normalized.into_result())
@@ -62,6 +86,12 @@ impl Shield {
 
     pub fn csp(mut self, options: CspOptions) -> Result<Self, ShieldError> {
         self.add_feature(CONTENT_SECURITY_POLICY, Box::new(Csp::new(options)))?;
+
+        Ok(self)
+    }
+
+    pub fn nel(mut self, options: NelOptions) -> Result<Self, ShieldError> {
+        self.add_feature(NETWORK_ERROR_LOGGING, Box::new(Nel::new(options)))?;
 
         Ok(self)
     }
@@ -191,7 +221,7 @@ impl Shield {
 
     fn add_feature(&mut self, order: u8, executor: Executor) -> Result<(), ShieldError> {
         executor
-            .validate_options()
+            .validate_options(&self.report_context)
             .map_err(ShieldError::ExecutorValidationFailed)?;
 
         self.pipeline.push(PipelineEntry { order, executor });

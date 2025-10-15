@@ -1,5 +1,5 @@
 use super::*;
-use crate::executor::FeatureOptions;
+use crate::executor::{FeatureOptions, ReportContext, ReportKind, ReportSeverity};
 
 mod validate {
     use super::*;
@@ -965,6 +965,41 @@ mod helpers {
         let result = CspNonceManager::with_size(0);
 
         assert!(matches!(result, Err(CspNonceManagerError::InvalidLength)));
+    }
+}
+
+mod reporting {
+    use super::*;
+
+    #[test]
+    fn given_reporting_configuration_when_emit_validation_reports_then_records_entries() {
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .report_to("default")
+            .report_group(CspReportGroup::new(
+                "default",
+                "https://reports.example.com",
+            ))
+            .reporting_endpoint("default", "https://reports.example.com")
+            .reporting_endpoint("backup", "https://backup.example.com");
+
+        let context = ReportContext::default();
+        FeatureOptions::emit_validation_reports(&options, &context);
+
+        let reports = context.entries();
+
+        assert!(reports.iter().any(|entry| {
+            entry.feature == "csp"
+                && entry.kind == ReportKind::Validation
+                && entry.severity == ReportSeverity::Info
+                && entry.message.contains("Reporting-Endpoints")
+        }));
+
+        assert!(reports.iter().any(|entry| {
+            entry.feature == "csp"
+                && entry.kind == ReportKind::Validation
+                && entry.message.contains("Report-To group")
+        }));
     }
 }
 

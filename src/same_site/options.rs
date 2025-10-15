@@ -1,5 +1,5 @@
 use crate::constants::header_values::{SAMESITE_LAX, SAMESITE_NONE, SAMESITE_STRICT};
-use crate::executor::FeatureOptions;
+use crate::executor::{FeatureOptions, ReportContext};
 use thiserror::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -79,6 +79,18 @@ impl FeatureOptions for SameSiteOptions {
         }
 
         Ok(())
+    }
+
+    fn emit_validation_reports(&self, context: &ReportContext) {
+        context.push_validation_info(
+            "same-site",
+            format!(
+                "Configured SameSite cookie policy: sameSite={}, secure={}, httpOnly={}",
+                self.meta.same_site.as_str(),
+                self.meta.secure,
+                self.meta.http_only
+            ),
+        );
     }
 }
 

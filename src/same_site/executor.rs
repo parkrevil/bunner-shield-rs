@@ -1,6 +1,6 @@
 use super::options::{CookieMeta, SameSiteOptions};
 use crate::constants::header_keys::SET_COOKIE;
-use crate::executor::{ExecutorError, FeatureExecutor};
+use crate::executor::{ExecutorError, FeatureExecutor, ReportContext};
 use crate::normalized_headers::NormalizedHeaders;
 
 pub struct SameSite {
@@ -27,6 +27,26 @@ impl FeatureExecutor for SameSite {
 
         let updated = apply_policy(existing, &self.options.meta);
         headers.insert(SET_COOKIE, updated);
+
+        Ok(())
+    }
+
+    fn emit_runtime_report(
+        &self,
+        context: &ReportContext,
+        headers: &NormalizedHeaders,
+    ) -> Result<(), ExecutorError> {
+        if headers.get(SET_COOKIE).is_some() {
+            context.push_runtime_info(
+                "same-site",
+                format!(
+                    "Applied SameSite policy {} with Secure={} and HttpOnly={}",
+                    self.options.meta.same_site.as_str(),
+                    self.options.meta.secure,
+                    self.options.meta.http_only
+                ),
+            );
+        }
 
         Ok(())
     }

@@ -2,7 +2,7 @@ use super::CspOptions;
 use crate::constants::header_keys::{
     CONTENT_SECURITY_POLICY, CONTENT_SECURITY_POLICY_REPORT_ONLY, REPORT_TO, REPORTING_ENDPOINTS,
 };
-use crate::executor::{ExecutorError, FeatureExecutor};
+use crate::executor::{ExecutorError, FeatureExecutor, ReportContext, ReportEntry, ReportSeverity};
 use crate::normalized_headers::NormalizedHeaders;
 
 pub struct Csp {
@@ -44,6 +44,54 @@ impl FeatureExecutor for Csp {
                 .collect::<Vec<_>>()
                 .join(", ");
             headers.insert(REPORTING_ENDPOINTS, value);
+        }
+
+        Ok(())
+    }
+
+    fn emit_runtime_report(
+        &self,
+        context: &ReportContext,
+        headers: &NormalizedHeaders,
+    ) -> Result<(), ExecutorError> {
+        let policy_header = if self.options.report_only {
+            CONTENT_SECURITY_POLICY_REPORT_ONLY
+        } else {
+            CONTENT_SECURITY_POLICY
+        };
+
+        if let Some(value) = headers.get(policy_header) {
+            context.push(ReportEntry::runtime(
+                "csp",
+                ReportSeverity::Info,
+                format!("Emitted {policy_header} header: {value}"),
+            ));
+        }
+
+        if let Some(report_to) = headers.get(REPORT_TO) {
+            context.push(ReportEntry::runtime(
+                "csp",
+                ReportSeverity::Info,
+                format!("Emitted Report-To header: {report_to}"),
+            ));
+        }
+
+        if let Some(endpoints) = headers.get(REPORTING_ENDPOINTS) {
+            let severity = if self.options.reporting_endpoints.is_empty() {
+                ReportSeverity::Warning
+            } else {
+                ReportSeverity::Info
+            };
+
+            let message = if self.options.reporting_endpoints.is_empty() {
+                format!(
+                    "Emitted Reporting-Endpoints header without configured endpoints: {endpoints}",
+                )
+            } else {
+                format!("Emitted Reporting-Endpoints header: {endpoints}")
+            };
+
+            context.push(ReportEntry::runtime("csp", severity, message));
         }
 
         Ok(())

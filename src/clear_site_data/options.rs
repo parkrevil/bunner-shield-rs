@@ -2,7 +2,7 @@ use crate::constants::header_values::{
     CLEAR_SITE_DATA_CACHE, CLEAR_SITE_DATA_COOKIES, CLEAR_SITE_DATA_EXECUTION_CONTEXTS,
     CLEAR_SITE_DATA_STORAGE,
 };
-use crate::executor::FeatureOptions;
+use crate::executor::{FeatureOptions, ReportContext};
 use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -60,6 +60,25 @@ impl ClearSiteDataOptions {
     fn has_any_section(&self) -> bool {
         self.cache || self.cookies || self.storage || self.execution_contexts
     }
+
+    fn selected_sections(&self) -> Vec<&'static str> {
+        let mut sections = Vec::new();
+
+        if self.cache {
+            sections.push("cache");
+        }
+        if self.cookies {
+            sections.push("cookies");
+        }
+        if self.storage {
+            sections.push("storage");
+        }
+        if self.execution_contexts {
+            sections.push("executionContexts");
+        }
+
+        sections
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -88,6 +107,16 @@ impl FeatureOptions for ClearSiteDataOptions {
         } else {
             Err(ClearSiteDataOptionsError::NoSectionsSelected)
         }
+    }
+
+    fn emit_validation_reports(&self, context: &ReportContext) {
+        let sections = self.selected_sections();
+        let description = sections.join(", ");
+
+        context.push_validation_info(
+            "clear-site-data",
+            format!("Configured Clear-Site-Data sections: {description}"),
+        );
     }
 }
 

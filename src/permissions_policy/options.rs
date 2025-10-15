@@ -1,4 +1,4 @@
-use crate::executor::FeatureOptions;
+use crate::executor::{FeatureOptions, ReportContext};
 use std::error::Error;
 use std::fmt;
 
@@ -50,6 +50,13 @@ impl FeatureOptions for PermissionsPolicyOptions {
         } else {
             Ok(())
         }
+    }
+
+    fn emit_validation_reports(&self, context: &ReportContext) {
+        context.push_validation_info(
+            "permissions-policy",
+            format!("Configured Permissions-Policy: {}", self.policy.trim()),
+        );
     }
 }
 

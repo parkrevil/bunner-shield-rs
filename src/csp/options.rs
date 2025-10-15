@@ -1,4 +1,4 @@
-use crate::executor::FeatureOptions;
+use crate::executor::{FeatureOptions, ReportContext, ReportEntry, ReportSeverity};
 use base64::Engine;
 use base64::engine::general_purpose;
 use rand::RngCore;
@@ -1180,6 +1180,71 @@ impl FeatureOptions for CspOptions {
 
     fn validate(&self) -> Result<(), Self::Error> {
         self.validate_with_warnings().map(|_| ())
+    }
+
+    fn emit_validation_reports(&self, context: &ReportContext) {
+        if let Some(group) = &self.report_group {
+            let mut message = format!(
+                "Configured Report-To group `{}` (max_age={}, endpoints={})",
+                group.name(),
+                group.max_age(),
+                group.endpoints().len()
+            );
+
+            if group.includes_subdomains() {
+                message.push_str(", include_subdomains=true");
+            }
+
+            context.push(ReportEntry::validation(
+                "csp",
+                ReportSeverity::Info,
+                message,
+            ));
+        }
+
+        if !self.reporting_endpoints.is_empty() {
+            let endpoint_summary = self
+                .reporting_endpoints
+                .iter()
+                .map(|endpoint| format!("{} -> {}", endpoint.name(), endpoint.url()))
+                .collect::<Vec<_>>()
+                .join(", ");
+
+            let has_report_to = self
+                .directive_value(CspDirective::ReportTo.as_str())
+                .is_some();
+
+            let severity = if has_report_to {
+                ReportSeverity::Info
+            } else {
+                ReportSeverity::Warning
+            };
+
+            let message = if has_report_to {
+                format!("Configured Reporting-Endpoints: {}", endpoint_summary)
+            } else {
+                format!(
+                    "Reporting-Endpoints configured without a matching report-to directive: {}",
+                    endpoint_summary
+                )
+            };
+
+            context.push(ReportEntry::validation("csp", severity, message));
+        }
+
+        if self.report_only {
+            let message = if self.report_group.is_some() {
+                "Report-Only mode enabled (Report-To group attached)".to_string()
+            } else {
+                "Report-Only mode enabled".to_string()
+            };
+
+            context.push(ReportEntry::validation(
+                "csp",
+                ReportSeverity::Info,
+                message,
+            ));
+        }
     }
 }
 

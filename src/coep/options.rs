@@ -1,5 +1,5 @@
 use crate::constants::header_values::{COEP_CREDENTIALLESS, COEP_REQUIRE_CORP};
-use crate::executor::FeatureOptions;
+use crate::executor::{FeatureOptions, ReportContext};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CoepPolicy {
@@ -45,5 +45,15 @@ impl FeatureOptions for CoepOptions {
 
     fn validate(&self) -> Result<(), Self::Error> {
         Ok(())
+    }
+
+    fn emit_validation_reports(&self, context: &ReportContext) {
+        context.push_validation_info(
+            "coep",
+            format!(
+                "Configured Cross-Origin-Embedder-Policy: {}",
+                self.policy.as_str()
+            ),
+        );
     }
 }

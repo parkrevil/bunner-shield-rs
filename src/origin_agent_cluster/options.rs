@@ -1,5 +1,5 @@
 use crate::constants::header_values::{ORIGIN_AGENT_CLUSTER_DISABLE, ORIGIN_AGENT_CLUSTER_ENABLE};
-use crate::executor::FeatureOptions;
+use crate::executor::{FeatureOptions, ReportContext};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct OriginAgentClusterOptions {
@@ -39,6 +39,16 @@ impl FeatureOptions for OriginAgentClusterOptions {
 
     fn validate(&self) -> Result<(), Self::Error> {
         Ok(())
+    }
+
+    fn emit_validation_reports(&self, context: &ReportContext) {
+        context.push_validation_info(
+            "origin-agent-cluster",
+            format!(
+                "Configured Origin-Agent-Cluster header value: {}",
+                self.enabled
+            ),
+        );
     }
 }
 

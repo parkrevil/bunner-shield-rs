@@ -1,7 +1,7 @@
 use super::options::CsrfOptions;
 use super::token::{CsrfTokenError, HmacCsrfService};
 use crate::constants::header_keys::{CSRF_TOKEN, SET_COOKIE};
-use crate::executor::{ExecutorError, FeatureExecutor};
+use crate::executor::{ExecutorError, FeatureExecutor, ReportContext};
 use crate::normalized_headers::NormalizedHeaders;
 use thiserror::Error;
 
@@ -43,6 +43,31 @@ impl FeatureExecutor for Csrf {
                 &self.options.cookie_name, &token
             ),
         );
+
+        Ok(())
+    }
+
+    fn emit_runtime_report(
+        &self,
+        context: &ReportContext,
+        headers: &NormalizedHeaders,
+    ) -> Result<(), ExecutorError> {
+        if let Some(value) = headers.get(CSRF_TOKEN) {
+            context.push_runtime_info(
+                "csrf",
+                format!("Issued X-CSRF-Token header ({} characters)", value.len()),
+            );
+        }
+
+        if headers.get(SET_COOKIE).is_some() {
+            context.push_runtime_info(
+                "csrf",
+                format!(
+                    "Issued Set-Cookie for CSRF token `{}`",
+                    self.options.cookie_name
+                ),
+            );
+        }
 
         Ok(())
     }
