@@ -1,5 +1,7 @@
 use crate::executor::{FeatureOptions, ReportContext};
+use std::collections::HashSet;
 use thiserror::Error;
+use url::Url;
 
 const DEFAULT_MAX_AGE: u64 = 2_592_000; // 30 days
 
@@ -10,6 +12,7 @@ pub struct NelOptions {
     pub(crate) include_subdomains: bool,
     pub(crate) failure_fraction: Option<f32>,
     pub(crate) success_fraction: Option<f32>,
+    pub(crate) reporting_endpoints: Vec<NelReportingEndpoint>,
 }
 
 impl NelOptions {
@@ -42,6 +45,21 @@ impl NelOptions {
         self
     }
 
+    pub fn reporting_endpoint(mut self, name: impl Into<String>, url: impl Into<String>) -> Self {
+        self.reporting_endpoints
+            .push(NelReportingEndpoint::new(name, url));
+        self
+    }
+
+    pub fn add_reporting_endpoint(mut self, endpoint: NelReportingEndpoint) -> Self {
+        self.reporting_endpoints.push(endpoint);
+        self
+    }
+
+    pub fn reporting_endpoints(&self) -> &[NelReportingEndpoint] {
+        &self.reporting_endpoints
+    }
+
     pub(crate) fn header_value(&self) -> String {
         let mut fields = Vec::new();
         fields.push(format!("\"report_to\":\"{}\"", self.report_to));
@@ -67,6 +85,60 @@ impl NelOptions {
 
         format!("{{{}}}", fields.join(","))
     }
+
+    pub(crate) fn report_to_header_value(&self) -> Option<String> {
+        if self.reporting_endpoints.is_empty() {
+            return None;
+        }
+
+        let mut fields = vec![
+            format!("\"group\":\"{}\"", self.report_to),
+            format!("\"max_age\":{}", self.max_age),
+        ];
+
+        if self.include_subdomains {
+            fields.push("\"include_subdomains\":true".to_string());
+        }
+
+        if let Some(fraction) = self.failure_fraction {
+            fields.push(format!(
+                "\"failure_fraction\":{}",
+                format_fraction(fraction)
+            ));
+        }
+
+        if let Some(fraction) = self.success_fraction {
+            fields.push(format!(
+                "\"success_fraction\":{}",
+                format_fraction(fraction)
+            ));
+        }
+
+        let endpoints = self
+            .reporting_endpoints
+            .iter()
+            .map(|endpoint| endpoint.report_to_fragment())
+            .collect::<Vec<_>>()
+            .join(",");
+
+        fields.push(format!("\"endpoints\":[{}]", endpoints));
+
+        Some(format!("{{{}}}", fields.join(",")))
+    }
+
+    pub(crate) fn reporting_endpoints_header_value(&self) -> Option<String> {
+        if self.reporting_endpoints.is_empty() {
+            return None;
+        }
+
+        Some(
+            self.reporting_endpoints
+                .iter()
+                .map(|endpoint| endpoint.reporting_endpoints_fragment())
+                .collect::<Vec<_>>()
+                .join(", "),
+        )
+    }
 }
 
 impl Default for NelOptions {
@@ -77,7 +149,39 @@ impl Default for NelOptions {
             include_subdomains: false,
             failure_fraction: None,
             success_fraction: None,
+            reporting_endpoints: Vec::new(),
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NelReportingEndpoint {
+    name: String,
+    url: String,
+}
+
+impl NelReportingEndpoint {
+    pub fn new(name: impl Into<String>, url: impl Into<String>) -> Self {
+        Self {
+            name: name.into().trim().to_string(),
+            url: url.into().trim().to_string(),
+        }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn url(&self) -> &str {
+        &self.url
+    }
+
+    fn report_to_fragment(&self) -> String {
+        format!("{{\"url\":\"{}\"}}", self.url)
+    }
+
+    fn reporting_endpoints_fragment(&self) -> String {
+        format!("{}=\"{}\"", self.name, self.url)
     }
 }
 
@@ -107,6 +211,8 @@ impl FeatureOptions for NelOptions {
             return Err(NelOptionsError::InvalidSuccessFraction(fraction));
         }
 
+        Self::validate_reporting_endpoints(&self.reporting_endpoints)?;
+
         Ok(())
     }
 
@@ -129,6 +235,20 @@ impl FeatureOptions for NelOptions {
             "nel",
             format!("Configured NEL policy: {}", attributes.join(", ")),
         );
+
+        if !self.reporting_endpoints.is_empty() {
+            let summary = self
+                .reporting_endpoints
+                .iter()
+                .map(|endpoint| format!("{} -> {}", endpoint.name(), endpoint.url()))
+                .collect::<Vec<_>>()
+                .join(", ");
+
+            context.push_validation_info(
+                "nel",
+                format!("Configured reporting endpoints: {}", summary),
+            );
+        }
     }
 }
 
@@ -142,6 +262,62 @@ pub enum NelOptionsError {
     InvalidFailureFraction(f32),
     #[error("nel success_fraction must be between 0.0 and 1.0 (received {0})")]
     InvalidSuccessFraction(f32),
+    #[error(
+        "nel reporting endpoint name must contain only ASCII alphanumeric characters, hyphen, underscore, or dot (received {0})"
+    )]
+    InvalidReportingEndpointName(String),
+    #[error("nel reporting endpoint url must be a valid https URL (received {0})")]
+    InvalidReportingEndpointUrl(String),
+    #[error("nel reporting endpoint names must be unique (duplicate {0})")]
+    DuplicateReportingEndpoint(String),
+}
+
+impl NelOptions {
+    fn validate_reporting_endpoints(
+        endpoints: &[NelReportingEndpoint],
+    ) -> Result<(), NelOptionsError> {
+        let mut seen = HashSet::new();
+
+        for endpoint in endpoints {
+            let name = endpoint.name();
+
+            if name.trim().is_empty() || !name.chars().all(valid_endpoint_name_char) {
+                return Err(NelOptionsError::InvalidReportingEndpointName(
+                    name.to_string(),
+                ));
+            }
+
+            let lowered = name.to_ascii_lowercase();
+            if !seen.insert(lowered) {
+                return Err(NelOptionsError::DuplicateReportingEndpoint(
+                    name.to_string(),
+                ));
+            }
+
+            let url = endpoint.url();
+
+            if url.trim().is_empty() {
+                return Err(NelOptionsError::InvalidReportingEndpointUrl(
+                    url.to_string(),
+                ));
+            }
+
+            let parsed = Url::parse(url)
+                .map_err(|_| NelOptionsError::InvalidReportingEndpointUrl(url.to_string()))?;
+
+            if parsed.scheme() != "https" || parsed.host_str().is_none() {
+                return Err(NelOptionsError::InvalidReportingEndpointUrl(
+                    url.to_string(),
+                ));
+            }
+        }
+
+        Ok(())
+    }
+}
+
+fn valid_endpoint_name_char(ch: char) -> bool {
+    ch.is_ascii_alphanumeric() || matches!(ch, '_' | '-' | '.')
 }
 
 fn format_fraction(value: f32) -> String {

@@ -7,11 +7,12 @@ use crate::constants::executor_order::{
     STRICT_TRANSPORT_SECURITY, X_CONTENT_TYPE_OPTIONS, X_DNS_PREFETCH_CONTROL, X_DOWNLOAD_OPTIONS,
     X_FRAME_OPTIONS, X_PERMITTED_CROSS_DOMAIN_POLICIES, X_POWERED_BY,
 };
+use crate::constants::header_keys::{REPORT_TO, REPORTING_ENDPOINTS};
 use crate::coop::{Coop, CoopOptions};
 use crate::corp::{Corp, CorpOptions};
 use crate::csp::{Csp, CspOptions};
 use crate::csrf::{Csrf, CsrfOptions};
-use crate::executor::{Executor, ExecutorError, ReportContext, ReportEntry};
+use crate::executor::{Executor, ExecutorError, ReportContext, ReportEntry, ReportingConfig};
 use crate::hsts::{Hsts, HstsOptions};
 use crate::nel::{Nel, NelOptions};
 use crate::normalized_headers::NormalizedHeaders;
@@ -70,6 +71,10 @@ impl Shield {
         let mut normalized = NormalizedHeaders::new(headers);
 
         for entry in &self.pipeline {
+            if let Some(config) = entry.executor.reporting_config() {
+                self.apply_reporting_config(&mut normalized, config);
+            }
+
             entry
                 .executor
                 .execute(&mut normalized)
@@ -228,6 +233,54 @@ impl Shield {
         self.pipeline.sort_by(|a, b| a.order.cmp(&b.order));
 
         Ok(())
+    }
+
+    fn apply_reporting_config(&self, headers: &mut NormalizedHeaders, config: ReportingConfig) {
+        if !config.report_to.is_empty() {
+            let mut header_value = headers
+                .get(REPORT_TO)
+                .map(str::to_string)
+                .unwrap_or_default();
+
+            for entry in config.report_to {
+                if header_value.is_empty() {
+                    header_value.push_str(&entry.value);
+                } else {
+                    header_value.push_str(", ");
+                    header_value.push_str(&entry.value);
+                }
+
+                self.report_context.push_runtime_info(
+                    entry.feature,
+                    format!("Added Report-To entry: {}", entry.value),
+                );
+            }
+
+            headers.insert(REPORT_TO, header_value);
+        }
+
+        if !config.reporting_endpoints.is_empty() {
+            let mut header_value = headers
+                .get(REPORTING_ENDPOINTS)
+                .map(str::to_string)
+                .unwrap_or_default();
+
+            for entry in config.reporting_endpoints {
+                if header_value.is_empty() {
+                    header_value.push_str(&entry.value);
+                } else {
+                    header_value.push_str(", ");
+                    header_value.push_str(&entry.value);
+                }
+
+                self.report_context.push_runtime_info(
+                    entry.feature,
+                    format!("Added Reporting-Endpoints entry: {}", entry.value),
+                );
+            }
+
+            headers.insert(REPORTING_ENDPOINTS, header_value);
+        }
     }
 }
 

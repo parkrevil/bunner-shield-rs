@@ -59,6 +59,33 @@ impl ReportEntry {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReportingEntry {
+    pub feature: &'static str,
+    pub value: String,
+}
+
+impl ReportingEntry {
+    pub fn new(feature: &'static str, value: impl Into<String>) -> Self {
+        Self {
+            feature,
+            value: value.into(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct ReportingConfig {
+    pub report_to: Vec<ReportingEntry>,
+    pub reporting_endpoints: Vec<ReportingEntry>,
+}
+
+impl ReportingConfig {
+    pub fn is_empty(&self) -> bool {
+        self.report_to.is_empty() && self.reporting_endpoints.is_empty()
+    }
+}
+
 #[derive(Clone, Default)]
 pub struct ReportContext {
     inner: Arc<ReportContextInner>,
@@ -147,6 +174,9 @@ pub(crate) trait FeatureExecutor {
 
     fn options(&self) -> &Self::Options;
     fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), ExecutorError>;
+    fn reporting_config(&self) -> Option<ReportingConfig> {
+        None
+    }
     fn emit_runtime_report(
         &self,
         _context: &ReportContext,
@@ -184,6 +214,7 @@ impl FeatureOptions for NoopOptions {
 pub(crate) trait DynFeatureExecutor {
     fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), ExecutorError>;
     fn validate_options(&self, context: &ReportContext) -> Result<(), ExecutorError>;
+    fn reporting_config(&self) -> Option<ReportingConfig>;
     fn emit_runtime_report(
         &self,
         context: &ReportContext,
@@ -201,6 +232,10 @@ where
 
     fn validate_options(&self, context: &ReportContext) -> Result<(), ExecutorError> {
         FeatureExecutor::validate_options(self, context)
+    }
+
+    fn reporting_config(&self) -> Option<ReportingConfig> {
+        FeatureExecutor::reporting_config(self)
     }
 
     fn emit_runtime_report(

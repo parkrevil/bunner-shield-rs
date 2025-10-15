@@ -17,9 +17,14 @@ pub mod header_keys {
     pub const SET_COOKIE: &str = "Set-Cookie";
     pub const CSRF_TOKEN: &str = "X-CSRF-Token";
     pub const CROSS_ORIGIN_EMBEDDER_POLICY: &str = "Cross-Origin-Embedder-Policy";
+    pub const CROSS_ORIGIN_EMBEDDER_POLICY_REPORT_ONLY: &str =
+        "Cross-Origin-Embedder-Policy-Report-Only";
     pub const CROSS_ORIGIN_OPENER_POLICY: &str = "Cross-Origin-Opener-Policy";
+    pub const CROSS_ORIGIN_OPENER_POLICY_REPORT_ONLY: &str =
+        "Cross-Origin-Opener-Policy-Report-Only";
     pub const CROSS_ORIGIN_RESOURCE_POLICY: &str = "Cross-Origin-Resource-Policy";
     pub const ORIGIN_AGENT_CLUSTER: &str = "Origin-Agent-Cluster";
+    pub const PERMISSIONS_POLICY_REPORT_ONLY: &str = "Permissions-Policy-Report-Only";
 }
 
 pub mod header_values {

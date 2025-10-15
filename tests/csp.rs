@@ -83,7 +83,7 @@ fn given_report_only_policy_when_secure_then_emits_report_headers() {
     assert!(runtime_reports.iter().any(|entry| {
         entry.feature == "csp"
             && entry.kind == ReportKind::Runtime
-            && entry.message.contains("Emitted Report-To header")
+            && entry.message.contains("Added Report-To entry")
     }));
 }
 
@@ -111,6 +111,6 @@ fn given_reporting_endpoints_when_secure_then_emits_reporting_header() {
     assert!(reports.iter().any(|entry| {
         entry.feature == "csp"
             && entry.kind == ReportKind::Runtime
-            && entry.message.contains("Emitted Reporting-Endpoints header")
+            && entry.message.contains("Added Reporting-Endpoints entry")
     }));
 }

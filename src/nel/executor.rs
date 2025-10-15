@@ -1,6 +1,8 @@
 use super::options::NelOptions;
 use crate::constants::header_keys::{NEL, REPORT_TO};
-use crate::executor::{ExecutorError, FeatureExecutor, ReportContext};
+use crate::executor::{
+    ExecutorError, FeatureExecutor, ReportContext, ReportingConfig, ReportingEntry,
+};
 use crate::normalized_headers::NormalizedHeaders;
 
 pub struct Nel {
@@ -24,6 +26,26 @@ impl FeatureExecutor for Nel {
         headers.insert(NEL, self.options.header_value());
 
         Ok(())
+    }
+
+    fn reporting_config(&self) -> Option<ReportingConfig> {
+        let mut config = ReportingConfig::default();
+
+        if let Some(value) = self.options.report_to_header_value() {
+            config.report_to.push(ReportingEntry::new("nel", value));
+        }
+
+        if let Some(value) = self.options.reporting_endpoints_header_value() {
+            config
+                .reporting_endpoints
+                .push(ReportingEntry::new("nel", value));
+        }
+
+        if config.is_empty() {
+            None
+        } else {
+            Some(config)
+        }
     }
 
     fn emit_runtime_report(

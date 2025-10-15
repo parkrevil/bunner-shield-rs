@@ -1,8 +1,9 @@
 use super::CspOptions;
-use crate::constants::header_keys::{
-    CONTENT_SECURITY_POLICY, CONTENT_SECURITY_POLICY_REPORT_ONLY, REPORT_TO, REPORTING_ENDPOINTS,
+use crate::constants::header_keys::{CONTENT_SECURITY_POLICY, CONTENT_SECURITY_POLICY_REPORT_ONLY};
+use crate::executor::{
+    ExecutorError, FeatureExecutor, ReportContext, ReportEntry, ReportSeverity, ReportingConfig,
+    ReportingEntry,
 };
-use crate::executor::{ExecutorError, FeatureExecutor, ReportContext, ReportEntry, ReportSeverity};
 use crate::normalized_headers::NormalizedHeaders;
 
 pub struct Csp {
@@ -31,8 +32,16 @@ impl FeatureExecutor for Csp {
 
         headers.insert(header_name, self.options.header_value());
 
+        Ok(())
+    }
+
+    fn reporting_config(&self) -> Option<ReportingConfig> {
+        let mut config = ReportingConfig::default();
+
         if let Some(group) = &self.options.report_group {
-            headers.insert(REPORT_TO, group.header_value());
+            config
+                .report_to
+                .push(ReportingEntry::new("csp", group.header_value()));
         }
 
         if !self.options.reporting_endpoints.is_empty() {
@@ -43,10 +52,17 @@ impl FeatureExecutor for Csp {
                 .map(|endpoint| endpoint.header_fragment())
                 .collect::<Vec<_>>()
                 .join(", ");
-            headers.insert(REPORTING_ENDPOINTS, value);
+
+            config
+                .reporting_endpoints
+                .push(ReportingEntry::new("csp", value));
         }
 
-        Ok(())
+        if config.is_empty() {
+            None
+        } else {
+            Some(config)
+        }
     }
 
     fn emit_runtime_report(
@@ -66,32 +82,6 @@ impl FeatureExecutor for Csp {
                 ReportSeverity::Info,
                 format!("Emitted {policy_header} header: {value}"),
             ));
-        }
-
-        if let Some(report_to) = headers.get(REPORT_TO) {
-            context.push(ReportEntry::runtime(
-                "csp",
-                ReportSeverity::Info,
-                format!("Emitted Report-To header: {report_to}"),
-            ));
-        }
-
-        if let Some(endpoints) = headers.get(REPORTING_ENDPOINTS) {
-            let severity = if self.options.reporting_endpoints.is_empty() {
-                ReportSeverity::Warning
-            } else {
-                ReportSeverity::Info
-            };
-
-            let message = if self.options.reporting_endpoints.is_empty() {
-                format!(
-                    "Emitted Reporting-Endpoints header without configured endpoints: {endpoints}",
-                )
-            } else {
-                format!("Emitted Reporting-Endpoints header: {endpoints}")
-            };
-
-            context.push(ReportEntry::runtime("csp", severity, message));
         }
 
         Ok(())

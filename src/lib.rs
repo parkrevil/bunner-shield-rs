@@ -22,9 +22,9 @@ mod x_permitted_cross_domain_policies;
 mod x_powered_by;
 
 pub use crate::clear_site_data::{ClearSiteData, ClearSiteDataOptions, ClearSiteDataOptionsError};
-pub use crate::coep::{Coep, CoepOptions, CoepPolicy};
+pub use crate::coep::{Coep, CoepOptions, CoepOptionsError, CoepPolicy};
 pub use crate::constants::{header_keys, header_values};
-pub use crate::coop::{Coop, CoopOptions, CoopPolicy};
+pub use crate::coop::{Coop, CoopOptions, CoopOptionsError, CoopPolicy};
 pub use crate::corp::{Corp, CorpOptions, CorpPolicy};
 pub use crate::csp::{
     CspDirective, CspHashAlgorithm, CspNonce, CspNonceManager, CspNonceManagerError, CspOptions,
@@ -34,7 +34,7 @@ pub use crate::csp::{
 pub use crate::csrf::{CsrfOptions, CsrfOptionsError, CsrfTokenError, HmacCsrfService};
 pub use crate::executor::{ReportContext, ReportEntry, ReportKind, ReportSeverity};
 pub use crate::hsts::{HstsOptions, HstsOptionsError};
-pub use crate::nel::{Nel, NelOptions, NelOptionsError};
+pub use crate::nel::{Nel, NelOptions, NelOptionsError, NelReportingEndpoint};
 pub use crate::origin_agent_cluster::{OriginAgentCluster, OriginAgentClusterOptions};
 pub use crate::permissions_policy::{
     PermissionsPolicy, PermissionsPolicyOptions, PermissionsPolicyOptionsError,

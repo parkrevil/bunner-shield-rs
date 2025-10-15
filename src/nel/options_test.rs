@@ -79,8 +79,71 @@ mod validation {
             .max_age(86_400)
             .include_subdomains(true)
             .failure_fraction(0.5)
-            .success_fraction(0.25);
+            .success_fraction(0.25)
+            .reporting_endpoint("default", "https://reports.example.com");
 
         assert!(options.validate().is_ok());
+    }
+
+    #[test]
+    fn given_invalid_reporting_endpoint_name_when_validate_then_returns_error() {
+        let options =
+            NelOptions::new().reporting_endpoint("invalid name", "https://reports.example.com");
+
+        assert!(matches!(
+            options.validate(),
+            Err(NelOptionsError::InvalidReportingEndpointName(name)) if name == "invalid name"
+        ));
+    }
+
+    #[test]
+    fn given_http_reporting_endpoint_url_when_validate_then_returns_error() {
+        let options = NelOptions::new().reporting_endpoint("default", "http://reports.example.com");
+
+        assert!(matches!(
+            options.validate(),
+            Err(NelOptionsError::InvalidReportingEndpointUrl(url)) if url == "http://reports.example.com"
+        ));
+    }
+
+    #[test]
+    fn given_duplicate_reporting_endpoint_names_when_validate_then_returns_error() {
+        let options = NelOptions::new()
+            .reporting_endpoint("DEFAULT", "https://reports.example.com")
+            .reporting_endpoint("default", "https://backup.example.com");
+
+        assert!(matches!(
+            options.validate(),
+            Err(NelOptionsError::DuplicateReportingEndpoint(name)) if name == "default"
+        ));
+    }
+}
+
+mod reporting_headers {
+    use super::*;
+
+    #[test]
+    fn given_reporting_endpoint_when_report_to_header_value_then_serializes_group() {
+        let options = NelOptions::new()
+            .report_to("nel")
+            .max_age(86_400)
+            .reporting_endpoint("default", "https://reports.example.com");
+
+        let value = options.report_to_header_value().expect("value");
+
+        assert!(value.contains("\"group\":\"nel\""));
+        assert!(value.contains("\"endpoints\""));
+        assert!(value.contains("https://reports.example.com"));
+    }
+
+    #[test]
+    fn given_reporting_endpoint_when_reporting_endpoints_header_value_then_serializes_header() {
+        let options =
+            NelOptions::new().reporting_endpoint("default", "https://reports.example.com");
+
+        assert_eq!(
+            options.reporting_endpoints_header_value(),
+            Some("default=\"https://reports.example.com\"".to_string())
+        );
     }
 }
