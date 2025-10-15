@@ -1,4 +1,4 @@
-use bunner_shield_rs::{CoopOptions, CoopPolicy, Shield, header_keys, header_values};
+use bunner_shield_rs::{CoopOptions, CoopPolicy, Shield};
 use std::collections::HashMap;
 
 fn empty_headers() -> HashMap<String, String> {
@@ -7,10 +7,7 @@ fn empty_headers() -> HashMap<String, String> {
 
 fn with_coop(value: &str) -> HashMap<String, String> {
     let mut headers = empty_headers();
-    headers.insert(
-        header_keys::CROSS_ORIGIN_OPENER_POLICY.to_string(),
-        value.to_string(),
-    );
+    headers.insert("Cross-Origin-Opener-Policy".to_string(), value.to_string());
     headers
 }
 
@@ -24,10 +21,8 @@ mod success {
         let result = shield.secure(empty_headers()).expect("secure");
 
         assert_eq!(
-            result
-                .get(header_keys::CROSS_ORIGIN_OPENER_POLICY)
-                .map(String::as_str),
-            Some(header_values::COOP_SAME_ORIGIN)
+            result.get("Cross-Origin-Opener-Policy").map(String::as_str),
+            Some("same-origin")
         );
     }
 
@@ -40,10 +35,8 @@ mod success {
         let result = shield.secure(empty_headers()).expect("secure");
 
         assert_eq!(
-            result
-                .get(header_keys::CROSS_ORIGIN_OPENER_POLICY)
-                .map(String::as_str),
-            Some(header_values::COOP_SAME_ORIGIN_ALLOW_POPUPS)
+            result.get("Cross-Origin-Opener-Policy").map(String::as_str),
+            Some("same-origin-allow-popups")
         );
     }
 
@@ -56,10 +49,8 @@ mod success {
         let result = shield.secure(empty_headers()).expect("secure");
 
         assert_eq!(
-            result
-                .get(header_keys::CROSS_ORIGIN_OPENER_POLICY)
-                .map(String::as_str),
-            Some(header_values::COOP_UNSAFE_NONE)
+            result.get("Cross-Origin-Opener-Policy").map(String::as_str),
+            Some("unsafe-none")
         );
     }
 }
@@ -74,10 +65,8 @@ mod edge {
         let result = shield.secure(with_coop("legacy")).expect("secure");
 
         assert_eq!(
-            result
-                .get(header_keys::CROSS_ORIGIN_OPENER_POLICY)
-                .map(String::as_str),
-            Some(header_values::COOP_SAME_ORIGIN)
+            result.get("Cross-Origin-Opener-Policy").map(String::as_str),
+            Some("same-origin")
         );
     }
 
@@ -94,10 +83,8 @@ mod edge {
 
         assert_eq!(result.get("X-Trace").map(String::as_str), Some("abc"));
         assert_eq!(
-            result
-                .get(header_keys::CROSS_ORIGIN_OPENER_POLICY)
-                .map(String::as_str),
-            Some(header_values::COOP_SAME_ORIGIN)
+            result.get("Cross-Origin-Opener-Policy").map(String::as_str),
+            Some("same-origin")
         );
     }
 }

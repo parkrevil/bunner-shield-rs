@@ -1,6 +1,4 @@
-use bunner_shield_rs::{
-    Shield, XdnsPrefetchControlOptions, XdnsPrefetchControlPolicy, header_keys, header_values,
-};
+use bunner_shield_rs::{Shield, XdnsPrefetchControlOptions, XdnsPrefetchControlPolicy};
 use std::collections::HashMap;
 
 fn empty_headers() -> HashMap<String, String> {
@@ -9,10 +7,7 @@ fn empty_headers() -> HashMap<String, String> {
 
 fn with_prefetch(value: &str) -> HashMap<String, String> {
     let mut headers = empty_headers();
-    headers.insert(
-        header_keys::X_DNS_PREFETCH_CONTROL.to_string(),
-        value.to_string(),
-    );
+    headers.insert("X-DNS-Prefetch-Control".to_string(), value.to_string());
     headers
 }
 
@@ -28,10 +23,8 @@ mod success {
         let result = shield.secure(empty_headers()).expect("secure");
 
         assert_eq!(
-            result
-                .get(header_keys::X_DNS_PREFETCH_CONTROL)
-                .map(String::as_str),
-            Some(header_values::X_DNS_PREFETCH_CONTROL_OFF)
+            result.get("X-DNS-Prefetch-Control").map(String::as_str),
+            Some("off")
         );
     }
 
@@ -46,10 +39,8 @@ mod success {
         let result = shield.secure(empty_headers()).expect("secure");
 
         assert_eq!(
-            result
-                .get(header_keys::X_DNS_PREFETCH_CONTROL)
-                .map(String::as_str),
-            Some(header_values::X_DNS_PREFETCH_CONTROL_ON)
+            result.get("X-DNS-Prefetch-Control").map(String::as_str),
+            Some("on")
         );
     }
 }
@@ -66,10 +57,8 @@ mod edge {
         let result = shield.secure(with_prefetch("on")).expect("secure");
 
         assert_eq!(
-            result
-                .get(header_keys::X_DNS_PREFETCH_CONTROL)
-                .map(String::as_str),
-            Some(header_values::X_DNS_PREFETCH_CONTROL_OFF)
+            result.get("X-DNS-Prefetch-Control").map(String::as_str),
+            Some("off")
         );
     }
 

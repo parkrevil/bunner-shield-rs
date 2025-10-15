@@ -1,5 +1,5 @@
 use bunner_shield_rs::{
-    PermissionsPolicyOptions, PermissionsPolicyOptionsError, Shield, ShieldError, header_keys,
+    PermissionsPolicyOptions, PermissionsPolicyOptionsError, Shield, ShieldError,
 };
 use std::collections::HashMap;
 
@@ -9,10 +9,7 @@ fn empty_headers() -> HashMap<String, String> {
 
 fn with_permissions_policy(value: &str) -> HashMap<String, String> {
     let mut headers = empty_headers();
-    headers.insert(
-        header_keys::PERMISSIONS_POLICY.to_string(),
-        value.to_string(),
-    );
+    headers.insert("Permissions-Policy".to_string(), value.to_string());
     headers
 }
 
@@ -28,9 +25,7 @@ mod success {
         let result = shield.secure(empty_headers()).expect("secure");
 
         assert_eq!(
-            result
-                .get(header_keys::PERMISSIONS_POLICY)
-                .map(String::as_str),
+            result.get("Permissions-Policy").map(String::as_str),
             Some("geolocation=()")
         );
     }
@@ -43,9 +38,7 @@ mod success {
         let result = shield.secure(empty_headers()).expect("secure");
 
         assert_eq!(
-            result
-                .get(header_keys::PERMISSIONS_POLICY)
-                .map(String::as_str),
+            result.get("Permissions-Policy").map(String::as_str),
             Some("microphone=('self')")
         );
     }
@@ -61,9 +54,7 @@ mod success {
         let result = shield.secure(empty_headers()).expect("secure");
 
         assert_eq!(
-            result
-                .get(header_keys::PERMISSIONS_POLICY)
-                .map(String::as_str),
+            result.get("Permissions-Policy").map(String::as_str),
             Some("camera=()")
         );
     }
@@ -83,9 +74,7 @@ mod edge {
             .expect("secure");
 
         assert_eq!(
-            result
-                .get(header_keys::PERMISSIONS_POLICY)
-                .map(String::as_str),
+            result.get("Permissions-Policy").map(String::as_str),
             Some("camera=()")
         );
     }

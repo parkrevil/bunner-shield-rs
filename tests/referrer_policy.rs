@@ -1,6 +1,4 @@
-use bunner_shield_rs::{
-    ReferrerPolicyOptions, ReferrerPolicyValue, Shield, header_keys, header_values,
-};
+use bunner_shield_rs::{ReferrerPolicyOptions, ReferrerPolicyValue, Shield};
 use std::collections::HashMap;
 
 fn empty_headers() -> HashMap<String, String> {
@@ -9,7 +7,7 @@ fn empty_headers() -> HashMap<String, String> {
 
 fn with_referrer_policy(value: &str) -> HashMap<String, String> {
     let mut headers = empty_headers();
-    headers.insert(header_keys::REFERRER_POLICY.to_string(), value.to_string());
+    headers.insert("Referrer-Policy".to_string(), value.to_string());
     headers
 }
 
@@ -21,7 +19,7 @@ fn assert_policy(policy: ReferrerPolicyValue, expected: &str) {
     let result = shield.secure(empty_headers()).expect("secure");
 
     assert_eq!(
-        result.get(header_keys::REFERRER_POLICY).map(String::as_str),
+        result.get("Referrer-Policy").map(String::as_str),
         Some(expected)
     );
 }
@@ -38,56 +36,44 @@ mod success {
             .expect("secure");
 
         assert_eq!(
-            result.get(header_keys::REFERRER_POLICY).map(String::as_str),
-            Some(header_values::REFERRER_POLICY_STRICT_ORIGIN_WHEN_CROSS_ORIGIN)
+            result.get("Referrer-Policy").map(String::as_str),
+            Some("strict-origin-when-cross-origin")
         );
     }
 
     #[test]
     fn given_no_referrer_policy_when_secure_then_sets_no_referrer_value() {
-        assert_policy(
-            ReferrerPolicyValue::NoReferrer,
-            header_values::REFERRER_POLICY_NO_REFERRER,
-        );
+        assert_policy(ReferrerPolicyValue::NoReferrer, "no-referrer");
     }
 
     #[test]
     fn given_no_referrer_when_downgrade_policy_when_secure_then_sets_expected_value() {
         assert_policy(
             ReferrerPolicyValue::NoReferrerWhenDowngrade,
-            header_values::REFERRER_POLICY_NO_REFERRER_WHEN_DOWNGRADE,
+            "no-referrer-when-downgrade",
         );
     }
 
     #[test]
     fn given_same_origin_policy_when_secure_then_sets_same_origin_value() {
-        assert_policy(
-            ReferrerPolicyValue::SameOrigin,
-            header_values::REFERRER_POLICY_SAME_ORIGIN,
-        );
+        assert_policy(ReferrerPolicyValue::SameOrigin, "same-origin");
     }
 
     #[test]
     fn given_origin_policy_when_secure_then_sets_origin_value() {
-        assert_policy(
-            ReferrerPolicyValue::Origin,
-            header_values::REFERRER_POLICY_ORIGIN,
-        );
+        assert_policy(ReferrerPolicyValue::Origin, "origin");
     }
 
     #[test]
     fn given_strict_origin_policy_when_secure_then_sets_strict_origin_value() {
-        assert_policy(
-            ReferrerPolicyValue::StrictOrigin,
-            header_values::REFERRER_POLICY_STRICT_ORIGIN,
-        );
+        assert_policy(ReferrerPolicyValue::StrictOrigin, "strict-origin");
     }
 
     #[test]
     fn given_origin_when_cross_origin_policy_when_secure_then_sets_expected_value() {
         assert_policy(
             ReferrerPolicyValue::OriginWhenCrossOrigin,
-            header_values::REFERRER_POLICY_ORIGIN_WHEN_CROSS_ORIGIN,
+            "origin-when-cross-origin",
         );
     }
 
@@ -95,16 +81,13 @@ mod success {
     fn given_strict_origin_when_cross_origin_policy_when_secure_then_sets_expected_value() {
         assert_policy(
             ReferrerPolicyValue::StrictOriginWhenCrossOrigin,
-            header_values::REFERRER_POLICY_STRICT_ORIGIN_WHEN_CROSS_ORIGIN,
+            "strict-origin-when-cross-origin",
         );
     }
 
     #[test]
     fn given_unsafe_url_policy_when_secure_then_sets_unsafe_url_value() {
-        assert_policy(
-            ReferrerPolicyValue::UnsafeUrl,
-            header_values::REFERRER_POLICY_UNSAFE_URL,
-        );
+        assert_policy(ReferrerPolicyValue::UnsafeUrl, "unsafe-url");
     }
 }
 
@@ -118,14 +101,12 @@ mod edge {
             .expect("feature");
 
         let result = shield
-            .secure(with_referrer_policy(
-                header_values::REFERRER_POLICY_UNSAFE_URL,
-            ))
+            .secure(with_referrer_policy("unsafe-url"))
             .expect("secure");
 
         assert_eq!(
-            result.get(header_keys::REFERRER_POLICY).map(String::as_str),
-            Some(header_values::REFERRER_POLICY_SAME_ORIGIN)
+            result.get("Referrer-Policy").map(String::as_str),
+            Some("same-origin")
         );
     }
 

@@ -1,5 +1,5 @@
 use bunner_shield_rs::{
-    CspNonceManager, CspOptions, CspOptionsError, CspSource, Shield, ShieldError, header_keys,
+    CspNonceManager, CspOptions, CspOptionsError, CspSource, Shield, ShieldError,
 };
 use std::collections::HashMap;
 
@@ -9,10 +9,7 @@ fn empty_headers() -> HashMap<String, String> {
 
 fn with_csp(value: &str) -> HashMap<String, String> {
     let mut headers = empty_headers();
-    headers.insert(
-        header_keys::CONTENT_SECURITY_POLICY.to_string(),
-        value.to_string(),
-    );
+    headers.insert("Content-Security-Policy".to_string(), value.to_string());
     headers
 }
 
@@ -30,9 +27,7 @@ mod success {
         let result = shield.secure(empty_headers()).expect("secure");
 
         assert_eq!(
-            result
-                .get(header_keys::CONTENT_SECURITY_POLICY)
-                .map(String::as_str),
+            result.get("Content-Security-Policy").map(String::as_str),
             Some("default-src 'self'; base-uri 'none'; frame-ancestors 'none'")
         );
     }
@@ -51,9 +46,7 @@ mod success {
         let result = shield.secure(empty_headers()).expect("secure");
 
         assert_eq!(
-            result
-                .get(header_keys::CONTENT_SECURITY_POLICY)
-                .map(String::as_str),
+            result.get("Content-Security-Policy").map(String::as_str),
             Some("default-src 'self'; img-src 'self'")
         );
     }
@@ -70,7 +63,7 @@ mod success {
 
         let nonce_value = format!("'nonce-{}'", nonce.into_inner());
         let header = result
-            .get(header_keys::CONTENT_SECURITY_POLICY)
+            .get("Content-Security-Policy")
             .map(String::to_string)
             .expect("csp header");
 
@@ -94,9 +87,7 @@ mod edge {
             .expect("secure");
 
         assert_eq!(
-            result
-                .get(header_keys::CONTENT_SECURITY_POLICY)
-                .map(String::as_str),
+            result.get("Content-Security-Policy").map(String::as_str),
             Some("default-src 'self'; style-src 'self'")
         );
     }

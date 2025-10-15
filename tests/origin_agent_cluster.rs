@@ -1,4 +1,4 @@
-use bunner_shield_rs::{OriginAgentClusterOptions, Shield, header_keys, header_values};
+use bunner_shield_rs::{OriginAgentClusterOptions, Shield};
 use std::collections::HashMap;
 
 fn empty_headers() -> HashMap<String, String> {
@@ -7,10 +7,7 @@ fn empty_headers() -> HashMap<String, String> {
 
 fn with_oac(value: &str) -> HashMap<String, String> {
     let mut headers = empty_headers();
-    headers.insert(
-        header_keys::ORIGIN_AGENT_CLUSTER.to_string(),
-        value.to_string(),
-    );
+    headers.insert("Origin-Agent-Cluster".to_string(), value.to_string());
     headers
 }
 
@@ -26,10 +23,8 @@ mod success {
         let result = shield.secure(empty_headers()).expect("secure");
 
         assert_eq!(
-            result
-                .get(header_keys::ORIGIN_AGENT_CLUSTER)
-                .map(String::as_str),
-            Some(header_values::ORIGIN_AGENT_CLUSTER_ENABLE)
+            result.get("Origin-Agent-Cluster").map(String::as_str),
+            Some("?1")
         );
     }
 
@@ -42,10 +37,8 @@ mod success {
         let result = shield.secure(empty_headers()).expect("secure");
 
         assert_eq!(
-            result
-                .get(header_keys::ORIGIN_AGENT_CLUSTER)
-                .map(String::as_str),
-            Some(header_values::ORIGIN_AGENT_CLUSTER_DISABLE)
+            result.get("Origin-Agent-Cluster").map(String::as_str),
+            Some("?0")
         );
     }
 
@@ -58,10 +51,8 @@ mod success {
         let result = shield.secure(empty_headers()).expect("secure");
 
         assert_eq!(
-            result
-                .get(header_keys::ORIGIN_AGENT_CLUSTER)
-                .map(String::as_str),
-            Some(header_values::ORIGIN_AGENT_CLUSTER_ENABLE)
+            result.get("Origin-Agent-Cluster").map(String::as_str),
+            Some("?1")
         );
     }
 }
@@ -78,10 +69,8 @@ mod edge {
         let result = shield.secure(with_oac("?1")).expect("secure");
 
         assert_eq!(
-            result
-                .get(header_keys::ORIGIN_AGENT_CLUSTER)
-                .map(String::as_str),
-            Some(header_values::ORIGIN_AGENT_CLUSTER_DISABLE)
+            result.get("Origin-Agent-Cluster").map(String::as_str),
+            Some("?0")
         );
     }
 

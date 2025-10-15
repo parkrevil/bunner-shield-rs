@@ -1,4 +1,4 @@
-use bunner_shield_rs::{Shield, XFrameOptionsOptions, XFrameOptionsPolicy, header_keys};
+use bunner_shield_rs::{Shield, XFrameOptionsOptions, XFrameOptionsPolicy};
 use std::collections::HashMap;
 
 fn empty_headers() -> HashMap<String, String> {
@@ -7,7 +7,7 @@ fn empty_headers() -> HashMap<String, String> {
 
 fn with_xfo(value: &str) -> HashMap<String, String> {
     let mut headers = empty_headers();
-    headers.insert(header_keys::X_FRAME_OPTIONS.to_string(), value.to_string());
+    headers.insert("X-Frame-Options".to_string(), value.to_string());
     headers
 }
 
@@ -23,7 +23,7 @@ mod success {
         let result = shield.secure(empty_headers()).expect("secure");
 
         assert_eq!(
-            result.get(header_keys::X_FRAME_OPTIONS).map(String::as_str),
+            result.get("X-Frame-Options").map(String::as_str),
             Some("DENY")
         );
     }
@@ -37,7 +37,7 @@ mod success {
         let result = shield.secure(empty_headers()).expect("secure");
 
         assert_eq!(
-            result.get(header_keys::X_FRAME_OPTIONS).map(String::as_str),
+            result.get("X-Frame-Options").map(String::as_str),
             Some("SAMEORIGIN")
         );
     }
@@ -55,7 +55,7 @@ mod edge {
         let result = shield.secure(with_xfo("ALLOW")).expect("secure");
 
         assert_eq!(
-            result.get(header_keys::X_FRAME_OPTIONS).map(String::as_str),
+            result.get("X-Frame-Options").map(String::as_str),
             Some("DENY")
         );
     }

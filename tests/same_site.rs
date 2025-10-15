@@ -1,5 +1,5 @@
 use bunner_shield_rs::{
-    SameSiteOptions, SameSiteOptionsError, SameSitePolicy, Shield, ShieldError, header_keys,
+    SameSiteOptions, SameSiteOptionsError, SameSitePolicy, Shield, ShieldError,
 };
 use std::collections::HashMap;
 
@@ -9,7 +9,7 @@ fn empty_headers() -> HashMap<String, String> {
 
 fn with_cookie(value: &str) -> HashMap<String, String> {
     let mut headers = empty_headers();
-    headers.insert(header_keys::SET_COOKIE.to_string(), value.to_string());
+    headers.insert("Set-Cookie".to_string(), value.to_string());
     headers
 }
 
@@ -25,7 +25,7 @@ mod success {
         let result = shield.secure(with_cookie("session=abc")).expect("secure");
 
         assert_eq!(
-            result.get(header_keys::SET_COOKIE).map(String::as_str),
+            result.get("Set-Cookie").map(String::as_str),
             Some("session=abc; Secure; HttpOnly; SameSite=Lax")
         );
     }
@@ -42,7 +42,7 @@ mod success {
             .expect("secure");
 
         assert_eq!(
-            result.get(header_keys::SET_COOKIE).map(String::as_str),
+            result.get("Set-Cookie").map(String::as_str),
             Some("session=abc; Secure; SameSite=Strict")
         );
     }
@@ -73,7 +73,7 @@ mod edge {
 
         let result = shield.secure(headers).expect("secure");
 
-        let cookie = result.get(header_keys::SET_COOKIE).expect("cookie present");
+        let cookie = result.get("Set-Cookie").expect("cookie present");
         assert!(cookie.contains("Path=/"));
         assert!(cookie.contains("Domain=example.com"));
         assert!(cookie.contains("SameSite=Lax"));

@@ -4,7 +4,7 @@ use bunner_shield_rs::{
     HstsOptionsError, OriginAgentClusterOptions, PermissionsPolicyOptions,
     PermissionsPolicyOptionsError, ReferrerPolicyOptions, ReferrerPolicyValue, SameSiteOptions,
     SameSitePolicy, Shield, ShieldError, XFrameOptionsOptions, XFrameOptionsPolicy,
-    XdnsPrefetchControlOptions, XdnsPrefetchControlPolicy, header_keys, header_values,
+    XdnsPrefetchControlOptions, XdnsPrefetchControlPolicy,
 };
 use std::collections::HashMap;
 
@@ -88,111 +88,89 @@ mod success {
         headers.insert("X-Powered-By".to_string(), "Express".to_string());
         headers.insert("Content-Type".to_string(), "application/json".to_string());
         headers.insert(
-            header_keys::CROSS_ORIGIN_OPENER_POLICY.to_string(),
+            "Cross-Origin-Opener-Policy".to_string(),
             "unsafe-none".to_string(),
         );
         headers.insert(
-            header_keys::STRICT_TRANSPORT_SECURITY.to_string(),
+            "Strict-Transport-Security".to_string(),
             "max-age=0".to_string(),
         );
 
         let secured = shield.secure(headers).expect("secure");
 
-        let csp = secured
-            .get(header_keys::CONTENT_SECURITY_POLICY)
-            .expect("csp header");
+        let csp = secured.get("Content-Security-Policy").expect("csp header");
         assert!(csp.contains("default-src 'self'"));
         assert!(csp.contains("script-src 'self'"));
 
         assert_eq!(
-            secured
-                .get(header_keys::STRICT_TRANSPORT_SECURITY)
-                .map(String::as_str),
+            secured.get("Strict-Transport-Security").map(String::as_str),
             Some("max-age=31536000; includeSubDomains")
         );
         assert_eq!(
-            secured
-                .get(header_keys::X_CONTENT_TYPE_OPTIONS)
-                .map(String::as_str),
-            Some(header_values::NOSNIFF)
+            secured.get("X-Content-Type-Options").map(String::as_str),
+            Some("nosniff")
         );
         assert_eq!(
             secured
-                .get(header_keys::CROSS_ORIGIN_EMBEDDER_POLICY)
+                .get("Cross-Origin-Embedder-Policy")
                 .map(String::as_str),
-            Some(header_values::COEP_CREDENTIALLESS)
+            Some("credentialless")
         );
         assert_eq!(
             secured
-                .get(header_keys::CROSS_ORIGIN_OPENER_POLICY)
+                .get("Cross-Origin-Opener-Policy")
                 .map(String::as_str),
-            Some(header_values::COOP_SAME_ORIGIN_ALLOW_POPUPS)
+            Some("same-origin-allow-popups")
         );
         assert_eq!(
             secured
-                .get(header_keys::CROSS_ORIGIN_RESOURCE_POLICY)
+                .get("Cross-Origin-Resource-Policy")
                 .map(String::as_str),
-            Some(header_values::CORP_CROSS_ORIGIN)
+            Some("cross-origin")
         );
         assert_eq!(
-            secured
-                .get(header_keys::X_FRAME_OPTIONS)
-                .map(String::as_str),
+            secured.get("X-Frame-Options").map(String::as_str),
             Some("SAMEORIGIN")
         );
         assert_eq!(
-            secured
-                .get(header_keys::REFERRER_POLICY)
-                .map(String::as_str),
-            Some(header_values::REFERRER_POLICY_STRICT_ORIGIN)
+            secured.get("Referrer-Policy").map(String::as_str),
+            Some("strict-origin")
         );
         assert_eq!(
-            secured
-                .get(header_keys::ORIGIN_AGENT_CLUSTER)
-                .map(String::as_str),
-            Some(header_values::ORIGIN_AGENT_CLUSTER_DISABLE)
+            secured.get("Origin-Agent-Cluster").map(String::as_str),
+            Some("?0")
         );
         assert_eq!(
-            secured
-                .get(header_keys::PERMISSIONS_POLICY)
-                .map(String::as_str),
+            secured.get("Permissions-Policy").map(String::as_str),
             Some("geolocation=()")
         );
         assert_eq!(
-            secured
-                .get(header_keys::X_DNS_PREFETCH_CONTROL)
-                .map(String::as_str),
-            Some(header_values::X_DNS_PREFETCH_CONTROL_ON)
+            secured.get("X-DNS-Prefetch-Control").map(String::as_str),
+            Some("on")
         );
         let clear_site_data_value = [
-            header_values::CLEAR_SITE_DATA_CACHE,
-            header_values::CLEAR_SITE_DATA_COOKIES,
-            header_values::CLEAR_SITE_DATA_STORAGE,
-            header_values::CLEAR_SITE_DATA_EXECUTION_CONTEXTS,
+            "\"cache\"",
+            "\"cookies\"",
+            "\"storage\"",
+            "\"executionContexts\"",
         ]
         .join(", ");
 
         assert_eq!(
-            secured
-                .get(header_keys::CLEAR_SITE_DATA)
-                .map(String::as_str),
+            secured.get("Clear-Site-Data").map(String::as_str),
             Some(clear_site_data_value.as_str())
         );
-        assert!(!secured.contains_key(header_keys::X_POWERED_BY));
+        assert!(!secured.contains_key("X-Powered-By"));
         assert_eq!(
             secured.get("Content-Type").map(String::as_str),
             Some("application/json")
         );
 
-        let csrf_token = secured
-            .get(header_keys::CSRF_TOKEN)
-            .expect("csrf token present");
+        let csrf_token = secured.get("X-CSRF-Token").expect("csrf token present");
         assert_eq!(csrf_token.len(), 64);
         assert!(csrf_token.chars().all(|c| c.is_ascii_hexdigit()));
 
-        let cookie = secured
-            .get(header_keys::SET_COOKIE)
-            .expect("csrf cookie present");
+        let cookie = secured.get("Set-Cookie").expect("csrf cookie present");
         assert!(cookie.contains("SameSite=Strict"));
     }
 
@@ -212,57 +190,50 @@ mod success {
 
         let mut headers = empty_headers();
         headers.insert(
-            header_keys::STRICT_TRANSPORT_SECURITY.to_string(),
+            "Strict-Transport-Security".to_string(),
             "max-age=0".to_string(),
         );
         headers.insert(
-            header_keys::CROSS_ORIGIN_EMBEDDER_POLICY.to_string(),
+            "Cross-Origin-Embedder-Policy".to_string(),
             "unsafe".to_string(),
         );
         headers.insert(
-            header_keys::CROSS_ORIGIN_OPENER_POLICY.to_string(),
+            "Cross-Origin-Opener-Policy".to_string(),
             "unsafe".to_string(),
         );
         headers.insert(
-            header_keys::CROSS_ORIGIN_RESOURCE_POLICY.to_string(),
+            "Cross-Origin-Resource-Policy".to_string(),
             "unsafe".to_string(),
         );
-        headers.insert(
-            header_keys::REFERRER_POLICY.to_string(),
-            "unsafe-url".to_string(),
-        );
+        headers.insert("Referrer-Policy".to_string(), "unsafe-url".to_string());
 
         let secured = shield.secure(headers).expect("secure");
 
         assert_eq!(
-            secured
-                .get(header_keys::STRICT_TRANSPORT_SECURITY)
-                .map(String::as_str),
+            secured.get("Strict-Transport-Security").map(String::as_str),
             Some("max-age=31536000; includeSubDomains")
         );
         assert_eq!(
             secured
-                .get(header_keys::CROSS_ORIGIN_EMBEDDER_POLICY)
+                .get("Cross-Origin-Embedder-Policy")
                 .map(String::as_str),
-            Some(header_values::COEP_REQUIRE_CORP)
+            Some("require-corp")
         );
         assert_eq!(
             secured
-                .get(header_keys::CROSS_ORIGIN_OPENER_POLICY)
+                .get("Cross-Origin-Opener-Policy")
                 .map(String::as_str),
-            Some(header_values::COOP_SAME_ORIGIN)
+            Some("same-origin")
         );
         assert_eq!(
             secured
-                .get(header_keys::CROSS_ORIGIN_RESOURCE_POLICY)
+                .get("Cross-Origin-Resource-Policy")
                 .map(String::as_str),
-            Some(header_values::CORP_SAME_ORIGIN)
+            Some("same-origin")
         );
         assert_eq!(
-            secured
-                .get(header_keys::REFERRER_POLICY)
-                .map(String::as_str),
-            Some(header_values::REFERRER_POLICY_STRICT_ORIGIN_WHEN_CROSS_ORIGIN)
+            secured.get("Referrer-Policy").map(String::as_str),
+            Some("strict-origin-when-cross-origin")
         );
     }
 
@@ -276,9 +247,7 @@ mod success {
 
         let secured = shield.secure(empty_headers()).expect("secure");
 
-        let cookie = secured
-            .get(header_keys::SET_COOKIE)
-            .expect("cookie present");
+        let cookie = secured.get("Set-Cookie").expect("cookie present");
         assert!(cookie.contains("SameSite=Strict"));
         assert!(cookie.contains("Secure"));
         assert!(cookie.contains("HttpOnly"));

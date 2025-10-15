@@ -84,7 +84,3 @@ pub enum HstsOptionsError {
     #[error("preload requires max-age of at least 31536000 seconds")]
     PreloadRequiresLongMaxAge,
 }
-
-#[cfg(test)]
-#[path = "options_test.rs"]
-mod options_test;

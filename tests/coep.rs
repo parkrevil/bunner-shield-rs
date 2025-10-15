@@ -1,4 +1,4 @@
-use bunner_shield_rs::{CoepOptions, CoepPolicy, Shield, header_keys, header_values};
+use bunner_shield_rs::{CoepOptions, CoepPolicy, Shield};
 use std::collections::HashMap;
 
 fn empty_headers() -> HashMap<String, String> {
@@ -8,7 +8,7 @@ fn empty_headers() -> HashMap<String, String> {
 fn with_coep(value: &str) -> HashMap<String, String> {
     let mut headers = empty_headers();
     headers.insert(
-        header_keys::CROSS_ORIGIN_EMBEDDER_POLICY.to_string(),
+        "Cross-Origin-Embedder-Policy".to_string(),
         value.to_string(),
     );
     headers
@@ -25,9 +25,9 @@ mod success {
 
         assert_eq!(
             result
-                .get(header_keys::CROSS_ORIGIN_EMBEDDER_POLICY)
+                .get("Cross-Origin-Embedder-Policy")
                 .map(String::as_str),
-            Some(header_values::COEP_REQUIRE_CORP)
+            Some("require-corp")
         );
     }
 
@@ -41,9 +41,9 @@ mod success {
 
         assert_eq!(
             result
-                .get(header_keys::CROSS_ORIGIN_EMBEDDER_POLICY)
+                .get("Cross-Origin-Embedder-Policy")
                 .map(String::as_str),
-            Some(header_values::COEP_CREDENTIALLESS)
+            Some("credentialless")
         );
     }
 
@@ -57,9 +57,9 @@ mod success {
 
         assert_eq!(
             result
-                .get(header_keys::CROSS_ORIGIN_EMBEDDER_POLICY)
+                .get("Cross-Origin-Embedder-Policy")
                 .map(String::as_str),
-            Some(header_values::COEP_REQUIRE_CORP)
+            Some("require-corp")
         );
     }
 }
@@ -75,9 +75,9 @@ mod edge {
 
         assert_eq!(
             result
-                .get(header_keys::CROSS_ORIGIN_EMBEDDER_POLICY)
+                .get("Cross-Origin-Embedder-Policy")
                 .map(String::as_str),
-            Some(header_values::COEP_REQUIRE_CORP)
+            Some("require-corp")
         );
     }
 
@@ -96,9 +96,9 @@ mod edge {
         );
         assert_eq!(
             result
-                .get(header_keys::CROSS_ORIGIN_EMBEDDER_POLICY)
+                .get("Cross-Origin-Embedder-Policy")
                 .map(String::as_str),
-            Some(header_values::COEP_REQUIRE_CORP)
+            Some("require-corp")
         );
     }
 }

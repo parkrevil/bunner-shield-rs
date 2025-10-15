@@ -1,4 +1,4 @@
-use bunner_shield_rs::{Shield, header_keys};
+use bunner_shield_rs::Shield;
 use std::collections::HashMap;
 
 fn empty_headers() -> HashMap<String, String> {
@@ -22,7 +22,7 @@ mod success {
 
         let result = shield.secure(headers).expect("secure");
 
-        assert!(!result.contains_key(header_keys::X_POWERED_BY));
+        assert!(!result.contains_key("X-Powered-By"));
         assert_eq!(
             result.get("Content-Type").map(String::as_str),
             Some("application/json")
@@ -37,7 +37,7 @@ mod success {
             .secure(with_header("x-PoWeReD-bY", "Express"))
             .expect("secure");
 
-        assert!(!result.contains_key(header_keys::X_POWERED_BY));
+        assert!(!result.contains_key("X-Powered-By"));
     }
 }
 

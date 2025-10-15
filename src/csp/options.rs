@@ -711,17 +711,6 @@ impl CspOptions {
         self.set_directive(directive.as_str(), "");
     }
 
-    #[cfg(test)]
-    pub(crate) fn directive<'a>(
-        mut self,
-        name: impl Into<Cow<'a, str>>,
-        value: impl Into<Cow<'a, str>>,
-    ) -> Self {
-        self.directives
-            .push((name.into().into_owned(), value.into().into_owned()));
-        self
-    }
-
     pub fn script_src_nonce<S>(mut self, nonce: S) -> Self
     where
         S: Into<String>,
@@ -1801,7 +1790,3 @@ pub enum CspNonceManagerError {
     #[error("nonce length must be greater than zero")]
     InvalidLength,
 }
-
-#[cfg(test)]
-#[path = "options_test.rs"]
-mod options_test;

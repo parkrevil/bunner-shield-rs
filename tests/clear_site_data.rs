@@ -1,7 +1,4 @@
-use bunner_shield_rs::{
-    ClearSiteDataOptions, ClearSiteDataOptionsError, Shield, ShieldError, header_keys,
-    header_values,
-};
+use bunner_shield_rs::{ClearSiteDataOptions, ClearSiteDataOptionsError, Shield, ShieldError};
 use std::collections::HashMap;
 
 fn empty_headers() -> HashMap<String, String> {
@@ -26,8 +23,8 @@ mod success {
         let result = shield.secure(empty_headers()).expect("secure");
 
         assert_eq!(
-            result.get(header_keys::CLEAR_SITE_DATA).map(String::as_str),
-            Some(header_values::CLEAR_SITE_DATA_CACHE)
+            result.get("Clear-Site-Data").map(String::as_str),
+            Some("\"cache\"")
         );
     }
 
@@ -46,15 +43,15 @@ mod success {
         let result = shield.secure(empty_headers()).expect("secure");
 
         let expected = [
-            header_values::CLEAR_SITE_DATA_CACHE,
-            header_values::CLEAR_SITE_DATA_COOKIES,
-            header_values::CLEAR_SITE_DATA_STORAGE,
-            header_values::CLEAR_SITE_DATA_EXECUTION_CONTEXTS,
+            "\"cache\"",
+            "\"cookies\"",
+            "\"storage\"",
+            "\"executionContexts\"",
         ]
         .join(", ");
 
         assert_eq!(
-            result.get(header_keys::CLEAR_SITE_DATA).map(String::as_str),
+            result.get("Clear-Site-Data").map(String::as_str),
             Some(expected.as_str())
         );
     }
@@ -66,15 +63,12 @@ mod success {
             .expect("feature");
 
         let result = shield
-            .secure(with_header(
-                header_keys::CLEAR_SITE_DATA,
-                header_values::CLEAR_SITE_DATA_COOKIES,
-            ))
+            .secure(with_header("Clear-Site-Data", "\"cookies\""))
             .expect("secure");
 
         assert_eq!(
-            result.get(header_keys::CLEAR_SITE_DATA).map(String::as_str),
-            Some(header_values::CLEAR_SITE_DATA_STORAGE)
+            result.get("Clear-Site-Data").map(String::as_str),
+            Some("\"storage\"")
         );
     }
 
@@ -98,8 +92,8 @@ mod success {
             Some("abc-123")
         );
         assert_eq!(
-            result.get(header_keys::CLEAR_SITE_DATA).map(String::as_str),
-            Some(header_values::CLEAR_SITE_DATA_COOKIES)
+            result.get("Clear-Site-Data").map(String::as_str),
+            Some("\"cookies\"")
         );
     }
 }

@@ -1,4 +1,4 @@
-use bunner_shield_rs::{HstsOptions, HstsOptionsError, Shield, ShieldError, header_keys};
+use bunner_shield_rs::{HstsOptions, HstsOptionsError, Shield, ShieldError};
 use std::collections::HashMap;
 
 fn empty_headers() -> HashMap<String, String> {
@@ -7,10 +7,7 @@ fn empty_headers() -> HashMap<String, String> {
 
 fn with_hsts(value: &str) -> HashMap<String, String> {
     let mut headers = empty_headers();
-    headers.insert(
-        header_keys::STRICT_TRANSPORT_SECURITY.to_string(),
-        value.to_string(),
-    );
+    headers.insert("Strict-Transport-Security".to_string(), value.to_string());
     headers
 }
 
@@ -24,9 +21,7 @@ mod success {
         let result = shield.secure(empty_headers()).expect("secure");
 
         assert_eq!(
-            result
-                .get(header_keys::STRICT_TRANSPORT_SECURITY)
-                .map(String::as_str),
+            result.get("Strict-Transport-Security").map(String::as_str),
             Some("max-age=31536000")
         );
     }
@@ -40,9 +35,7 @@ mod success {
         let result = shield.secure(empty_headers()).expect("secure");
 
         assert_eq!(
-            result
-                .get(header_keys::STRICT_TRANSPORT_SECURITY)
-                .map(String::as_str),
+            result.get("Strict-Transport-Security").map(String::as_str),
             Some("max-age=31536000; includeSubDomains")
         );
     }
@@ -61,9 +54,7 @@ mod success {
         let result = shield.secure(empty_headers()).expect("secure");
 
         assert_eq!(
-            result
-                .get(header_keys::STRICT_TRANSPORT_SECURITY)
-                .map(String::as_str),
+            result.get("Strict-Transport-Security").map(String::as_str),
             Some("max-age=31536000; includeSubDomains; preload")
         );
     }
@@ -81,9 +72,7 @@ mod edge {
         let result = shield.secure(with_hsts("max-age=0")).expect("secure");
 
         assert_eq!(
-            result
-                .get(header_keys::STRICT_TRANSPORT_SECURITY)
-                .map(String::as_str),
+            result.get("Strict-Transport-Security").map(String::as_str),
             Some("max-age=31536000; includeSubDomains")
         );
     }

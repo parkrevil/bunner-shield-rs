@@ -1,4 +1,4 @@
-use bunner_shield_rs::{CsrfOptions, CsrfOptionsError, Shield, ShieldError, header_keys};
+use bunner_shield_rs::{CsrfOptions, CsrfOptionsError, Shield, ShieldError};
 use std::collections::HashMap;
 
 fn secret() -> [u8; 32] {
@@ -25,14 +25,10 @@ mod success {
 
         let result = shield.secure(empty_headers()).expect("secure");
 
-        let token = result
-            .get(header_keys::CSRF_TOKEN)
-            .expect("csrf token present");
+        let token = result.get("X-CSRF-Token").expect("csrf token present");
         assert_hex(token, 64);
 
-        let cookie = result
-            .get(header_keys::SET_COOKIE)
-            .expect("csrf cookie present");
+        let cookie = result.get("Set-Cookie").expect("csrf cookie present");
         assert!(cookie.contains("__Host-csrf-token="));
         assert!(cookie.contains("Path=/"));
         assert!(cookie.contains("Secure"));
@@ -48,9 +44,7 @@ mod success {
 
         let result = shield.secure(empty_headers()).expect("secure");
 
-        let token = result
-            .get(header_keys::CSRF_TOKEN)
-            .expect("csrf token present");
+        let token = result.get("X-CSRF-Token").expect("csrf token present");
         assert_hex(token, 40);
     }
 
@@ -63,8 +57,8 @@ mod success {
         let first = shield.secure(empty_headers()).expect("secure");
         let second = shield.secure(empty_headers()).expect("secure again");
 
-        let token_one = first.get(header_keys::CSRF_TOKEN).expect("first token");
-        let token_two = second.get(header_keys::CSRF_TOKEN).expect("second token");
+        let token_one = first.get("X-CSRF-Token").expect("first token");
+        let token_two = second.get("X-CSRF-Token").expect("second token");
 
         assert_ne!(token_one, token_two);
     }
@@ -81,15 +75,13 @@ mod edge {
 
         let mut headers = empty_headers();
         headers.insert(
-            header_keys::SET_COOKIE.to_string(),
+            "Set-Cookie".to_string(),
             "__Host-csrf-token=abc; Path=/; SameSite=None".to_string(),
         );
 
         let result = shield.secure(headers).expect("secure");
 
-        let cookie = result
-            .get(header_keys::SET_COOKIE)
-            .expect("csrf cookie present");
+        let cookie = result.get("Set-Cookie").expect("csrf cookie present");
         assert!(cookie.contains("SameSite=Lax"));
         assert!(cookie.contains("Secure"));
         assert!(cookie.contains("HttpOnly"));
