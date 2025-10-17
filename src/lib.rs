@@ -48,9 +48,5 @@ pub use crate::x_dns_prefetch_control::{
 pub use crate::x_frame_options::{XFrameOptions, XFrameOptionsOptions, XFrameOptionsPolicy};
 
 #[cfg(test)]
-#[path = "lib_test.rs"]
-mod lib_test;
-
-#[cfg(test)]
 #[path = "tests_common.rs"]
 pub(crate) mod tests_common;
