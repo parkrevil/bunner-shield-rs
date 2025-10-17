@@ -34,11 +34,7 @@ impl HeaderEntry {
                 .join("\n");
             self.joined = Cow::Owned(joined);
         } else {
-            self.joined = self
-                .values
-                .first()
-                .cloned()
-                .unwrap_or(Cow::Borrowed(""));
+            self.joined = self.values.first().cloned().unwrap_or(Cow::Borrowed(""));
         }
     }
 }
