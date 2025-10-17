@@ -15,9 +15,7 @@ fn with_csp(value: &str) -> HashMap<String, String> {
 
 mod success {
     use super::*;
-    use bunner_shield_rs::{
-        CspHashAlgorithm, SandboxToken, TrustedTypesPolicy, TrustedTypesToken,
-    };
+    use bunner_shield_rs::{CspHashAlgorithm, SandboxToken, TrustedTypesPolicy, TrustedTypesToken};
     use std::collections::HashMap;
 
     fn parse_csp_header(header: &str) -> HashMap<String, Vec<String>> {
@@ -47,7 +45,8 @@ mod success {
         name: &str,
         expected: &[&str],
     ) {
-        let mut expected_tokens: Vec<String> = expected.iter().map(|token| token.to_string()).collect();
+        let mut expected_tokens: Vec<String> =
+            expected.iter().map(|token| token.to_string()).collect();
         expected_tokens.sort();
 
         let actual = directives
@@ -123,9 +122,7 @@ mod success {
         let shield = Shield::new().csp(options).expect("feature");
 
         let result = shield.secure(empty_headers()).expect("secure");
-        let header = result
-            .get("Content-Security-Policy")
-            .expect("csp header");
+        let header = result.get("Content-Security-Policy").expect("csp header");
         let directives = parse_csp_header(header);
 
         assert_directive_tokens(&directives, "trusted-types", &["'none'"]);
@@ -182,10 +179,7 @@ mod success {
         assert_directive_tokens(
             &directives,
             "script-src-elem",
-            &[
-                &format!("'nonce-{nonce}'"),
-                &format!("'sha384-{hash}'"),
-            ],
+            &[&format!("'nonce-{nonce}'"), &format!("'sha384-{hash}'")],
         );
     }
 
@@ -225,7 +219,11 @@ mod success {
         let hash = "E".repeat(64);
         let options = CspOptions::new()
             .default_src([CspSource::SelfKeyword])
-            .style_src([CspSource::SelfKeyword, CspSource::UnsafeInline, CspSource::UnsafeHashes])
+            .style_src([
+                CspSource::SelfKeyword,
+                CspSource::UnsafeInline,
+                CspSource::UnsafeHashes,
+            ])
             .style_src_nonce(&nonce)
             .style_src_hash(CspHashAlgorithm::Sha384, &hash);
         let shield = Shield::new().csp(options).expect("feature");
@@ -386,7 +384,10 @@ mod success {
     fn given_img_src_host_when_secure_then_sets_expected_sources() {
         let options = CspOptions::new()
             .default_src([CspSource::SelfKeyword])
-            .img_src([CspSource::host("cdn.example.com"), CspSource::scheme("https")]);
+            .img_src([
+                CspSource::host("cdn.example.com"),
+                CspSource::scheme("https"),
+            ]);
         let shield = Shield::new().csp(options).expect("feature");
 
         let header = shield
@@ -624,7 +625,10 @@ mod success {
     fn given_navigate_to_when_secure_then_sets_expected_destinations() {
         let options = CspOptions::new()
             .default_src([CspSource::SelfKeyword])
-            .navigate_to([CspSource::SelfKeyword, CspSource::host("payments.example.com")]);
+            .navigate_to([
+                CspSource::SelfKeyword,
+                CspSource::host("payments.example.com"),
+            ]);
         let shield = Shield::new().csp(options).expect("feature");
 
         let header = shield
@@ -742,9 +746,7 @@ mod edge {
         let shield = Shield::new().csp(options).expect("feature");
 
         let result = shield.secure(empty_headers()).expect("secure");
-        let header = result
-            .get("Content-Security-Policy")
-            .expect("csp header");
+        let header = result.get("Content-Security-Policy").expect("csp header");
 
         assert_csp_directives(header, &["default-src 'self'"]);
         assert!(!header.contains("connect-src"));
@@ -934,8 +936,8 @@ mod failure {
 
     #[test]
     fn given_invalid_source_expression_when_add_feature_then_returns_error() {
-        let options = CspOptions::new()
-            .img_src([CspSource::raw("https://user:secret@cdn.example.com")]);
+        let options =
+            CspOptions::new().img_src([CspSource::raw("https://user:secret@cdn.example.com")]);
 
         let error = expect_validation_error(Shield::new().csp(options));
 
@@ -948,9 +950,9 @@ mod failure {
     }
 
     #[test]
-    fn given_path_source_with_whitespace_when_add_feature_then_returns_invalid_source_expression_error() {
-        let options = CspOptions::new()
-            .img_src([CspSource::raw("/invalid\npath")]);
+    fn given_path_source_with_whitespace_when_add_feature_then_returns_invalid_source_expression_error()
+     {
+        let options = CspOptions::new().img_src([CspSource::raw("/invalid\npath")]);
 
         let error = expect_validation_error(Shield::new().csp(options));
 
@@ -958,7 +960,8 @@ mod failure {
     }
 
     #[test]
-    fn given_style_src_attr_with_unsafe_eval_when_add_feature_then_returns_token_not_allowed_error() {
+    fn given_style_src_attr_with_unsafe_eval_when_add_feature_then_returns_token_not_allowed_error()
+    {
         let options = CspOptions::new().style_src_attr([CspSource::UnsafeEval]);
 
         let error = expect_validation_error(Shield::new().csp(options));
@@ -974,8 +977,7 @@ mod failure {
 
     #[test]
     fn given_nonce_with_invalid_characters_when_add_feature_then_returns_invalid_nonce_error() {
-        let options = CspOptions::new()
-            .script_src_nonce("invalid!!nonce");
+        let options = CspOptions::new().script_src_nonce("invalid!!nonce");
 
         let error = expect_validation_error(Shield::new().csp(options));
 
