@@ -1,4 +1,4 @@
-use bunner_shield_rs::{CoepOptions, CoepPolicy, Shield};
+use bunner_shield_rs::{CoepOptions, CoepOptionsError, CoepPolicy, Shield};
 use std::collections::HashMap;
 
 fn empty_headers() -> HashMap<String, String> {
@@ -99,6 +99,50 @@ mod edge {
                 .get("Cross-Origin-Embedder-Policy")
                 .map(String::as_str),
             Some("require-corp")
+        );
+    }
+}
+
+mod failure {
+    use super::*;
+
+    #[test]
+    fn given_unknown_policy_when_building_options_then_returns_invalid_policy_error() {
+        let error = CoepOptions::from_policy_str("invalid-policy").unwrap_err();
+
+        assert!(matches!(
+            error,
+            CoepOptionsError::InvalidPolicy(value) if value == "invalid-policy"
+        ));
+    }
+
+    #[test]
+    fn given_mixed_case_when_building_options_then_normalizes_to_known_policy() {
+        let options = CoepOptions::from_policy_str("ReQuIrE-CoRp").expect("policy");
+        let shield = Shield::new().coep(options).expect("feature");
+
+        let result = shield.secure(empty_headers()).expect("secure");
+
+        assert_eq!(
+            result
+                .get("Cross-Origin-Embedder-Policy")
+                .map(String::as_str),
+            Some("require-corp")
+        );
+    }
+
+    #[test]
+    fn given_policy_with_whitespace_when_building_options_then_trims_before_matching() {
+        let options = CoepOptions::from_policy_str("  credentialless  ").expect("policy");
+        let shield = Shield::new().coep(options).expect("feature");
+
+        let result = shield.secure(empty_headers()).expect("secure");
+
+        assert_eq!(
+            result
+                .get("Cross-Origin-Embedder-Policy")
+                .map(String::as_str),
+            Some("credentialless")
         );
     }
 }

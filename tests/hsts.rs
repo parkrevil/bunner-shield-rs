@@ -88,6 +88,25 @@ mod edge {
 
         assert_eq!(result.get("Server").map(String::as_str), Some("api"));
     }
+
+    #[test]
+    fn given_existing_header_with_mixed_case_key_when_secure_then_overwrites_canonically() {
+        let shield = Shield::new().hsts(HstsOptions::new()).expect("feature");
+
+        let mut headers = HashMap::new();
+        headers.insert(
+            "strict-transport-security".to_string(),
+            "max-age=10".to_string(),
+        );
+
+        let result = shield.secure(headers).expect("secure");
+
+        assert_eq!(
+            result.get("Strict-Transport-Security").map(String::as_str),
+            Some("max-age=31536000")
+        );
+        assert!(!result.contains_key("strict-transport-security"));
+    }
 }
 
 mod failure {

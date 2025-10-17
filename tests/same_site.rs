@@ -79,6 +79,44 @@ mod edge {
         assert!(cookie.contains("SameSite=Lax"));
         assert_eq!(result.get("X-Other").map(String::as_str), Some("value"));
     }
+
+    #[test]
+    fn given_host_prefixed_cookie_when_secure_then_retains_required_attributes() {
+        let shield = Shield::new()
+            .same_site(SameSiteOptions::new())
+            .expect("feature");
+
+        let result = shield
+            .secure(with_cookie("__Host-session=abc; Path=/"))
+            .expect("secure");
+
+        let cookie = result.get("Set-Cookie").expect("cookie present");
+        assert!(cookie.starts_with("__Host-session="));
+        assert!(cookie.contains("Path=/"));
+        assert!(cookie.contains("Secure"));
+        assert!(cookie.contains("SameSite=Lax"));
+    }
+
+    #[test]
+    fn given_multiple_cookies_when_secure_then_upgrades_each_entry() {
+        let shield = Shield::new()
+            .same_site(SameSiteOptions::new())
+            .expect("feature");
+
+        let mut headers = empty_headers();
+        headers.insert(
+            "Set-Cookie".to_string(),
+            "session=abc; Path=/\ntracking=1".to_string(),
+        );
+
+        let result = shield.secure(headers).expect("secure");
+
+        let cookies = result.get("Set-Cookie").expect("cookies present");
+        let lines: Vec<&str> = cookies.split('\n').collect();
+        assert_eq!(lines.len(), 2);
+        assert!(lines.iter().all(|line| line.contains("SameSite=Lax")));
+        assert!(lines.iter().all(|line| line.contains("Secure")));
+    }
 }
 
 mod failure {

@@ -11,6 +11,20 @@ fn with_header(key: &str, value: &str) -> HashMap<String, String> {
     headers
 }
 
+fn assert_clear_site_data(actual: &str, expected: &[&str]) {
+    let mut actual_tokens: Vec<_> = actual
+        .split(',')
+        .map(|value| value.trim())
+        .filter(|value| !value.is_empty())
+        .collect();
+    let mut expected_tokens: Vec<_> = expected.to_vec();
+
+    actual_tokens.sort_unstable();
+    expected_tokens.sort_unstable();
+
+    assert_eq!(actual_tokens, expected_tokens);
+}
+
 mod success {
     use super::*;
 
@@ -22,10 +36,11 @@ mod success {
 
         let result = shield.secure(empty_headers()).expect("secure");
 
-        assert_eq!(
-            result.get("Clear-Site-Data").map(String::as_str),
-            Some("\"cache\"")
-        );
+        let header = result
+            .get("Clear-Site-Data")
+            .expect("clear-site-data header");
+
+        assert_clear_site_data(header, &["\"cache\""]);
     }
 
     #[test]
@@ -42,17 +57,18 @@ mod success {
 
         let result = shield.secure(empty_headers()).expect("secure");
 
-        let expected = [
-            "\"cache\"",
-            "\"cookies\"",
-            "\"storage\"",
-            "\"executionContexts\"",
-        ]
-        .join(", ");
+        let header = result
+            .get("Clear-Site-Data")
+            .expect("clear-site-data header");
 
-        assert_eq!(
-            result.get("Clear-Site-Data").map(String::as_str),
-            Some(expected.as_str())
+        assert_clear_site_data(
+            header,
+            &[
+                "\"cache\"",
+                "\"cookies\"",
+                "\"storage\"",
+                "\"executionContexts\"",
+            ],
         );
     }
 
@@ -66,10 +82,29 @@ mod success {
             .secure(with_header("Clear-Site-Data", "\"cookies\""))
             .expect("secure");
 
-        assert_eq!(
-            result.get("Clear-Site-Data").map(String::as_str),
-            Some("\"storage\"")
-        );
+        let header = result
+            .get("Clear-Site-Data")
+            .expect("clear-site-data header");
+
+        assert_clear_site_data(header, &["\"storage\""]);
+    }
+
+    #[test]
+    fn given_existing_header_with_lowercase_key_when_secure_then_overwrites_using_canonical_case() {
+        let shield = Shield::new()
+            .clear_site_data(ClearSiteDataOptions::new().cache())
+            .expect("feature");
+
+        let result = shield
+            .secure(with_header("clear-site-data", "\"storage\""))
+            .expect("secure");
+
+        let header = result
+            .get("Clear-Site-Data")
+            .expect("clear-site-data header");
+
+        assert_clear_site_data(header, &["\"cache\""]);
+        assert!(!result.contains_key("clear-site-data"));
     }
 
     #[test]
@@ -91,10 +126,11 @@ mod success {
             result.get("X-Correlation-Id").map(String::as_str),
             Some("abc-123")
         );
-        assert_eq!(
-            result.get("Clear-Site-Data").map(String::as_str),
-            Some("\"cookies\"")
-        );
+        let header = result
+            .get("Clear-Site-Data")
+            .expect("clear-site-data header");
+
+        assert_clear_site_data(header, &["\"cookies\""]);
     }
 }
 

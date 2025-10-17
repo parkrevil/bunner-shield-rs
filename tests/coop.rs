@@ -1,4 +1,4 @@
-use bunner_shield_rs::{CoopOptions, CoopPolicy, Shield};
+use bunner_shield_rs::{CoopOptions, CoopOptionsError, CoopPolicy, Shield};
 use std::collections::HashMap;
 
 fn empty_headers() -> HashMap<String, String> {
@@ -85,6 +85,46 @@ mod edge {
         assert_eq!(
             result.get("Cross-Origin-Opener-Policy").map(String::as_str),
             Some("same-origin")
+        );
+    }
+}
+
+mod failure {
+    use super::*;
+
+    #[test]
+    fn given_unknown_policy_when_building_options_then_returns_invalid_policy_error() {
+        let error = CoopOptions::from_policy_str("disallowed").unwrap_err();
+
+        assert!(matches!(
+            error,
+            CoopOptionsError::InvalidPolicy(value) if value == "disallowed"
+        ));
+    }
+
+    #[test]
+    fn given_uppercase_policy_when_building_options_then_matches_known_variant() {
+        let options = CoopOptions::from_policy_str("SAME-ORIGIN-ALLOW-POPUPS").expect("policy");
+        let shield = Shield::new().coop(options).expect("feature");
+
+        let result = shield.secure(empty_headers()).expect("secure");
+
+        assert_eq!(
+            result.get("Cross-Origin-Opener-Policy").map(String::as_str),
+            Some("same-origin-allow-popups")
+        );
+    }
+
+    #[test]
+    fn given_policy_with_padding_when_building_options_then_trims_before_matching() {
+        let options = CoopOptions::from_policy_str("  unsafe-none  ").expect("policy");
+        let shield = Shield::new().coop(options).expect("feature");
+
+        let result = shield.secure(empty_headers()).expect("secure");
+
+        assert_eq!(
+            result.get("Cross-Origin-Opener-Policy").map(String::as_str),
+            Some("unsafe-none")
         );
     }
 }

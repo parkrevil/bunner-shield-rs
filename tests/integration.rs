@@ -1,10 +1,11 @@
 use bunner_shield_rs::{
     ClearSiteDataOptions, CoepOptions, CoepPolicy, CoopOptions, CoopPolicy, CorpOptions,
-    CorpPolicy, CspOptions, CspOptionsError, CspSource, CsrfOptions, CsrfOptionsError, HstsOptions,
-    HstsOptionsError, OriginAgentClusterOptions, PermissionsPolicyOptions,
-    PermissionsPolicyOptionsError, ReferrerPolicyOptions, ReferrerPolicyValue, SameSiteOptions,
-    SameSitePolicy, Shield, ShieldError, XFrameOptionsOptions, XFrameOptionsPolicy,
-    XdnsPrefetchControlOptions, XdnsPrefetchControlPolicy,
+    CorpPolicy, CspNonceManager, CspOptions, CspOptionsError, CspSource, CsrfOptions,
+    CsrfOptionsError, HstsOptions, HstsOptionsError, OriginAgentClusterOptions,
+    PermissionsPolicyOptions, PermissionsPolicyOptionsError, ReferrerPolicyOptions,
+    ReferrerPolicyValue, SameSiteOptions, SameSitePolicy, Shield, ShieldError,
+    XFrameOptionsOptions, XFrameOptionsPolicy, XdnsPrefetchControlOptions,
+    XdnsPrefetchControlPolicy,
 };
 use std::collections::HashMap;
 
@@ -14,6 +15,20 @@ fn empty_headers() -> HashMap<String, String> {
 
 fn base_secret() -> [u8; 32] {
     [0x11; 32]
+}
+
+fn assert_clear_site_data(actual: &str, expected: &[&str]) {
+    let mut actual_tokens: Vec<_> = actual
+        .split(',')
+        .map(|value| value.trim())
+        .filter(|value| !value.is_empty())
+        .collect();
+    let mut expected_tokens: Vec<_> = expected.to_vec();
+
+    actual_tokens.sort_unstable();
+    expected_tokens.sort_unstable();
+
+    assert_eq!(actual_tokens, expected_tokens);
 }
 
 fn expect_validation_error<T>(result: Result<Shield, ShieldError>) -> T
@@ -153,13 +168,13 @@ mod success {
             "\"cookies\"",
             "\"storage\"",
             "\"executionContexts\"",
-        ]
-        .join(", ");
+        ];
 
-        assert_eq!(
-            secured.get("Clear-Site-Data").map(String::as_str),
-            Some(clear_site_data_value.as_str())
-        );
+        let clear_site_data_header = secured
+            .get("Clear-Site-Data")
+            .map(String::to_string)
+            .expect("clear-site-data header");
+        assert_clear_site_data(&clear_site_data_header, &clear_site_data_value);
         assert!(!secured.contains_key("X-Powered-By"));
         assert_eq!(
             secured.get("Content-Type").map(String::as_str),
@@ -251,6 +266,107 @@ mod success {
         assert!(cookie.contains("SameSite=Strict"));
         assert!(cookie.contains("Secure"));
         assert!(cookie.contains("HttpOnly"));
+    }
+
+    #[test]
+    fn given_existing_multiple_cookies_when_secure_then_upgrades_each_entry() {
+        let shield = Shield::new()
+            .csrf(CsrfOptions::new(base_secret()))
+            .expect("csrf")
+            .same_site(SameSiteOptions::new().same_site(SameSitePolicy::Strict))
+            .expect("same-site");
+
+        let mut headers = empty_headers();
+        headers.insert(
+            "Set-Cookie".to_string(),
+            "session=abc; Path=/\ntracking=1".to_string(),
+        );
+
+        let secured = shield.secure(headers).expect("secure");
+
+        let cookies = secured.get("Set-Cookie").expect("cookies present");
+        let mut lines: Vec<&str> = cookies.split('\n').collect();
+        lines.sort();
+
+        assert_eq!(lines.len(), 3);
+        assert!(lines.iter().any(|line| line.starts_with("session=abc")));
+        assert!(lines.iter().any(|line| line.starts_with("tracking=1")));
+        assert!(
+            lines
+                .iter()
+                .any(|line| line.contains("__Host-csrf-token=") && line.contains("SameSite=Strict"))
+        );
+        for line in &lines {
+            assert!(line.contains("SameSite=Strict"));
+            assert!(line.contains("Secure"));
+            assert!(line.contains("HttpOnly"));
+        }
+    }
+
+    #[test]
+    fn given_lowercase_headers_when_secure_then_emits_canonical_casing() {
+        let shield = Shield::new()
+            .hsts(HstsOptions::new().include_subdomains())
+            .expect("hsts")
+            .permissions_policy(PermissionsPolicyOptions::new("geolocation=()"))
+            .expect("permissions-policy")
+            .coep(CoepOptions::new())
+            .expect("coep")
+            .coop(CoopOptions::new())
+            .expect("coop");
+
+        let mut headers = empty_headers();
+        headers.insert(
+            "strict-transport-security".to_string(),
+            "max-age=0".to_string(),
+        );
+        headers.insert("permissions-policy".to_string(), "camera=()".to_string());
+        headers.insert(
+            "cross-origin-embedder-policy".to_string(),
+            "unsafe".to_string(),
+        );
+        headers.insert(
+            "cross-origin-opener-policy".to_string(),
+            "unsafe".to_string(),
+        );
+
+        let secured = shield.secure(headers).expect("secure");
+
+        assert!(secured.contains_key("Strict-Transport-Security"));
+        assert!(secured.contains_key("Permissions-Policy"));
+        assert!(secured.contains_key("Cross-Origin-Embedder-Policy"));
+        assert!(secured.contains_key("Cross-Origin-Opener-Policy"));
+
+        assert!(!secured.contains_key("strict-transport-security"));
+        assert!(!secured.contains_key("permissions-policy"));
+        assert!(!secured.contains_key("cross-origin-embedder-policy"));
+        assert!(!secured.contains_key("cross-origin-opener-policy"));
+    }
+
+    #[test]
+    fn given_strict_dynamic_with_nonce_when_secure_then_emits_expected_tokens() {
+        let nonce_manager = CspNonceManager::new();
+        let nonce = nonce_manager.issue();
+        let nonce_value = nonce.clone().into_inner();
+
+        let shield = Shield::new()
+            .csp(
+                CspOptions::new()
+                    .default_src([CspSource::SelfKeyword])
+                    .enable_strict_dynamic()
+                    .script_src_with_nonce(nonce),
+            )
+            .expect("csp");
+
+        let secured = shield.secure(empty_headers()).expect("secure");
+
+        let header = secured
+            .get("Content-Security-Policy")
+            .map(String::to_string)
+            .expect("csp header");
+
+        assert!(header.contains("'strict-dynamic'"));
+        assert!(header.contains(&format!("'nonce-{nonce_value}'")));
     }
 }
 

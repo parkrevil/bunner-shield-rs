@@ -1,4 +1,6 @@
-use bunner_shield_rs::{CorpOptions, CorpPolicy, Shield, header_keys, header_values};
+use bunner_shield_rs::{
+    CorpOptions, CorpOptionsError, CorpPolicy, Shield, header_keys, header_values,
+};
 use std::collections::HashMap;
 
 fn empty_headers() -> HashMap<String, String> {
@@ -96,6 +98,35 @@ mod edge {
                 .get(header_keys::CROSS_ORIGIN_RESOURCE_POLICY)
                 .map(String::as_str),
             Some(header_values::CORP_SAME_ORIGIN)
+        );
+    }
+}
+
+mod failure {
+    use super::*;
+
+    #[test]
+    fn given_unknown_policy_when_building_options_then_returns_invalid_policy_error() {
+        let error = CorpOptions::from_policy_str("forbidden").unwrap_err();
+
+        assert!(matches!(
+            error,
+            CorpOptionsError::InvalidPolicy(value) if value == "forbidden"
+        ));
+    }
+
+    #[test]
+    fn given_whitespace_policy_when_building_options_then_normalizes_before_match() {
+        let options = CorpOptions::from_policy_str("  same-site  ").expect("policy");
+        let shield = Shield::new().corp(options).expect("feature");
+
+        let result = shield.secure(empty_headers()).expect("secure");
+
+        assert_eq!(
+            result
+                .get(header_keys::CROSS_ORIGIN_RESOURCE_POLICY)
+                .map(String::as_str),
+            Some(header_values::CORP_SAME_SITE)
         );
     }
 }

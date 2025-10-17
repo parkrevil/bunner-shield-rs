@@ -1,5 +1,7 @@
 use crate::constants::header_values::{COEP_CREDENTIALLESS, COEP_REQUIRE_CORP};
 use crate::executor::FeatureOptions;
+use std::str::FromStr;
+use thiserror::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CoepPolicy {
@@ -12,6 +14,20 @@ impl CoepPolicy {
         match self {
             CoepPolicy::RequireCorp => COEP_REQUIRE_CORP,
             CoepPolicy::Credentialless => COEP_CREDENTIALLESS,
+        }
+    }
+}
+
+impl FromStr for CoepPolicy {
+    type Err = CoepOptionsError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let normalized = value.trim();
+
+        match normalized.to_ascii_lowercase().as_str() {
+            "require-corp" => Ok(CoepPolicy::RequireCorp),
+            "credentialless" => Ok(CoepPolicy::Credentialless),
+            _ => Err(CoepOptionsError::InvalidPolicy(normalized.to_string())),
         }
     }
 }
@@ -30,6 +46,17 @@ impl CoepOptions {
         self.policy = policy;
         self
     }
+
+    pub fn policy_from_str(mut self, policy: &str) -> Result<Self, CoepOptionsError> {
+        self.policy = policy.parse()?;
+        Ok(self)
+    }
+
+    pub fn from_policy_str(policy: &str) -> Result<Self, CoepOptionsError> {
+        Ok(Self {
+            policy: policy.parse()?,
+        })
+    }
 }
 
 impl Default for CoepOptions {
@@ -46,4 +73,10 @@ impl FeatureOptions for CoepOptions {
     fn validate(&self) -> Result<(), Self::Error> {
         Ok(())
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum CoepOptionsError {
+    #[error("cross-origin-embedder-policy must be one of: require-corp, credentialless (got {0})")]
+    InvalidPolicy(String),
 }

@@ -75,6 +75,39 @@ mod success {
 mod edge {
     use super::*;
 
+    fn assert_csp_directives(actual: &str, expected: &[&str]) {
+        let mut actual_tokens: Vec<_> = actual
+            .split(';')
+            .map(|directive| directive.trim())
+            .filter(|directive| !directive.is_empty())
+            .collect();
+    let mut expected_tokens: Vec<_> = expected.to_vec();
+
+        actual_tokens.sort_unstable();
+        expected_tokens.sort_unstable();
+
+        assert_eq!(actual_tokens, expected_tokens);
+    }
+
+    #[test]
+    fn given_existing_header_with_lowercase_key_when_secure_then_overwrites_case_insensitively() {
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .frame_ancestors([CspSource::None]);
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let mut headers = HashMap::new();
+        headers.insert(
+            "content-security-policy".to_string(),
+            "default-src *".to_string(),
+        );
+
+        let result = shield.secure(headers).expect("secure");
+        let header = result.get("Content-Security-Policy").expect("csp header");
+
+        assert_csp_directives(header, &["default-src 'self'", "frame-ancestors 'none'"]);
+        assert!(!result.contains_key("content-security-policy"));
+    }
     #[test]
     fn given_existing_header_when_secure_then_overwrites_with_new_policy() {
         let options = CspOptions::new()
@@ -86,10 +119,9 @@ mod edge {
             .secure(with_csp("default-src 'unsafe-inline'"))
             .expect("secure");
 
-        assert_eq!(
-            result.get("Content-Security-Policy").map(String::as_str),
-            Some("default-src 'self'; style-src 'self'")
-        );
+        let header = result.get("Content-Security-Policy").expect("csp header");
+
+        assert_csp_directives(header, &["default-src 'self'", "style-src 'self'"]);
     }
 
     #[test]

@@ -21,12 +21,20 @@ impl FeatureExecutor for SameSite {
     }
 
     fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), ExecutorError> {
-        let Some(existing) = headers.get(SET_COOKIE) else {
+        let Some(existing) = headers.get_all(SET_COOKIE).map(|cookies| cookies.to_vec()) else {
             return Ok(());
         };
 
-        let updated = apply_policy(existing, &self.options.meta);
-        headers.insert(SET_COOKIE, updated);
+        if existing.is_empty() {
+            return Ok(());
+        }
+
+        headers.remove(SET_COOKIE);
+
+        for cookie in existing {
+            let updated = apply_policy(&cookie, &self.options.meta);
+            headers.insert(SET_COOKIE, updated);
+        }
 
         Ok(())
     }

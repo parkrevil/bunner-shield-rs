@@ -34,6 +34,7 @@ mod success {
         assert!(cookie.contains("Secure"));
         assert!(cookie.contains("HttpOnly"));
         assert!(cookie.contains("SameSite=Lax"));
+        assert!(!cookie.contains("Domain="));
     }
 
     #[test]
@@ -62,6 +63,23 @@ mod success {
 
         assert_ne!(token_one, token_two);
     }
+
+    #[test]
+    fn given_custom_cookie_name_when_secure_then_enforces_host_prefix_invariants() {
+        let shield = Shield::new()
+            .csrf(CsrfOptions::new(secret()).cookie_name("__Host-csrf-alt"))
+            .expect("feature");
+
+        let result = shield.secure(empty_headers()).expect("secure");
+
+        let cookie = result.get("Set-Cookie").expect("csrf cookie present");
+        assert!(cookie.starts_with("__Host-csrf-alt="));
+        assert!(cookie.contains("Path=/"));
+        assert!(cookie.contains("Secure"));
+        assert!(cookie.contains("HttpOnly"));
+        assert!(cookie.contains("SameSite=Lax"));
+        assert!(!cookie.contains("Domain="));
+    }
 }
 
 mod edge {
@@ -82,9 +100,34 @@ mod edge {
         let result = shield.secure(headers).expect("secure");
 
         let cookie = result.get("Set-Cookie").expect("csrf cookie present");
+        assert!(cookie.contains("Path=/"));
         assert!(cookie.contains("SameSite=Lax"));
         assert!(cookie.contains("Secure"));
         assert!(cookie.contains("HttpOnly"));
+        assert!(!cookie.contains("Domain="));
+    }
+
+    #[test]
+    fn given_existing_cookie_when_secure_then_appends_csrf_cookie() {
+        let shield = Shield::new()
+            .csrf(CsrfOptions::new(secret()))
+            .expect("feature");
+
+        let mut headers = empty_headers();
+        headers.insert("Set-Cookie".to_string(), "session=abc; Path=/".to_string());
+
+        let result = shield.secure(headers).expect("secure");
+
+        let cookies = result.get("Set-Cookie").expect("cookies present");
+        let mut lines: Vec<&str> = cookies.split('\n').collect();
+        lines.sort();
+
+        assert!(lines.iter().any(|line| line.starts_with("session=abc")));
+        assert!(
+            lines
+                .iter()
+                .any(|line| line.contains("__Host-csrf-token=") && line.contains("SameSite=Lax"))
+        );
     }
 }
 

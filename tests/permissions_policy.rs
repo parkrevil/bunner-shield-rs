@@ -13,6 +13,20 @@ fn with_permissions_policy(value: &str) -> HashMap<String, String> {
     headers
 }
 
+fn assert_permissions_policy(actual: &str, expected: &[&str]) {
+    let mut actual_tokens: Vec<_> = actual
+        .split(',')
+        .map(|value| value.trim())
+        .filter(|value| !value.is_empty())
+        .collect();
+    let mut expected_tokens: Vec<_> = expected.to_vec();
+
+    actual_tokens.sort_unstable();
+    expected_tokens.sort_unstable();
+
+    assert_eq!(actual_tokens, expected_tokens);
+}
+
 mod success {
     use super::*;
 
@@ -24,10 +38,11 @@ mod success {
 
         let result = shield.secure(empty_headers()).expect("secure");
 
-        assert_eq!(
-            result.get("Permissions-Policy").map(String::as_str),
-            Some("geolocation=()")
-        );
+        let header = result
+            .get("Permissions-Policy")
+            .expect("permissions-policy header");
+
+        assert_permissions_policy(header, &["geolocation=()"]);
     }
 
     #[test]
@@ -37,10 +52,11 @@ mod success {
 
         let result = shield.secure(empty_headers()).expect("secure");
 
-        assert_eq!(
-            result.get("Permissions-Policy").map(String::as_str),
-            Some("microphone=('self')")
-        );
+        let header = result
+            .get("Permissions-Policy")
+            .expect("permissions-policy header");
+
+        assert_permissions_policy(header, &["microphone=('self')"]);
     }
 
     #[test]
@@ -53,10 +69,11 @@ mod success {
 
         let result = shield.secure(empty_headers()).expect("secure");
 
-        assert_eq!(
-            result.get("Permissions-Policy").map(String::as_str),
-            Some("camera=()")
-        );
+        let header = result
+            .get("Permissions-Policy")
+            .expect("permissions-policy header");
+
+        assert_permissions_policy(header, &["camera=()"]);
     }
 }
 
@@ -73,10 +90,11 @@ mod edge {
             .secure(with_permissions_policy("geolocation=()*"))
             .expect("secure");
 
-        assert_eq!(
-            result.get("Permissions-Policy").map(String::as_str),
-            Some("camera=()")
-        );
+        let header = result
+            .get("Permissions-Policy")
+            .expect("permissions-policy header");
+
+        assert_permissions_policy(header, &["camera=()"]);
     }
 
     #[test]

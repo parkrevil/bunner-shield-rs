@@ -19,10 +19,10 @@ mod x_frame_options;
 mod x_powered_by;
 
 pub use crate::clear_site_data::{ClearSiteData, ClearSiteDataOptions, ClearSiteDataOptionsError};
-pub use crate::coep::{Coep, CoepOptions, CoepPolicy};
+pub use crate::coep::{Coep, CoepOptions, CoepOptionsError, CoepPolicy};
 pub use crate::constants::{header_keys, header_values};
-pub use crate::coop::{Coop, CoopOptions, CoopPolicy};
-pub use crate::corp::{Corp, CorpOptions, CorpPolicy};
+pub use crate::coop::{Coop, CoopOptions, CoopOptionsError, CoopPolicy};
+pub use crate::corp::{Corp, CorpOptions, CorpOptionsError, CorpPolicy};
 pub use crate::csp::{
     CspDirective, CspHashAlgorithm, CspNonce, CspNonceManager, CspNonceManagerError, CspOptions,
     CspOptionsError, CspOptionsWarning, CspSource, SandboxToken, TrustedTypesPolicy,

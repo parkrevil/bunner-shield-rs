@@ -43,6 +43,25 @@ mod edge {
     }
 
     #[test]
+    fn given_existing_header_with_lowercase_key_when_secure_then_overwrites_case_insensitively() {
+        let shield = Shield::new().x_content_type_options().expect("feature");
+
+        let mut headers = empty_headers();
+        headers.insert(
+            "x-content-type-options".to_string(),
+            "deprecated".to_string(),
+        );
+
+        let result = shield.secure(headers).expect("secure");
+
+        assert_eq!(
+            result.get("X-Content-Type-Options").map(String::as_str),
+            Some("nosniff")
+        );
+        assert!(!result.contains_key("x-content-type-options"));
+    }
+
+    #[test]
     fn given_other_headers_when_secure_then_preserves_them() {
         let shield = Shield::new().x_content_type_options().expect("feature");
 

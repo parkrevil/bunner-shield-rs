@@ -2,4 +2,4 @@ mod executor;
 mod options;
 
 pub use executor::Corp;
-pub use options::{CorpOptions, CorpPolicy};
+pub use options::{CorpOptions, CorpOptionsError, CorpPolicy};
