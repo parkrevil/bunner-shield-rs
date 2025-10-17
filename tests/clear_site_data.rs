@@ -132,6 +132,28 @@ mod success {
 
         assert_clear_site_data(header, &["\"cookies\""]);
     }
+
+    #[test]
+    fn given_duplicate_sections_when_secure_then_emits_unique_tokens_in_canonical_order() {
+        let shield = Shield::new()
+            .clear_site_data(
+                ClearSiteDataOptions::new()
+                    .cookies()
+                    .cache()
+                    .storage()
+                    .cookies()
+                    .cache(),
+            )
+            .expect("feature");
+
+        let result = shield.secure(empty_headers()).expect("secure");
+
+        let header = result
+            .get("Clear-Site-Data")
+            .expect("clear-site-data header");
+
+        assert_eq!(header, "\"cache\", \"cookies\", \"storage\"");
+    }
 }
 
 mod failure {

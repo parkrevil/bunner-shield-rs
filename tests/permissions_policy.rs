@@ -75,6 +75,22 @@ mod success {
 
         assert_permissions_policy(header, &["camera=()"]);
     }
+
+    #[test]
+    fn given_multi_feature_policy_when_secure_then_keeps_original_layout() {
+        let policy = "geolocation=(), microphone=('self'), camera=(), fullscreen=()";
+        let shield = Shield::new()
+            .permissions_policy(PermissionsPolicyOptions::new(policy))
+            .expect("feature");
+
+        let result = shield.secure(empty_headers()).expect("secure");
+
+        let header = result
+            .get("Permissions-Policy")
+            .expect("permissions-policy header");
+
+        assert_eq!(header, policy);
+    }
 }
 
 mod edge {
