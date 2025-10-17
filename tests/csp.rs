@@ -81,7 +81,7 @@ mod edge {
             .map(|directive| directive.trim())
             .filter(|directive| !directive.is_empty())
             .collect();
-    let mut expected_tokens: Vec<_> = expected.to_vec();
+        let mut expected_tokens: Vec<_> = expected.to_vec();
 
         actual_tokens.sort_unstable();
         expected_tokens.sort_unstable();
