@@ -3,8 +3,8 @@ use bunner_shield_rs::{
     CorpPolicy, CspNonceManager, CspOptions, CspOptionsError, CspSource, CsrfOptions,
     CsrfOptionsError, HstsOptions, HstsOptionsError, OriginAgentClusterOptions,
     PermissionsPolicyOptions, PermissionsPolicyOptionsError, ReferrerPolicyOptions,
-    ReferrerPolicyValue, SameSiteOptions, SameSiteOptionsError, SameSitePolicy, Shield, ShieldError,
-    XFrameOptionsOptions, XFrameOptionsPolicy, XdnsPrefetchControlOptions,
+    ReferrerPolicyValue, SameSiteOptions, SameSiteOptionsError, SameSitePolicy, Shield,
+    ShieldError, XFrameOptionsOptions, XFrameOptionsPolicy, XdnsPrefetchControlOptions,
     XdnsPrefetchControlPolicy,
 };
 use std::collections::HashMap;
