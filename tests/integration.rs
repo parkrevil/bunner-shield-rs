@@ -668,10 +668,7 @@ mod stress {
 
         let mut headers = empty_headers();
         for index in 0..HEADER_COUNT {
-            headers.insert(
-                format!("X-Custom-{index}"),
-                format!("value-{index:04}"),
-            );
+            headers.insert(format!("X-Custom-{index}"), format!("value-{index:04}"));
         }
         headers.insert("Content-Length".to_string(), "1234".to_string());
 
