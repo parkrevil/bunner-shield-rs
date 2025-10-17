@@ -33,14 +33,14 @@ impl FeatureOptions for NoopOptions {
     }
 }
 
-pub(crate) trait DynFeatureExecutor {
+pub(crate) trait DynFeatureExecutor: Send + Sync {
     fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), ExecutorError>;
     fn validate_options(&self) -> Result<(), ExecutorError>;
 }
 
 impl<T> DynFeatureExecutor for T
 where
-    T: FeatureExecutor,
+    T: FeatureExecutor + Send + Sync,
 {
     fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), ExecutorError> {
         FeatureExecutor::execute(self, headers)

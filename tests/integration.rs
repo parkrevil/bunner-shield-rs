@@ -629,6 +629,7 @@ mod failure {
 
 mod stress {
     use super::*;
+    use std::{sync::Arc, thread};
 
     #[test]
     fn given_megabyte_scale_header_when_secure_then_preserves_value_without_panicking() {
@@ -737,6 +738,70 @@ mod stress {
         for index in 0..200 {
             let token = format!("https://cdn{index}.example.com");
             assert!(header.contains(&token), "missing host token `{token}`");
+        }
+    }
+
+    #[test]
+    fn given_shared_shield_when_secure_runs_in_parallel_then_results_remain_isolated() {
+        const THREADS: usize = 8;
+        const ITERATIONS: usize = 128;
+
+        let shield = Arc::new(
+            Shield::new()
+                .csrf(CsrfOptions::new(base_secret()))
+                .expect("csrf")
+                .same_site(SameSiteOptions::new().same_site(SameSitePolicy::Strict))
+                .expect("same-site")
+                .clear_site_data(ClearSiteDataOptions::new().cookies())
+                .expect("clear-site-data")
+                .permissions_policy(PermissionsPolicyOptions::new("geolocation=()"))
+                .expect("permissions-policy"),
+        );
+
+        let mut handles = Vec::new();
+        for thread_id in 0..THREADS {
+            let shield = Arc::clone(&shield);
+            handles.push(thread::spawn(move || {
+                for iteration in 0..ITERATIONS {
+                    let mut headers = empty_headers();
+                    headers.insert(
+                        "Set-Cookie".to_string(),
+                        format!("session={thread_id}-{iteration}; Path=/"),
+                    );
+                    headers.insert("X-Trace".to_string(), format!("{thread_id}-{iteration}"));
+
+                    let secured = shield.secure(headers).expect("secure");
+
+                    let token = secured.get("X-CSRF-Token").expect("csrf token");
+                    assert_eq!(token.len(), 64);
+                    assert!(token.chars().all(|ch| ch.is_ascii_hexdigit()));
+
+                    let cookie = secured.get("Set-Cookie").expect("cookies");
+                    assert!(cookie.contains("SameSite=Strict"));
+                    assert!(cookie.contains("Secure"));
+                    assert!(cookie.contains("HttpOnly"));
+
+                    assert_eq!(
+                        secured.get("Permissions-Policy").map(String::as_str),
+                        Some("geolocation=()"),
+                    );
+
+                    let clear_site_data = secured
+                        .get("Clear-Site-Data")
+                        .map(String::to_string)
+                        .expect("clear-site-data");
+                    assert!(clear_site_data.contains("\"cookies\""));
+
+                    assert_eq!(
+                        secured.get("X-Trace").map(String::to_string).as_deref(),
+                        Some(format!("{thread_id}-{iteration}").as_str()),
+                    );
+                }
+            }));
+        }
+
+        for handle in handles {
+            handle.join().expect("thread");
         }
     }
 }
