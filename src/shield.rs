@@ -185,3 +185,7 @@ pub enum ShieldError {
     #[error("execution failed: {0}")]
     ExecutionFailed(ExecutorError),
 }
+
+#[cfg(test)]
+#[path = "shield_test.rs"]
+mod shield_test;

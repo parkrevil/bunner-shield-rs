@@ -73,3 +73,7 @@ impl<O> CachedHeader<O> {
         self.header_value.clone()
     }
 }
+
+#[cfg(test)]
+#[path = "executor_test.rs"]
+mod executor_test;

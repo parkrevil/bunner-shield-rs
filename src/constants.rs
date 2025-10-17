@@ -71,3 +71,7 @@ pub mod executor_order {
     pub const X_DNS_PREFETCH_CONTROL: u8 = 14;
     pub const CLEAR_SITE_DATA: u8 = 15;
 }
+
+#[cfg(test)]
+#[path = "constants_test.rs"]
+mod constants_test;

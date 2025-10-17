@@ -1,3 +1,5 @@
+extern crate self as bunner_shield_rs;
+
 mod clear_site_data;
 mod coep;
 mod constants;
@@ -44,3 +46,11 @@ pub use crate::x_dns_prefetch_control::{
     XdnsPrefetchControl, XdnsPrefetchControlOptions, XdnsPrefetchControlPolicy,
 };
 pub use crate::x_frame_options::{XFrameOptions, XFrameOptionsOptions, XFrameOptionsPolicy};
+
+#[cfg(test)]
+#[path = "lib_test.rs"]
+mod lib_test;
+
+#[cfg(test)]
+#[path = "tests_common.rs"]
+pub(crate) mod tests_common;

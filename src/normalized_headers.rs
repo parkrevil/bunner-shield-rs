@@ -119,3 +119,7 @@ fn split_multi_values(raw: String) -> Vec<Cow<'static, str>> {
         })
         .collect()
 }
+
+#[cfg(test)]
+#[path = "normalized_headers_test.rs"]
+mod normalized_headers_test;
