@@ -80,3 +80,7 @@ pub enum CoepOptionsError {
     #[error("cross-origin-embedder-policy must be one of: require-corp, credentialless (got {0})")]
     InvalidPolicy(String),
 }
+
+#[cfg(test)]
+#[path = "options_test.rs"]
+mod options_test;
