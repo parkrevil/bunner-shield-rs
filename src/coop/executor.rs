@@ -1,15 +1,19 @@
 use super::options::CoopOptions;
 use crate::constants::header_keys::CROSS_ORIGIN_OPENER_POLICY;
-use crate::executor::{ExecutorError, FeatureExecutor};
+use crate::executor::{CachedHeader, ExecutorError, FeatureExecutor};
 use crate::normalized_headers::NormalizedHeaders;
+use std::borrow::Cow;
 
 pub struct Coop {
-    options: CoopOptions,
+    cached: CachedHeader<CoopOptions>,
 }
 
 impl Coop {
     pub fn new(options: CoopOptions) -> Self {
-        Self { options }
+        let header_value = options.policy.as_str().to_string();
+        Self {
+            cached: CachedHeader::new(options, Cow::Owned(header_value)),
+        }
     }
 }
 
@@ -17,11 +21,14 @@ impl FeatureExecutor for Coop {
     type Options = CoopOptions;
 
     fn options(&self) -> &Self::Options {
-        &self.options
+        self.cached.options()
     }
 
     fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), ExecutorError> {
-        headers.insert(CROSS_ORIGIN_OPENER_POLICY, self.options.policy.as_str());
+        headers.insert(
+            CROSS_ORIGIN_OPENER_POLICY,
+            self.cached.cloned_header_value(),
+        );
 
         Ok(())
     }

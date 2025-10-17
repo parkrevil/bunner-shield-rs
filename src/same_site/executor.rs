@@ -21,7 +21,12 @@ impl FeatureExecutor for SameSite {
     }
 
     fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), ExecutorError> {
-        let Some(existing) = headers.get_all(SET_COOKIE).map(|cookies| cookies.to_vec()) else {
+        let Some(existing) = headers.get_all(SET_COOKIE).map(|cookies| {
+            cookies
+                .iter()
+                .map(|cookie| cookie.to_string())
+                .collect::<Vec<_>>()
+        }) else {
             return Ok(());
         };
 
@@ -33,7 +38,7 @@ impl FeatureExecutor for SameSite {
 
         for cookie in existing {
             let updated = apply_policy(&cookie, &self.options.meta);
-            headers.insert(SET_COOKIE, updated);
+            headers.insert_owned(SET_COOKIE, updated);
         }
 
         Ok(())

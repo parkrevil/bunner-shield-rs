@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::OnceLock;
 use std::time::Duration;
 
 use bunner_shield_rs::{
@@ -93,13 +94,9 @@ fn build_full_featured_shield() -> Shield {
 
 fn build_comprehensive_csp_options() -> CspOptions {
     let nonce_manager = CspNonceManager::with_size(48).expect("nonce manager");
-    let script_nonce = nonce_manager.issue();
-    let style_nonce = nonce_manager.issue();
-    let attr_nonce = nonce_manager.issue();
-
-    let script_nonce_value = script_nonce.as_str().to_string();
-    let style_nonce_value = style_nonce.as_str().to_string();
-    let attr_nonce_value = attr_nonce.as_str().to_string();
+    let script_nonce = nonce_manager.issue().into_inner();
+    let style_nonce = nonce_manager.issue().into_inner();
+    let attr_nonce = nonce_manager.issue().into_inner();
 
     let trusted_policy = TrustedTypesPolicy::new("heavyPolicy").expect("trusted policy");
 
@@ -182,7 +179,7 @@ fn build_comprehensive_csp_options() -> CspOptions {
         .upgrade_insecure_requests()
         .sandbox_with(sandbox_tokens)
         .script_src([
-            CspSource::from(script_nonce.clone()),
+            CspSource::SelfKeyword,
             CspSource::Hash {
                 algorithm: CspHashAlgorithm::Sha256,
                 value: sha256_hash.clone(),
@@ -190,14 +187,15 @@ fn build_comprehensive_csp_options() -> CspOptions {
             CspSource::ReportSample,
         ])
         .script_src_elem([
-            CspSource::from(script_nonce.clone()),
+            CspSource::SelfKeyword,
+            CspSource::host("https://modules.example.com"),
             CspSource::Hash {
                 algorithm: CspHashAlgorithm::Sha384,
                 value: sha384_hash.clone(),
             },
         ])
         .script_src_attr([
-            CspSource::from(attr_nonce.clone()),
+            CspSource::SelfKeyword,
             CspSource::Hash {
                 algorithm: CspHashAlgorithm::Sha512,
                 value: sha512_hash.clone(),
@@ -218,24 +216,23 @@ fn build_comprehensive_csp_options() -> CspOptions {
             },
         ])
         .trusted_types_tokens([
-            TrustedTypesToken::policy(trusted_policy.clone()),
+            TrustedTypesToken::policy(trusted_policy),
             TrustedTypesToken::allow_duplicates(),
         ])
         .require_trusted_types_for_scripts();
 
     options = options
-        .script_src_nonce(script_nonce_value.clone())
+        .script_src_nonce(script_nonce.clone())
         .script_src_hash(CspHashAlgorithm::Sha512, sha512_hash.clone())
-        .enable_strict_dynamic()
-        .style_src_nonce(style_nonce_value.clone())
+        .style_src_nonce(style_nonce.clone())
         .style_src_hash(CspHashAlgorithm::Sha256, sha256_hash.clone())
-        .style_src_elem_nonce(style_nonce_value.clone())
+        .style_src_elem_nonce(style_nonce.clone())
         .style_src_elem_hash(CspHashAlgorithm::Sha512, sha512_hash.clone())
-        .style_src_attr_nonce(attr_nonce_value.clone())
+        .style_src_attr_nonce(attr_nonce.clone())
         .style_src_attr_hash(CspHashAlgorithm::Sha384, sha384_hash)
-        .script_src_elem_nonce(script_nonce_value.clone())
+        .script_src_elem_nonce(script_nonce.clone())
         .script_src_elem_hash(CspHashAlgorithm::Sha512, sha512_hash.clone())
-        .script_src_attr_nonce(attr_nonce_value.clone())
+        .script_src_attr_nonce(attr_nonce.clone())
         .script_src_attr_hash(CspHashAlgorithm::Sha256, sha256_hash)
         .add_source(
             CspDirective::WorkerSrc,
@@ -246,49 +243,55 @@ fn build_comprehensive_csp_options() -> CspOptions {
 }
 
 fn heavy_request_headers() -> HashMap<String, String> {
-    let mut headers = HashMap::new();
-    headers.insert("Content-Type".to_string(), "application/json".to_string());
-    headers.insert("X-Powered-By".to_string(), "LegacyStack 3.2".to_string());
-    headers.insert(
-        "Strict-Transport-Security".to_string(),
-        "max-age=0".to_string(),
-    );
-    headers.insert(
-        "Content-Security-Policy".to_string(),
-        "default-src *".to_string(),
-    );
-    headers.insert(
-        "Cross-Origin-Embedder-Policy".to_string(),
-        "unsafe-none".to_string(),
-    );
-    headers.insert(
-        "Cross-Origin-Opener-Policy".to_string(),
-        "unsafe-none".to_string(),
-    );
-    headers.insert(
-        "Cross-Origin-Resource-Policy".to_string(),
-        "cross-origin".to_string(),
-    );
-    headers.insert("Referrer-Policy".to_string(), "no-referrer".to_string());
-    headers.insert("Origin-Agent-Cluster".to_string(), "?1".to_string());
-    headers.insert(
-        "Permissions-Policy".to_string(),
-        "geolocation=*".to_string(),
-    );
-    headers.insert("X-Frame-Options".to_string(), "DENY".to_string());
-    headers.insert("X-DNS-Prefetch-Control".to_string(), "off".to_string());
-    headers.insert("Clear-Site-Data".to_string(), "\"cache\"".to_string());
-    headers.insert(
-        "Set-Cookie".to_string(),
-        "session=abc123; Path=/; SameSite=Lax".to_string(),
-    );
-    headers.insert("X-CSRF-Token".to_string(), "legacy-token".to_string());
+    static BASE_HEADERS: OnceLock<HashMap<String, String>> = OnceLock::new();
 
-    for index in 0..512 {
-        headers.insert(format!("X-Custom-{index:03}"), format!("value-{index:08}"));
-    }
+    BASE_HEADERS
+        .get_or_init(|| {
+            let mut headers = HashMap::with_capacity(560);
+            headers.insert("Content-Type".to_string(), "application/json".to_string());
+            headers.insert("X-Powered-By".to_string(), "LegacyStack 3.2".to_string());
+            headers.insert(
+                "Strict-Transport-Security".to_string(),
+                "max-age=0".to_string(),
+            );
+            headers.insert(
+                "Content-Security-Policy".to_string(),
+                "default-src *".to_string(),
+            );
+            headers.insert(
+                "Cross-Origin-Embedder-Policy".to_string(),
+                "unsafe-none".to_string(),
+            );
+            headers.insert(
+                "Cross-Origin-Opener-Policy".to_string(),
+                "unsafe-none".to_string(),
+            );
+            headers.insert(
+                "Cross-Origin-Resource-Policy".to_string(),
+                "cross-origin".to_string(),
+            );
+            headers.insert("Referrer-Policy".to_string(), "no-referrer".to_string());
+            headers.insert("Origin-Agent-Cluster".to_string(), "?1".to_string());
+            headers.insert(
+                "Permissions-Policy".to_string(),
+                "geolocation=*".to_string(),
+            );
+            headers.insert("X-Frame-Options".to_string(), "DENY".to_string());
+            headers.insert("X-DNS-Prefetch-Control".to_string(), "off".to_string());
+            headers.insert("Clear-Site-Data".to_string(), "\"cache\"".to_string());
+            headers.insert(
+                "Set-Cookie".to_string(),
+                "session=abc123; Path=/; SameSite=Lax".to_string(),
+            );
+            headers.insert("X-CSRF-Token".to_string(), "legacy-token".to_string());
 
-    headers
+            for index in 0..512 {
+                headers.insert(format!("X-Custom-{index:03}"), format!("value-{index:08}"));
+            }
+
+            headers
+        })
+        .clone()
 }
 
 criterion_group!(

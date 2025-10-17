@@ -93,7 +93,7 @@ proptest! {
 
         let actual: Vec<String> = headers
             .get_all("Set-Cookie")
-            .map(|values| values.to_vec())
+            .map(|values| values.iter().map(|value| value.to_string()).collect())
             .unwrap_or_default();
 
         let expected: Vec<String> = lines

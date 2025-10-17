@@ -1,4 +1,5 @@
 use crate::normalized_headers::NormalizedHeaders;
+use std::borrow::Cow;
 use std::error::Error as StdError;
 
 pub type Executor = Box<dyn DynFeatureExecutor + 'static>;
@@ -48,5 +49,27 @@ where
 
     fn validate_options(&self) -> Result<(), ExecutorError> {
         FeatureExecutor::validate_options(self)
+    }
+}
+
+pub(crate) struct CachedHeader<O> {
+    options: O,
+    header_value: Cow<'static, str>,
+}
+
+impl<O> CachedHeader<O> {
+    pub(crate) fn new(options: O, header_value: Cow<'static, str>) -> Self {
+        Self {
+            options,
+            header_value,
+        }
+    }
+
+    pub(crate) fn options(&self) -> &O {
+        &self.options
+    }
+
+    pub(crate) fn cloned_header_value(&self) -> Cow<'static, str> {
+        self.header_value.clone()
     }
 }

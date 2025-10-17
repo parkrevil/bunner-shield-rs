@@ -5,19 +5,24 @@ use crate::executor::{ExecutorError, FeatureExecutor};
 use crate::normalized_headers::NormalizedHeaders;
 use thiserror::Error;
 
+const COOKIE_SUFFIX: &str = "; Path=/; Secure; HttpOnly; SameSite=Lax";
+
 pub struct Csrf {
     options: CsrfOptions,
     token_service: HmacCsrfService,
+    cookie_prefix: String,
 }
 
 impl Csrf {
     pub fn new(options: CsrfOptions) -> Self {
         let secret = options.secret_key;
         let token_service = HmacCsrfService::new(secret);
+        let cookie_prefix = format!("{}=", options.cookie_name);
 
         Self {
             options,
             token_service,
+            cookie_prefix,
         }
     }
 }
@@ -35,14 +40,14 @@ impl FeatureExecutor for Csrf {
             .issue(self.options.token_length)
             .map_err(|err| Box::new(CsrfError::TokenGeneration(err)) as ExecutorError)?;
 
-        headers.insert(CSRF_TOKEN, token.as_str());
-        headers.insert(
-            SET_COOKIE,
-            format!(
-                "{}={}; Path=/; Secure; HttpOnly; SameSite=Lax",
-                &self.options.cookie_name, &token
-            ),
-        );
+        let mut cookie =
+            String::with_capacity(self.cookie_prefix.len() + token.len() + COOKIE_SUFFIX.len());
+        cookie.push_str(&self.cookie_prefix);
+        cookie.push_str(token.as_str());
+        cookie.push_str(COOKIE_SUFFIX);
+
+        headers.insert_owned(CSRF_TOKEN, token);
+        headers.insert_owned(SET_COOKIE, cookie);
 
         Ok(())
     }

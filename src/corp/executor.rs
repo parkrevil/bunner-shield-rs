@@ -1,15 +1,19 @@
 use super::options::CorpOptions;
 use crate::constants::header_keys::CROSS_ORIGIN_RESOURCE_POLICY;
-use crate::executor::{ExecutorError, FeatureExecutor};
+use crate::executor::{CachedHeader, ExecutorError, FeatureExecutor};
 use crate::normalized_headers::NormalizedHeaders;
+use std::borrow::Cow;
 
 pub struct Corp {
-    options: CorpOptions,
+    cached: CachedHeader<CorpOptions>,
 }
 
 impl Corp {
     pub fn new(options: CorpOptions) -> Self {
-        Self { options }
+        let header_value = options.policy.as_str().to_string();
+        Self {
+            cached: CachedHeader::new(options, Cow::Owned(header_value)),
+        }
     }
 }
 
@@ -17,11 +21,14 @@ impl FeatureExecutor for Corp {
     type Options = CorpOptions;
 
     fn options(&self) -> &Self::Options {
-        &self.options
+        self.cached.options()
     }
 
     fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), ExecutorError> {
-        headers.insert(CROSS_ORIGIN_RESOURCE_POLICY, self.options.policy.as_str());
+        headers.insert(
+            CROSS_ORIGIN_RESOURCE_POLICY,
+            self.cached.cloned_header_value(),
+        );
 
         Ok(())
     }
