@@ -48,6 +48,22 @@ mod success {
     }
 
     #[test]
+    fn given_same_site_none_with_secure_when_secure_then_sets_none_policy() {
+        let shield = Shield::new()
+            .same_site(SameSiteOptions::new().same_site(SameSitePolicy::None))
+            .expect("feature");
+
+        let result = shield
+            .secure(with_cookie("session=abc; Path=/"))
+            .expect("secure");
+
+        assert_eq!(
+            result.get("Set-Cookie").map(String::as_str),
+            Some("session=abc; Path=/; Secure; HttpOnly; SameSite=None")
+        );
+    }
+
+    #[test]
     fn given_request_without_cookie_when_secure_then_leaves_headers_untouched() {
         let shield = Shield::new()
             .same_site(SameSiteOptions::new())
