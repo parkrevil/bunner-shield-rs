@@ -626,3 +626,72 @@ mod failure {
         assert!(matches!(error, CspOptionsError::MissingDirectives));
     }
 }
+
+mod stress {
+    use super::*;
+
+    #[test]
+    fn given_megabyte_scale_header_when_secure_then_preserves_value_without_panicking() {
+        let shield = Shield::new()
+            .x_content_type_options()
+            .expect("x-content-type-options");
+
+        let mut headers = empty_headers();
+        headers.insert("X-Large-Payload".to_string(), "A".repeat(2 * 1024 * 1024));
+        headers.insert("Content-Type".to_string(), "application/json".to_string());
+
+        let secured = shield.secure(headers).expect("secure");
+
+        let payload = secured
+            .get("X-Large-Payload")
+            .map(String::to_string)
+            .expect("large payload present");
+        assert_eq!(payload.len(), 2 * 1024 * 1024);
+        assert!(payload.chars().all(|ch| ch == 'A'));
+        assert_eq!(
+            secured.get("X-Content-Type-Options").map(String::as_str),
+            Some("nosniff")
+        );
+        assert_eq!(
+            secured.get("Content-Type").map(String::as_str),
+            Some("application/json")
+        );
+    }
+
+    #[test]
+    fn given_thousands_of_headers_when_secure_then_preserves_all_entries() {
+        const HEADER_COUNT: usize = 4096;
+
+        let shield = Shield::new()
+            .x_frame_options(XFrameOptionsOptions::new())
+            .expect("x-frame-options");
+
+        let mut headers = empty_headers();
+        for index in 0..HEADER_COUNT {
+            headers.insert(
+                format!("X-Custom-{index}"),
+                format!("value-{index:04}"),
+            );
+        }
+        headers.insert("Content-Length".to_string(), "1234".to_string());
+
+        let secured = shield.secure(headers.clone()).expect("secure");
+
+        assert_eq!(secured.len(), HEADER_COUNT + 2);
+        assert_eq!(
+            secured.get("X-Frame-Options").map(String::as_str),
+            Some("DENY")
+        );
+        assert_eq!(
+            secured.get("Content-Length").map(String::as_str),
+            Some("1234")
+        );
+
+        for (key, value) in headers.iter().filter(|(key, _)| *key != "Content-Length") {
+            let actual = secured
+                .get(key)
+                .unwrap_or_else(|| panic!("missing header {key}"));
+            assert_eq!(actual, value, "header `{key}` mismatch");
+        }
+    }
+}
