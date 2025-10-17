@@ -97,6 +97,24 @@ mod edge {
     }
 
     #[test]
+    fn given_lowercase_set_cookie_key_when_secure_then_emits_canonical_header() {
+        let shield = Shield::new()
+            .same_site(SameSiteOptions::new())
+            .expect("feature");
+
+        let mut headers = empty_headers();
+        headers.insert("set-cookie".to_string(), "session=abc".to_string());
+
+        let result = shield.secure(headers).expect("secure");
+
+        assert!(result.contains_key("Set-Cookie"));
+        assert!(!result.contains_key("set-cookie"));
+        let cookie = result.get("Set-Cookie").expect("cookie present");
+        assert!(cookie.contains("SameSite=Lax"));
+        assert!(cookie.contains("Secure"));
+    }
+
+    #[test]
     fn given_host_prefixed_cookie_when_secure_then_retains_required_attributes() {
         let shield = Shield::new()
             .same_site(SameSiteOptions::new())

@@ -39,6 +39,18 @@ mod success {
 
         assert!(!result.contains_key("X-Powered-By"));
     }
+
+    #[test]
+    fn given_lowercase_header_when_secure_then_removes_canonical_key() {
+        let shield = Shield::new().x_powered_by().expect("feature");
+
+        let result = shield
+            .secure(with_header("x-powered-by", "Express"))
+            .expect("secure");
+
+        assert!(!result.contains_key("X-Powered-By"));
+        assert!(!result.contains_key("x-powered-by"));
+    }
 }
 
 mod edge {
