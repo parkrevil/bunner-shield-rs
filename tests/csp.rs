@@ -310,6 +310,30 @@ mod success {
     }
 
     #[test]
+    fn given_script_src_with_unsafe_hashes_and_hash_when_secure_then_emits_expected_tokens() {
+        let hash = "R".repeat(44);
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .script_src([CspSource::UnsafeHashes])
+            .script_src_hash(CspHashAlgorithm::Sha256, &hash);
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let header = shield
+            .secure(empty_headers())
+            .expect("secure")
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+        let directives = parse_csp_header(&header);
+
+        assert_directive_tokens(
+            &directives,
+            "script-src",
+            &["'unsafe-hashes'", &format!("'sha256-{hash}'")],
+        );
+    }
+
+    #[test]
     fn given_trusted_types_tokens_when_secure_then_deduplicates_values() {
         let main = TrustedTypesPolicy::new("appMain").expect("policy");
         let backup = TrustedTypesPolicy::new("appBackup").expect("policy");
@@ -337,6 +361,41 @@ mod success {
             "trusted-types",
             &["'allow-duplicates'", "appBackup", "appMain"],
         );
+        assert_directive_tokens(&directives, "require-trusted-types-for", &["'script'"]);
+    }
+
+    #[test]
+    fn given_trusted_types_with_nonce_and_hash_when_secure_then_preserves_all_directives() {
+        let nonce = "p".repeat(22);
+        let hash = "Q".repeat(44);
+        let ui_primary = TrustedTypesPolicy::new("uiPrimary").expect("policy");
+        let ui_audit = TrustedTypesPolicy::new("uiAudit").expect("policy");
+
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .script_src_nonce(&nonce)
+            .script_src_hash(CspHashAlgorithm::Sha256, &hash)
+            .trusted_types_tokens([
+                TrustedTypesToken::from(ui_primary.clone()),
+                TrustedTypesToken::from(ui_audit.clone()),
+            ])
+            .require_trusted_types_for_scripts();
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let header = shield
+            .secure(empty_headers())
+            .expect("secure")
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+        let directives = parse_csp_header(&header);
+
+        assert_directive_tokens(
+            &directives,
+            "script-src",
+            &[&format!("'nonce-{nonce}'"), &format!("'sha256-{hash}'")],
+        );
+        assert_directive_tokens(&directives, "trusted-types", &[ui_audit.as_str(), ui_primary.as_str()]);
         assert_directive_tokens(&directives, "require-trusted-types-for", &["'script'"]);
     }
 
@@ -687,6 +746,35 @@ mod success {
         let directives = parse_csp_header(&header);
 
         assert_directive_tokens(&directives, "script-src", &["'self'", "'wasm-unsafe-eval'"]);
+    }
+
+    #[test]
+    fn given_strict_dynamic_with_wasm_unsafe_eval_when_secure_then_emits_expected_tokens() {
+        let nonce = "n".repeat(22);
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .script_src([CspSource::WasmUnsafeEval])
+            .script_src_nonce(&nonce)
+            .enable_strict_dynamic();
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let header = shield
+            .secure(empty_headers())
+            .expect("secure")
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+        let directives = parse_csp_header(&header);
+
+        assert_directive_tokens(
+            &directives,
+            "script-src",
+            &[
+                &format!("'nonce-{nonce}'"),
+                "'strict-dynamic'",
+                "'wasm-unsafe-eval'",
+            ],
+        );
     }
 
     #[test]
