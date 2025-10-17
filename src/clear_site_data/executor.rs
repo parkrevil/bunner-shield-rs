@@ -30,3 +30,7 @@ impl FeatureExecutor for ClearSiteData {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "executor_test.rs"]
+mod executor_test;

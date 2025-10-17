@@ -1,4 +1,4 @@
-use super::{is_multi_value, split_multi_values, NormalizedHeaders};
+use super::{NormalizedHeaders, is_multi_value, split_multi_values};
 use crate::tests_common as common;
 use std::borrow::Cow;
 
@@ -24,8 +24,8 @@ mod insert {
 
         headers.insert("X-Test", "new");
 
-    let values = headers.get_all("x-test").expect("values");
-    assert_eq!(values, &[Cow::Borrowed("new")]);
+        let values = headers.get_all("x-test").expect("values");
+        assert_eq!(values, &[Cow::Borrowed("new")]);
     }
 
     #[test]
@@ -52,8 +52,8 @@ mod insert_owned {
 
         headers.insert_owned("X-Test", "value".to_string());
 
-    let values = headers.get_all("x-test").expect("values");
-    assert_eq!(values, &[Cow::Borrowed("value")]);
+        let values = headers.get_all("x-test").expect("values");
+        assert_eq!(values, &[Cow::Borrowed("value")]);
     }
 }
 

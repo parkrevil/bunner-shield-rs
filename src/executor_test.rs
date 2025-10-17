@@ -52,8 +52,7 @@ impl FeatureExecutor for ToggleExecutor {
 
     fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), ExecutorError> {
         headers.insert_owned("x-test", "applied".to_string());
-        self
-            .observed
+        self.observed
             .lock()
             .expect("lock")
             .push("applied".to_string());
