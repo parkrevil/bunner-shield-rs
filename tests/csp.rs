@@ -15,6 +15,47 @@ fn with_csp(value: &str) -> HashMap<String, String> {
 
 mod success {
     use super::*;
+    use bunner_shield_rs::{
+        CspHashAlgorithm, SandboxToken, TrustedTypesPolicy, TrustedTypesToken,
+    };
+    use std::collections::HashMap;
+
+    fn parse_csp_header(header: &str) -> HashMap<String, Vec<String>> {
+        let mut directives = HashMap::new();
+
+        for part in header.split(';') {
+            let trimmed = part.trim();
+            if trimmed.is_empty() {
+                continue;
+            }
+
+            let mut segments = trimmed.split_whitespace();
+            let directive = segments
+                .next()
+                .unwrap_or_else(|| panic!("missing directive name in `{trimmed}`"));
+            let mut tokens: Vec<String> = segments.map(|token| token.to_string()).collect();
+            tokens.sort();
+
+            directives.insert(directive.to_string(), tokens);
+        }
+
+        directives
+    }
+
+    fn assert_directive_tokens(
+        directives: &HashMap<String, Vec<String>>,
+        name: &str,
+        expected: &[&str],
+    ) {
+        let mut expected_tokens: Vec<String> = expected.iter().map(|token| token.to_string()).collect();
+        expected_tokens.sort();
+
+        let actual = directives
+            .get(name)
+            .unwrap_or_else(|| panic!("missing directive `{name}`"));
+
+        assert_eq!(actual, &expected_tokens, "directive `{name}` mismatch");
+    }
 
     #[test]
     fn given_minimal_policy_when_secure_then_emits_expected_directives() {
@@ -70,10 +111,566 @@ mod success {
         assert!(header.contains("script-src"));
         assert!(header.contains(&nonce_value));
     }
+
+    #[test]
+    fn given_trusted_types_none_when_secure_then_overrides_existing_tokens() {
+        let policy = TrustedTypesPolicy::new("frontend").expect("policy");
+
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .trusted_types_policies([policy.clone(), policy])
+            .trusted_types_none();
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let result = shield.secure(empty_headers()).expect("secure");
+        let header = result
+            .get("Content-Security-Policy")
+            .expect("csp header");
+        let directives = parse_csp_header(header);
+
+        assert_directive_tokens(&directives, "trusted-types", &["'none'"]);
+    }
+
+    #[test]
+    fn given_script_src_nonce_and_hash_when_secure_then_emits_expected_tokens() {
+        let nonce = "a".repeat(22);
+        let hash = "B".repeat(44);
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .script_src_nonce(format!("  {nonce}  "))
+            .script_src_hash(CspHashAlgorithm::Sha256, &hash)
+            .enable_strict_dynamic();
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let header = shield
+            .secure(empty_headers())
+            .expect("secure")
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+        let directives = parse_csp_header(&header);
+
+        assert_directive_tokens(
+            &directives,
+            "script-src",
+            &[
+                &format!("'nonce-{nonce}'"),
+                &format!("'sha256-{hash}'"),
+                "'strict-dynamic'",
+            ],
+        );
+    }
+
+    #[test]
+    fn given_script_src_elem_nonce_and_hash_when_secure_then_emits_expected_tokens() {
+        let nonce = "b".repeat(22);
+        let hash = "C".repeat(64);
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .script_src_elem_nonce(&nonce)
+            .script_src_elem_hash(CspHashAlgorithm::Sha384, &hash);
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let header = shield
+            .secure(empty_headers())
+            .expect("secure")
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+        let directives = parse_csp_header(&header);
+
+        assert_directive_tokens(
+            &directives,
+            "script-src-elem",
+            &[
+                &format!("'nonce-{nonce}'"),
+                &format!("'sha384-{hash}'"),
+            ],
+        );
+    }
+
+    #[test]
+    fn given_script_src_attr_nonce_and_hash_when_secure_then_emits_expected_tokens() {
+        let nonce = "c".repeat(22);
+        let hash = "D".repeat(88);
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .script_src_attr([CspSource::SelfKeyword])
+            .script_src_attr_nonce(&nonce)
+            .script_src_attr_hash(CspHashAlgorithm::Sha512, &hash);
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let header = shield
+            .secure(empty_headers())
+            .expect("secure")
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+        let directives = parse_csp_header(&header);
+
+        assert_directive_tokens(
+            &directives,
+            "script-src-attr",
+            &[
+                "'self'",
+                &format!("'nonce-{nonce}'"),
+                &format!("'sha512-{hash}'"),
+            ],
+        );
+    }
+
+    #[test]
+    fn given_style_src_inline_and_hash_when_secure_then_emits_expected_tokens() {
+        let nonce = "d".repeat(22);
+        let hash = "E".repeat(64);
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .style_src([CspSource::SelfKeyword, CspSource::UnsafeInline, CspSource::UnsafeHashes])
+            .style_src_nonce(&nonce)
+            .style_src_hash(CspHashAlgorithm::Sha384, &hash);
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let header = shield
+            .secure(empty_headers())
+            .expect("secure")
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+        let directives = parse_csp_header(&header);
+
+        assert_directive_tokens(
+            &directives,
+            "style-src",
+            &[
+                "'self'",
+                "'unsafe-inline'",
+                "'unsafe-hashes'",
+                &format!("'nonce-{nonce}'"),
+                &format!("'sha384-{hash}'"),
+            ],
+        );
+    }
+
+    #[test]
+    fn given_style_src_elem_nonce_and_hash_when_secure_then_emits_expected_tokens() {
+        let nonce = "e".repeat(22);
+        let hash = "F".repeat(44);
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .style_src_elem([CspSource::SelfKeyword])
+            .style_src_elem_nonce(&nonce)
+            .style_src_elem_hash(CspHashAlgorithm::Sha256, &hash);
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let header = shield
+            .secure(empty_headers())
+            .expect("secure")
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+        let directives = parse_csp_header(&header);
+
+        assert_directive_tokens(
+            &directives,
+            "style-src-elem",
+            &[
+                "'self'",
+                &format!("'nonce-{nonce}'"),
+                &format!("'sha256-{hash}'"),
+            ],
+        );
+    }
+
+    #[test]
+    fn given_style_src_attr_nonce_and_hash_when_secure_then_emits_expected_tokens() {
+        let nonce = "f".repeat(22);
+        let hash = "G".repeat(88);
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .style_src_attr([CspSource::SelfKeyword])
+            .style_src_attr_nonce(&nonce)
+            .style_src_attr_hash(CspHashAlgorithm::Sha512, &hash);
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let header = shield
+            .secure(empty_headers())
+            .expect("secure")
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+        let directives = parse_csp_header(&header);
+
+        assert_directive_tokens(
+            &directives,
+            "style-src-attr",
+            &[
+                "'self'",
+                &format!("'nonce-{nonce}'"),
+                &format!("'sha512-{hash}'"),
+            ],
+        );
+    }
+
+    #[test]
+    fn given_trusted_types_tokens_when_secure_then_deduplicates_values() {
+        let main = TrustedTypesPolicy::new("appMain").expect("policy");
+        let backup = TrustedTypesPolicy::new("appBackup").expect("policy");
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .trusted_types_tokens([
+                TrustedTypesToken::from(main.clone()),
+                TrustedTypesToken::from(main),
+                TrustedTypesToken::from(backup),
+                TrustedTypesToken::allow_duplicates(),
+            ])
+            .require_trusted_types_for_scripts();
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let header = shield
+            .secure(empty_headers())
+            .expect("secure")
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+        let directives = parse_csp_header(&header);
+
+        assert_directive_tokens(
+            &directives,
+            "trusted-types",
+            &["'allow-duplicates'", "appBackup", "appMain"],
+        );
+        assert_directive_tokens(&directives, "require-trusted-types-for", &["'script'"]);
+    }
+
+    #[test]
+    fn given_trusted_types_none_after_tokens_when_secure_then_resets_directive() {
+        let main = TrustedTypesPolicy::new("mainPolicy").expect("policy");
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .trusted_types_policies([main])
+            .trusted_types_none();
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let header = shield
+            .secure(empty_headers())
+            .expect("secure")
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+        let directives = parse_csp_header(&header);
+
+        assert_directive_tokens(&directives, "trusted-types", &["'none'"]);
+    }
+
+    #[test]
+    fn given_report_to_merge_when_secure_then_preserves_first_group() {
+        let base = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .report_to("primary");
+        let overlay = CspOptions::new().report_to("secondary");
+        let options = base.merge(&overlay);
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let header = shield
+            .secure(empty_headers())
+            .expect("secure")
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+        let directives = parse_csp_header(&header);
+
+        assert_directive_tokens(&directives, "report-to", &["primary"]);
+    }
+
+    #[test]
+    fn given_img_src_host_when_secure_then_sets_expected_sources() {
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .img_src([CspSource::host("cdn.example.com"), CspSource::scheme("https")]);
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let header = shield
+            .secure(empty_headers())
+            .expect("secure")
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+        let directives = parse_csp_header(&header);
+
+        assert_directive_tokens(&directives, "img-src", &["cdn.example.com", "https:"]);
+    }
+
+    #[test]
+    fn given_font_src_host_when_secure_then_sets_expected_sources() {
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .font_src([CspSource::host("fonts.example.com")]);
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let header = shield
+            .secure(empty_headers())
+            .expect("secure")
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+        let directives = parse_csp_header(&header);
+
+        assert_directive_tokens(&directives, "font-src", &["fonts.example.com"]);
+    }
+
+    #[test]
+    fn given_frame_src_host_when_secure_then_sets_expected_sources() {
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .frame_src([CspSource::host("frames.example.com")]);
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let header = shield
+            .secure(empty_headers())
+            .expect("secure")
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+        let directives = parse_csp_header(&header);
+
+        assert_directive_tokens(&directives, "frame-src", &["frames.example.com"]);
+    }
+
+    #[test]
+    fn given_media_src_host_when_secure_then_sets_expected_sources() {
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .media_src([CspSource::host("media.example.com")]);
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let header = shield
+            .secure(empty_headers())
+            .expect("secure")
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+        let directives = parse_csp_header(&header);
+
+        assert_directive_tokens(&directives, "media-src", &["media.example.com"]);
+    }
+
+    #[test]
+    fn given_manifest_src_self_when_secure_then_sets_expected_sources() {
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .manifest_src([CspSource::SelfKeyword]);
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let header = shield
+            .secure(empty_headers())
+            .expect("secure")
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+        let directives = parse_csp_header(&header);
+
+        assert_directive_tokens(&directives, "manifest-src", &["'self'"]);
+    }
+
+    #[test]
+    fn given_object_src_self_when_secure_then_sets_expected_sources() {
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .object_src([CspSource::SelfKeyword]);
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let header = shield
+            .secure(empty_headers())
+            .expect("secure")
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+        let directives = parse_csp_header(&header);
+
+        assert_directive_tokens(&directives, "object-src", &["'self'"]);
+    }
+
+    #[test]
+    fn given_base_uri_self_when_secure_then_sets_expected_sources() {
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .base_uri([CspSource::SelfKeyword]);
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let header = shield
+            .secure(empty_headers())
+            .expect("secure")
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+        let directives = parse_csp_header(&header);
+
+        assert_directive_tokens(&directives, "base-uri", &["'self'"]);
+    }
+
+    #[test]
+    fn given_form_action_self_when_secure_then_sets_expected_sources() {
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .form_action([CspSource::SelfKeyword]);
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let header = shield
+            .secure(empty_headers())
+            .expect("secure")
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+        let directives = parse_csp_header(&header);
+
+        assert_directive_tokens(&directives, "form-action", &["'self'"]);
+    }
+
+    #[test]
+    fn given_frame_ancestors_none_when_secure_then_sets_expected_sources() {
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .frame_ancestors([CspSource::None]);
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let header = shield
+            .secure(empty_headers())
+            .expect("secure")
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+        let directives = parse_csp_header(&header);
+
+        assert_directive_tokens(&directives, "frame-ancestors", &["'none'"]);
+    }
+
+    #[test]
+    fn given_sandbox_tokens_when_secure_then_deduplicates_entries() {
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .sandbox_with([
+                SandboxToken::AllowScripts,
+                SandboxToken::AllowScripts,
+                SandboxToken::AllowForms,
+            ]);
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let header = shield
+            .secure(empty_headers())
+            .expect("secure")
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+        let directives = parse_csp_header(&header);
+
+        assert_directive_tokens(&directives, "sandbox", &["allow-forms", "allow-scripts"]);
+    }
+
+    #[test]
+    fn given_upgrade_insecure_requests_when_secure_then_sets_flag_directive() {
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .upgrade_insecure_requests();
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let header = shield
+            .secure(empty_headers())
+            .expect("secure")
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+        let directives = parse_csp_header(&header);
+
+        assert_directive_tokens(&directives, "upgrade-insecure-requests", &[]);
+    }
+
+    #[test]
+    fn given_block_all_mixed_content_when_secure_then_sets_flag_directive() {
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .block_all_mixed_content();
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let header = shield
+            .secure(empty_headers())
+            .expect("secure")
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+        let directives = parse_csp_header(&header);
+
+        assert_directive_tokens(&directives, "block-all-mixed-content", &[]);
+    }
+
+    #[test]
+    fn given_worker_src_when_secure_then_uses_configured_scheme() {
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .worker_src([CspSource::scheme("https")]);
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let header = shield
+            .secure(empty_headers())
+            .expect("secure")
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+        let directives = parse_csp_header(&header);
+
+        assert_directive_tokens(&directives, "worker-src", &["https:"]);
+    }
+
+    #[test]
+    fn given_navigate_to_when_secure_then_sets_expected_destinations() {
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .navigate_to([CspSource::SelfKeyword, CspSource::host("payments.example.com")]);
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let header = shield
+            .secure(empty_headers())
+            .expect("secure")
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+        let directives = parse_csp_header(&header);
+
+        assert_directive_tokens(
+            &directives,
+            "navigate-to",
+            &["'self'", "payments.example.com"],
+        );
+    }
+
+    #[test]
+    fn given_connect_src_merge_when_secure_then_combines_sources() {
+        let base = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .connect_src([CspSource::SelfKeyword]);
+        let overlay = CspOptions::new()
+            .connect_src([CspSource::scheme("wss"), CspSource::host("api.example.com")]);
+        let options = base.merge(&overlay);
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let header = shield
+            .secure(empty_headers())
+            .expect("secure")
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+        let directives = parse_csp_header(&header);
+
+        assert_directive_tokens(
+            &directives,
+            "connect-src",
+            &["'self'", "api.example.com", "wss:"],
+        );
+    }
 }
 
 mod edge {
     use super::*;
+    use bunner_shield_rs::CspDirective;
 
     fn assert_csp_directives(actual: &str, expected: &[&str]) {
         let mut actual_tokens: Vec<_> = actual
@@ -136,10 +733,27 @@ mod edge {
 
         assert_eq!(result.get("X-App-Version").map(String::as_str), Some("9"));
     }
+
+    #[test]
+    fn given_blank_add_source_when_secure_then_ignores_token() {
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .add_source(CspDirective::ConnectSrc, CspSource::raw("   "));
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let result = shield.secure(empty_headers()).expect("secure");
+        let header = result
+            .get("Content-Security-Policy")
+            .expect("csp header");
+
+        assert_csp_directives(header, &["default-src 'self'"]);
+        assert!(!header.contains("connect-src"));
+    }
 }
 
 mod failure {
     use super::*;
+    use bunner_shield_rs::{CspDirective, CspHashAlgorithm, CspSource};
 
     fn expect_validation_error(result: Result<Shield, ShieldError>) -> CspOptionsError {
         let err = match result {
@@ -178,5 +792,193 @@ mod failure {
         let error = expect_validation_error(Shield::new().csp(options));
 
         assert_eq!(error, CspOptionsError::StrictDynamicRequiresNonceOrHash);
+    }
+
+    #[test]
+    fn given_whitespace_source_when_add_feature_then_returns_invalid_directive_value_error() {
+        let options = CspOptions::new().default_src([CspSource::raw("   ")]);
+
+        let error = expect_validation_error(Shield::new().csp(options));
+
+        assert_eq!(error, CspOptionsError::InvalidDirectiveValue);
+    }
+
+    #[test]
+    fn given_unterminated_token_when_add_feature_then_returns_invalid_directive_token_error() {
+        let options = CspOptions::new().default_src([CspSource::raw("'unterminated")]);
+
+        let error = expect_validation_error(Shield::new().csp(options));
+
+        assert_eq!(error, CspOptionsError::InvalidDirectiveToken);
+    }
+
+    #[test]
+    fn given_short_nonce_when_add_feature_then_returns_invalid_nonce_error() {
+        let options = CspOptions::new().script_src_nonce("short");
+
+        let error = expect_validation_error(Shield::new().csp(options));
+
+        assert_eq!(error, CspOptionsError::InvalidNonce);
+    }
+
+    #[test]
+    fn given_invalid_hash_length_when_add_feature_then_returns_invalid_hash_error() {
+        let options = CspOptions::new()
+            .script_src([CspSource::SelfKeyword])
+            .script_src_hash(CspHashAlgorithm::Sha256, "short");
+
+        let error = expect_validation_error(Shield::new().csp(options));
+
+        assert_eq!(error, CspOptionsError::InvalidHash);
+    }
+
+    #[test]
+    fn given_unsafe_hashes_without_hash_when_add_feature_then_returns_semantic_error() {
+        let options = CspOptions::new().style_src([CspSource::UnsafeHashes]);
+
+        let error = expect_validation_error(Shield::new().csp(options));
+
+        assert_eq!(
+            error,
+            CspOptionsError::UnsafeHashesRequireHashes("style-src".to_string()),
+        );
+    }
+
+    #[test]
+    fn given_strict_dynamic_with_unsafe_inline_when_add_feature_then_returns_conflict_error() {
+        let nonce = "a".repeat(22);
+        let options = CspOptions::new()
+            .script_src([CspSource::UnsafeInline])
+            .script_src_nonce(nonce)
+            .enable_strict_dynamic();
+
+        let error = expect_validation_error(Shield::new().csp(options));
+
+        assert_eq!(error, CspOptionsError::StrictDynamicConflicts);
+    }
+
+    #[test]
+    fn given_strict_dynamic_with_host_when_add_feature_then_returns_host_conflict_error() {
+        let nonce = "a".repeat(22);
+        let options = CspOptions::new()
+            .script_src([CspSource::SelfKeyword])
+            .script_src_nonce(nonce)
+            .enable_strict_dynamic();
+
+        let error = expect_validation_error(Shield::new().csp(options));
+
+        assert_eq!(error, CspOptionsError::StrictDynamicHostSourceConflict);
+    }
+
+    #[test]
+    fn given_disallowed_scheme_when_add_feature_then_returns_disallowed_scheme_error() {
+        let options = CspOptions::new().script_src([CspSource::scheme("javascript")]);
+
+        let error = expect_validation_error(Shield::new().csp(options));
+
+        match error {
+            CspOptionsError::DisallowedScheme(directive, scheme) => {
+                assert_eq!(directive, "script-src");
+                assert_eq!(scheme, "javascript");
+            }
+            other => panic!("unexpected error: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn given_port_wildcard_when_add_feature_then_returns_port_wildcard_error() {
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .connect_src([CspSource::raw("https://api.example.com:*")]);
+
+        let error = expect_validation_error(Shield::new().csp(options));
+
+        match error {
+            CspOptionsError::PortWildcardUnsupported(token) => {
+                assert_eq!(token, "https://api.example.com:*");
+            }
+            other => panic!("unexpected error: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn given_invalid_sandbox_token_when_add_feature_then_returns_error() {
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .add_source(CspDirective::Sandbox, CspSource::raw("allow-teleport"));
+
+        let error = expect_validation_error(Shield::new().csp(options));
+
+        match error {
+            CspOptionsError::InvalidSandboxToken(token) => {
+                assert_eq!(token, "allow-teleport".to_string());
+            }
+            other => panic!("unexpected error: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn given_token_not_allowed_for_directive_when_add_feature_then_returns_error() {
+        let options = CspOptions::new().img_src([CspSource::UnsafeInline]);
+
+        let error = expect_validation_error(Shield::new().csp(options));
+
+        match error {
+            CspOptionsError::TokenNotAllowedForDirective(token, directive) => {
+                assert_eq!(token, "'unsafe-inline'".to_string());
+                assert_eq!(directive, "img-src".to_string());
+            }
+            other => panic!("unexpected error: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn given_invalid_source_expression_when_add_feature_then_returns_error() {
+        let options = CspOptions::new()
+            .img_src([CspSource::raw("https://user:secret@cdn.example.com")]);
+
+        let error = expect_validation_error(Shield::new().csp(options));
+
+        match error {
+            CspOptionsError::InvalidSourceExpression(token) => {
+                assert_eq!(token, "https://user:secret@cdn.example.com".to_string());
+            }
+            other => panic!("unexpected error: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn given_path_source_with_whitespace_when_add_feature_then_returns_invalid_source_expression_error() {
+        let options = CspOptions::new()
+            .img_src([CspSource::raw("/invalid\npath")]);
+
+        let error = expect_validation_error(Shield::new().csp(options));
+
+        assert_eq!(error, CspOptionsError::InvalidDirectiveToken);
+    }
+
+    #[test]
+    fn given_style_src_attr_with_unsafe_eval_when_add_feature_then_returns_token_not_allowed_error() {
+        let options = CspOptions::new().style_src_attr([CspSource::UnsafeEval]);
+
+        let error = expect_validation_error(Shield::new().csp(options));
+
+        match error {
+            CspOptionsError::TokenNotAllowedForDirective(token, directive) => {
+                assert_eq!(token, "'unsafe-eval'".to_string());
+                assert_eq!(directive, "style-src-attr".to_string());
+            }
+            other => panic!("unexpected error: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn given_nonce_with_invalid_characters_when_add_feature_then_returns_invalid_nonce_error() {
+        let options = CspOptions::new()
+            .script_src_nonce("invalid!!nonce");
+
+        let error = expect_validation_error(Shield::new().csp(options));
+
+        assert_eq!(error, CspOptionsError::InvalidNonce);
     }
 }
