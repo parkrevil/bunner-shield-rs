@@ -1,11 +1,11 @@
 use bunner_shield_rs::{
     ClearSiteDataOptions, CoepOptions, CoepPolicy, CoopOptions, CoopPolicy, CorpOptions,
-    CorpPolicy, CspNonceManager, CspOptions, CspOptionsError, CspSource, CsrfOptions,
-    CsrfOptionsError, HstsOptions, HstsOptionsError, OriginAgentClusterOptions,
-    PermissionsPolicyOptions, PermissionsPolicyOptionsError, ReferrerPolicyOptions,
-    ReferrerPolicyValue, SameSiteOptions, SameSiteOptionsError, SameSitePolicy, Shield,
-    ShieldError, XFrameOptionsOptions, XFrameOptionsPolicy, XdnsPrefetchControlOptions,
-    XdnsPrefetchControlPolicy,
+    CorpPolicy, CspDirective, CspHashAlgorithm, CspNonceManager, CspOptions, CspOptionsError,
+    CspSource, CsrfOptions, CsrfOptionsError, HstsOptions, HstsOptionsError,
+    OriginAgentClusterOptions, PermissionsPolicyOptions, PermissionsPolicyOptionsError,
+    ReferrerPolicyOptions, ReferrerPolicyValue, SameSiteOptions, SameSiteOptionsError,
+    SameSitePolicy, Shield, ShieldError, XFrameOptionsOptions, XFrameOptionsPolicy,
+    XdnsPrefetchControlOptions, XdnsPrefetchControlPolicy,
 };
 use std::collections::HashMap;
 
@@ -689,6 +689,54 @@ mod stress {
                 .get(key)
                 .unwrap_or_else(|| panic!("missing header {key}"));
             assert_eq!(actual, value, "header `{key}` mismatch");
+        }
+    }
+
+    #[test]
+    fn given_extreme_csp_composition_when_secure_then_emits_all_directives() {
+        let mut options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .style_src([CspSource::SelfKeyword])
+            .img_src([CspSource::SelfKeyword])
+            .base_uri([CspSource::None])
+            .frame_ancestors([CspSource::None])
+            .enable_strict_dynamic()
+            .script_src_nonce("n".repeat(22))
+            .script_src_hash(CspHashAlgorithm::Sha256, "h".repeat(44))
+            .report_to("primary");
+
+        for index in 0..200 {
+            let directive = match index % 4 {
+                0 => CspDirective::ConnectSrc,
+                1 => CspDirective::FontSrc,
+                2 => CspDirective::MediaSrc,
+                _ => CspDirective::FrameSrc,
+            };
+            let host = format!("https://cdn{index}.example.com");
+            options = options.add_source(directive, CspSource::raw(host));
+        }
+
+        let shield = Shield::new().csp(options).expect("csp");
+
+        let secured = shield.secure(empty_headers()).expect("secure");
+        let header = secured
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+
+        assert!(header.contains("default-src 'self'"));
+        assert!(header.contains("style-src 'self'"));
+        assert!(header.contains("img-src 'self'"));
+        assert!(header.contains("base-uri 'none'"));
+        assert!(header.contains("frame-ancestors 'none'"));
+        assert!(header.contains("'strict-dynamic'"));
+        assert!(header.contains("'nonce-n"));
+        assert!(header.contains("'sha256-h"));
+        assert!(header.contains("report-to primary"));
+
+        for index in 0..200 {
+            let token = format!("https://cdn{index}.example.com");
+            assert!(header.contains(&token), "missing host token `{token}`");
         }
     }
 }
