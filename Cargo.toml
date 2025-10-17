@@ -22,8 +22,13 @@ base64 = "0.22"
 
 [dev-dependencies]
 proptest = "1"
+criterion = { version = "0.5", features = ["html_reports"] }
 
 [dev-dependencies.cargo-husky]
 version = "1"
 default-features = false
 features = ["user-hooks"]
+
+[[bench]]
+name = "bunner_shield_rs"
+harness = false
