@@ -304,6 +304,154 @@ mod success {
     }
 
     #[test]
+    fn given_csrf_same_site_clear_site_data_permissions_when_secure_then_preserves_all_headers() {
+        let shield = Shield::new()
+            .csrf(CsrfOptions::new(base_secret()))
+            .expect("csrf")
+            .same_site(SameSiteOptions::new().same_site(SameSitePolicy::Strict))
+            .expect("same-site")
+            .clear_site_data(ClearSiteDataOptions::new().cache().cookies())
+            .expect("clear-site-data")
+            .permissions_policy(PermissionsPolicyOptions::new("geolocation=()"))
+            .expect("permissions-policy");
+
+        let mut headers = empty_headers();
+        headers.insert("Set-Cookie".to_string(), "session=abc; Path=/".to_string());
+        headers.insert("Clear-Site-Data".to_string(), "\"cookies\"".to_string());
+        headers.insert("Permissions-Policy".to_string(), "camera=()".to_string());
+
+        let secured = shield.secure(headers).expect("secure");
+
+        let token = secured.get("X-CSRF-Token").expect("csrf token present");
+        assert_eq!(token.len(), 64);
+        assert!(token.chars().all(|ch| ch.is_ascii_hexdigit()));
+
+        let cookies = secured.get("Set-Cookie").expect("cookies present");
+        let mut lines: Vec<&str> = cookies.split('\n').collect();
+        lines.sort();
+        assert!(lines.iter().any(|line| line.starts_with("session=abc")));
+        assert!(lines.iter().any(|line| line.contains("__Host-csrf-token=") && line.contains("SameSite=Strict")));
+        for line in &lines {
+            assert!(line.contains("SameSite=Strict"));
+            assert!(line.contains("Secure"));
+            assert!(line.contains("HttpOnly"));
+        }
+
+        let clear_site_data = secured
+            .get("Clear-Site-Data")
+            .map(String::to_string)
+            .expect("clear-site-data header");
+        assert_clear_site_data(&clear_site_data, &["\"cache\"", "\"cookies\""]);
+
+        assert_eq!(
+            secured.get("Permissions-Policy").map(String::as_str),
+            Some("geolocation=()"),
+        );
+    }
+
+    #[test]
+    fn given_static_features_when_secure_multiple_times_then_result_is_idempotent() {
+        let shield = Shield::new()
+            .same_site(SameSiteOptions::new().same_site(SameSitePolicy::Strict))
+            .expect("same-site")
+            .clear_site_data(ClearSiteDataOptions::new().cache().storage())
+            .expect("clear-site-data")
+            .permissions_policy(PermissionsPolicyOptions::new("geolocation=()"))
+            .expect("permissions-policy");
+
+        let mut original = empty_headers();
+        original.insert("Set-Cookie".to_string(), "session=abc; Path=/".to_string());
+        original.insert("Clear-Site-Data".to_string(), "\"cache\"".to_string());
+        original.insert("Permissions-Policy".to_string(), "camera=()".to_string());
+
+        let repeat = original.clone();
+
+        let first = shield.secure(original).expect("first secure");
+        let second = shield.secure(repeat).expect("second secure");
+
+        assert_eq!(first, second);
+    }
+
+    #[test]
+    fn given_stateful_features_when_secure_multiple_times_then_invariants_hold() {
+        let shield = Shield::new()
+            .csrf(CsrfOptions::new(base_secret()))
+            .expect("csrf")
+            .same_site(SameSiteOptions::new().same_site(SameSitePolicy::Strict))
+            .expect("same-site")
+            .clear_site_data(ClearSiteDataOptions::new().cookies().storage())
+            .expect("clear-site-data")
+            .permissions_policy(PermissionsPolicyOptions::new("microphone=()"))
+            .expect("permissions-policy");
+
+        let mut first_headers = empty_headers();
+        first_headers.insert("Set-Cookie".to_string(), "session=abc; Path=/".to_string());
+
+        let mut second_headers = empty_headers();
+        second_headers.insert("Set-Cookie".to_string(), "tracking=1; Path=/".to_string());
+        second_headers.insert("X-Other".to_string(), "value".to_string());
+
+        let first = shield.secure(first_headers).expect("first secure");
+        let second = shield.secure(second_headers).expect("second secure");
+
+        let token_one = first.get("X-CSRF-Token").expect("first token");
+        let token_two = second.get("X-CSRF-Token").expect("second token");
+        assert_ne!(token_one, token_two);
+        assert_eq!(token_one.len(), 64);
+        assert_eq!(token_two.len(), 64);
+        assert!(token_one.chars().all(|ch| ch.is_ascii_hexdigit()));
+        assert!(token_two.chars().all(|ch| ch.is_ascii_hexdigit()));
+
+        let expected_clear_site_data = ["\"cookies\"", "\"storage\""];
+        let first_clear = first
+            .get("Clear-Site-Data")
+            .map(String::to_string)
+            .expect("first clear-site-data");
+        let second_clear = second
+            .get("Clear-Site-Data")
+            .map(String::to_string)
+            .expect("second clear-site-data");
+        assert_clear_site_data(&first_clear, &expected_clear_site_data);
+        assert_clear_site_data(&second_clear, &expected_clear_site_data);
+
+        assert_eq!(
+            first.get("Permissions-Policy").map(String::as_str),
+            Some("microphone=()"),
+        );
+        assert_eq!(
+            second.get("Permissions-Policy").map(String::as_str),
+            Some("microphone=()"),
+        );
+
+        let first_cookies = first.get("Set-Cookie").expect("first cookies");
+        let mut first_lines: Vec<&str> = first_cookies.split('\n').collect();
+        first_lines.sort();
+        assert!(
+            first_lines
+                .iter()
+                .any(|line| line.starts_with("session=abc"))
+        );
+        assert!(first_lines.iter().any(|line| line.contains("__Host-csrf-token=") && line.contains("SameSite=Strict")));
+
+        let second_cookies = second.get("Set-Cookie").expect("second cookies");
+        let mut second_lines: Vec<&str> = second_cookies.split('\n').collect();
+        second_lines.sort();
+        assert!(
+            second_lines
+                .iter()
+                .any(|line| line.starts_with("tracking=1"))
+        );
+        assert!(second_lines.iter().any(|line| line.contains("__Host-csrf-token=") && line.contains("SameSite=Strict")));
+        for line in first_lines.iter().chain(second_lines.iter()) {
+            assert!(line.contains("SameSite=Strict"));
+            assert!(line.contains("Secure"));
+            assert!(line.contains("HttpOnly"));
+        }
+
+        assert_eq!(second.get("X-Other").map(String::as_str), Some("value"));
+    }
+
+    #[test]
     fn given_lowercase_headers_when_secure_then_emits_canonical_casing() {
         let shield = Shield::new()
             .hsts(HstsOptions::new().include_subdomains())
