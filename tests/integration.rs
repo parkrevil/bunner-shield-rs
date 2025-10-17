@@ -344,6 +344,42 @@ mod success {
     }
 
     #[test]
+    fn given_duplicate_feature_registration_when_secure_then_last_options_take_precedence() {
+        let shield = Shield::new()
+            .hsts(HstsOptions::new().max_age(10))
+            .expect("initial hsts")
+            .hsts(HstsOptions::new().include_subdomains())
+            .expect("override hsts")
+            .coep(CoepOptions::new().policy(CoepPolicy::RequireCorp))
+            .expect("initial coep")
+            .coep(CoepOptions::new().policy(CoepPolicy::Credentialless))
+            .expect("override coep");
+
+        let mut headers = empty_headers();
+        headers.insert(
+            "Strict-Transport-Security".to_string(),
+            "max-age=0".to_string(),
+        );
+        headers.insert(
+            "Cross-Origin-Embedder-Policy".to_string(),
+            "unsafe".to_string(),
+        );
+
+        let secured = shield.secure(headers).expect("secure");
+
+        assert_eq!(
+            secured.get("Strict-Transport-Security").map(String::as_str),
+            Some("max-age=31536000; includeSubDomains")
+        );
+        assert_eq!(
+            secured
+                .get("Cross-Origin-Embedder-Policy")
+                .map(String::as_str),
+            Some("credentialless")
+        );
+    }
+
+    #[test]
     fn given_strict_dynamic_with_nonce_when_secure_then_emits_expected_tokens() {
         let nonce_manager = CspNonceManager::new();
         let nonce = nonce_manager.issue();
