@@ -670,6 +670,74 @@ mod success {
             &["'self'", "api.example.com", "wss:"],
         );
     }
+
+    #[test]
+    fn given_script_src_wasm_unsafe_eval_when_secure_then_includes_token() {
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .script_src([
+                CspSource::SelfKeyword,
+                CspSource::WasmUnsafeEval,
+            ]);
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let header = shield
+            .secure(empty_headers())
+            .expect("secure")
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+        let directives = parse_csp_header(&header);
+
+        assert_directive_tokens(
+            &directives,
+            "script-src",
+            &["'self'", "'wasm-unsafe-eval'"],
+        );
+    }
+
+    #[test]
+    fn given_style_src_report_sample_when_secure_then_includes_token() {
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .style_src([
+                CspSource::SelfKeyword,
+                CspSource::ReportSample,
+            ]);
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let header = shield
+            .secure(empty_headers())
+            .expect("secure")
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+        let directives = parse_csp_header(&header);
+
+        assert_directive_tokens(
+            &directives,
+            "style-src",
+            &["'report-sample'", "'self'"],
+        );
+    }
+
+    #[test]
+    fn given_wildcard_source_when_secure_then_emits_asterisk() {
+        let options = CspOptions::new()
+            .default_src([CspSource::SelfKeyword])
+            .connect_src([CspSource::Wildcard]);
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let header = shield
+            .secure(empty_headers())
+            .expect("secure")
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+        let directives = parse_csp_header(&header);
+
+        assert_directive_tokens(&directives, "connect-src", &["*"]);
+    }
 }
 
 mod edge {
@@ -982,5 +1050,36 @@ mod failure {
         let error = expect_validation_error(Shield::new().csp(options));
 
         assert_eq!(error, CspOptionsError::InvalidNonce);
+    }
+
+    #[test]
+    fn given_style_src_with_wasm_unsafe_eval_when_add_feature_then_returns_token_not_allowed_error(
+    ) {
+        let options = CspOptions::new().style_src([CspSource::WasmUnsafeEval]);
+
+        let error = expect_validation_error(Shield::new().csp(options));
+
+        match error {
+            CspOptionsError::TokenNotAllowedForDirective(token, directive) => {
+                assert_eq!(token, "'wasm-unsafe-eval'".to_string());
+                assert_eq!(directive, "style-src".to_string());
+            }
+            other => panic!("unexpected error: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn given_img_src_with_report_sample_when_add_feature_then_returns_token_not_allowed_error() {
+        let options = CspOptions::new().img_src([CspSource::ReportSample]);
+
+        let error = expect_validation_error(Shield::new().csp(options));
+
+        match error {
+            CspOptionsError::TokenNotAllowedForDirective(token, directive) => {
+                assert_eq!(token, "'report-sample'".to_string());
+                assert_eq!(directive, "img-src".to_string());
+            }
+            other => panic!("unexpected error: {other:?}"),
+        }
     }
 }
