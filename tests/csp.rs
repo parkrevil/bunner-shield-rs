@@ -675,10 +675,7 @@ mod success {
     fn given_script_src_wasm_unsafe_eval_when_secure_then_includes_token() {
         let options = CspOptions::new()
             .default_src([CspSource::SelfKeyword])
-            .script_src([
-                CspSource::SelfKeyword,
-                CspSource::WasmUnsafeEval,
-            ]);
+            .script_src([CspSource::SelfKeyword, CspSource::WasmUnsafeEval]);
         let shield = Shield::new().csp(options).expect("feature");
 
         let header = shield
@@ -689,21 +686,14 @@ mod success {
             .expect("csp header");
         let directives = parse_csp_header(&header);
 
-        assert_directive_tokens(
-            &directives,
-            "script-src",
-            &["'self'", "'wasm-unsafe-eval'"],
-        );
+        assert_directive_tokens(&directives, "script-src", &["'self'", "'wasm-unsafe-eval'"]);
     }
 
     #[test]
     fn given_style_src_report_sample_when_secure_then_includes_token() {
         let options = CspOptions::new()
             .default_src([CspSource::SelfKeyword])
-            .style_src([
-                CspSource::SelfKeyword,
-                CspSource::ReportSample,
-            ]);
+            .style_src([CspSource::SelfKeyword, CspSource::ReportSample]);
         let shield = Shield::new().csp(options).expect("feature");
 
         let header = shield
@@ -714,11 +704,7 @@ mod success {
             .expect("csp header");
         let directives = parse_csp_header(&header);
 
-        assert_directive_tokens(
-            &directives,
-            "style-src",
-            &["'report-sample'", "'self'"],
-        );
+        assert_directive_tokens(&directives, "style-src", &["'report-sample'", "'self'"]);
     }
 
     #[test]
@@ -1053,8 +1039,8 @@ mod failure {
     }
 
     #[test]
-    fn given_style_src_with_wasm_unsafe_eval_when_add_feature_then_returns_token_not_allowed_error(
-    ) {
+    fn given_style_src_with_wasm_unsafe_eval_when_add_feature_then_returns_token_not_allowed_error()
+    {
         let options = CspOptions::new().style_src([CspSource::WasmUnsafeEval]);
 
         let error = expect_validation_error(Shield::new().csp(options));
