@@ -3,7 +3,7 @@ use bunner_shield_rs::{
     CorpPolicy, CspNonceManager, CspOptions, CspOptionsError, CspSource, CsrfOptions,
     CsrfOptionsError, HstsOptions, HstsOptionsError, OriginAgentClusterOptions,
     PermissionsPolicyOptions, PermissionsPolicyOptionsError, ReferrerPolicyOptions,
-    ReferrerPolicyValue, SameSiteOptions, SameSitePolicy, Shield, ShieldError,
+    ReferrerPolicyValue, SameSiteOptions, SameSiteOptionsError, SameSitePolicy, Shield, ShieldError,
     XFrameOptionsOptions, XFrameOptionsPolicy, XdnsPrefetchControlOptions,
     XdnsPrefetchControlPolicy,
 };
@@ -383,6 +383,25 @@ mod failure {
         );
 
         assert!(matches!(error, PermissionsPolicyOptionsError::EmptyPolicy));
+    }
+
+    #[test]
+    fn given_same_site_none_without_secure_when_add_feature_then_returns_validation_error() {
+        let options = SameSiteOptions::new()
+            .secure(false)
+            .same_site(SameSitePolicy::None);
+
+        let error: SameSiteOptionsError = expect_validation_error(
+            Shield::new()
+                .csrf(CsrfOptions::new(base_secret()))
+                .expect("csrf")
+                .same_site(options),
+        );
+
+        assert!(matches!(
+            error,
+            SameSiteOptionsError::SameSiteNoneRequiresSecure
+        ));
     }
 
     #[test]
