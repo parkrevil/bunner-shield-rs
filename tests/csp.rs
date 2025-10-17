@@ -395,7 +395,11 @@ mod success {
             "script-src",
             &[&format!("'nonce-{nonce}'"), &format!("'sha256-{hash}'")],
         );
-        assert_directive_tokens(&directives, "trusted-types", &[ui_audit.as_str(), ui_primary.as_str()]);
+        assert_directive_tokens(
+            &directives,
+            "trusted-types",
+            &[ui_audit.as_str(), ui_primary.as_str()],
+        );
         assert_directive_tokens(&directives, "require-trusted-types-for", &["'script'"]);
     }
 
