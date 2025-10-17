@@ -30,6 +30,7 @@ pub use crate::csp::{
 };
 pub use crate::csrf::{CsrfOptions, CsrfOptionsError, CsrfTokenError, HmacCsrfService};
 pub use crate::hsts::{HstsOptions, HstsOptionsError};
+pub use crate::normalized_headers::NormalizedHeaders;
 pub use crate::origin_agent_cluster::{OriginAgentCluster, OriginAgentClusterOptions};
 pub use crate::permissions_policy::{
     PermissionsPolicy, PermissionsPolicyOptions, PermissionsPolicyOptionsError,
@@ -39,7 +40,6 @@ pub use crate::same_site::{
     CookieMeta, SameSite, SameSiteOptions, SameSiteOptionsError, SameSitePolicy,
 };
 pub use crate::shield::{Shield, ShieldError};
-pub use crate::normalized_headers::NormalizedHeaders;
 pub use crate::x_dns_prefetch_control::{
     XdnsPrefetchControl, XdnsPrefetchControlOptions, XdnsPrefetchControlPolicy,
 };
