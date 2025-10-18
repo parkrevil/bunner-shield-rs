@@ -10,9 +10,9 @@ pub struct XdnsPrefetchControl {
 
 impl XdnsPrefetchControl {
     pub fn new(options: XdnsPrefetchControlOptions) -> Self {
-        let header_value = options.header_value().to_string();
+        let header_value = options.header_value();
         Self {
-            cached: CachedHeader::new(options, Cow::Owned(header_value)),
+            cached: CachedHeader::new(options, Cow::Borrowed(header_value)),
         }
     }
 }

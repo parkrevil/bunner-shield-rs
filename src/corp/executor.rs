@@ -10,9 +10,9 @@ pub struct Corp {
 
 impl Corp {
     pub fn new(options: CorpOptions) -> Self {
-        let header_value = options.policy.as_str().to_string();
+        let header_value = options.policy.as_str();
         Self {
-            cached: CachedHeader::new(options, Cow::Owned(header_value)),
+            cached: CachedHeader::new(options, Cow::Borrowed(header_value)),
         }
     }
 }

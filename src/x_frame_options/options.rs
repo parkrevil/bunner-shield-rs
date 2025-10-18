@@ -8,7 +8,7 @@ pub enum XFrameOptionsPolicy {
 }
 
 impl XFrameOptionsPolicy {
-    pub(crate) fn as_str(self) -> &'static str {
+    fn as_str(self) -> &'static str {
         match self {
             XFrameOptionsPolicy::Deny => X_FRAME_OPTIONS_DENY,
             XFrameOptionsPolicy::SameOrigin => X_FRAME_OPTIONS_SAMEORIGIN,

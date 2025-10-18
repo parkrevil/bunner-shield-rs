@@ -19,7 +19,7 @@ pub enum ReferrerPolicyValue {
 }
 
 impl ReferrerPolicyValue {
-    pub(crate) fn as_str(self) -> &'static str {
+    fn as_str(self) -> &'static str {
         match self {
             ReferrerPolicyValue::NoReferrer => REFERRER_POLICY_NO_REFERRER,
             ReferrerPolicyValue::NoReferrerWhenDowngrade => {

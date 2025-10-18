@@ -8,7 +8,7 @@ pub enum XdnsPrefetchControlPolicy {
 }
 
 impl XdnsPrefetchControlPolicy {
-    pub(crate) fn as_str(self) -> &'static str {
+    fn as_str(self) -> &'static str {
         match self {
             XdnsPrefetchControlPolicy::On => X_DNS_PREFETCH_CONTROL_ON,
             XdnsPrefetchControlPolicy::Off => X_DNS_PREFETCH_CONTROL_OFF,
