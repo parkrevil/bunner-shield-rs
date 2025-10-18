@@ -33,3 +33,7 @@ impl FeatureExecutor for Coop {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "executor_test.rs"]
+mod executor_test;
