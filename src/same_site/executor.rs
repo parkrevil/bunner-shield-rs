@@ -21,22 +21,27 @@ impl FeatureExecutor for SameSite {
     }
 
     fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), ExecutorError> {
-        let Some(existing) = headers.get_all(SET_COOKIE).map(|cookies| {
-            cookies
-                .iter()
-                .map(|cookie| cookie.to_string())
-                .collect::<Vec<_>>()
-        }) else {
+        let Some(values) = headers.get_all(SET_COOKIE) else {
             return Ok(());
         };
 
-        if existing.is_empty() {
+    let mut cookies: Vec<String> = Vec::with_capacity(values.len());
+
+        for value in values {
+            let cookie = value.to_string();
+            if cookie.trim().is_empty() {
+                continue;
+            }
+            cookies.push(cookie);
+        }
+
+        if cookies.is_empty() {
             return Ok(());
         }
 
         headers.remove(SET_COOKIE);
 
-        for cookie in existing {
+        for cookie in cookies {
             let updated = apply_policy(&cookie, &self.options.meta);
             headers.insert_owned(SET_COOKIE, updated);
         }
@@ -46,21 +51,13 @@ impl FeatureExecutor for SameSite {
 }
 
 fn apply_policy(cookie: &str, meta: &CookieMeta) -> String {
-    let parts: Vec<String> = cookie
-        .split(';')
-        .map(|part| part.trim().to_string())
-        .collect();
+    let mut parts = cookie.split(';').map(|part| part.trim().to_string());
 
-    if parts.is_empty() {
-        return cookie.to_string();
-    }
-
+    let base = parts.next().unwrap_or_default();
     let mut attributes: Vec<String> = Vec::new();
-    let mut base = String::new();
 
-    for (index, part) in parts.into_iter().enumerate() {
-        if index == 0 {
-            base = part;
+    for part in parts {
+        if part.is_empty() {
             continue;
         }
 
@@ -69,9 +66,7 @@ fn apply_policy(cookie: &str, meta: &CookieMeta) -> String {
             continue;
         }
 
-        if !part.is_empty() {
-            attributes.push(part);
-        }
+        attributes.push(part);
     }
 
     if meta.secure {

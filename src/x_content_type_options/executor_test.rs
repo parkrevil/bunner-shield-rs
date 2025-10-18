@@ -2,6 +2,23 @@ use super::*;
 use crate::executor::FeatureExecutor;
 use crate::tests_common as common;
 
+mod options {
+    use super::*;
+
+    #[test]
+    fn given_executor_when_options_then_returns_noop_reference() {
+        let executor = XContentTypeOptions::new();
+
+        let first = executor.options();
+        let second = executor.options();
+
+        assert!(
+            std::ptr::eq(first, second),
+            "options should return the same reference each call"
+        );
+    }
+}
+
 mod validate_options {
     use super::*;
 

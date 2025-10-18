@@ -68,6 +68,19 @@ mod execute {
     }
 
     #[test]
+    fn given_empty_set_cookie_values_when_execute_then_returns_early() {
+        let executor = SameSite::new(SameSiteOptions::new());
+        let mut headers = common::normalized_headers_from(&[("Set-Cookie", " \n \r")]);
+
+        executor
+            .execute(&mut headers)
+            .expect("execute should succeed");
+
+        let result = headers.into_result();
+        assert_eq!(result.get("Set-Cookie"), Some(&String::new()));
+    }
+
+    #[test]
     fn given_multi_cookie_headers_when_execute_then_overrides_same_site_attributes() {
         let executor = SameSite::new(SameSiteOptions::new());
         let mut headers = common::normalized_headers_from(&[(
@@ -86,6 +99,26 @@ mod execute {
         let expected_first = "session=value; Path=/; Secure; HttpOnly; SameSite=Lax";
         let expected_second = "tracking=optin; Secure; HttpOnly; SameSite=Lax";
         assert_eq!(updated, &format!("{expected_first}\n{expected_second}"));
+    }
+
+    #[test]
+    fn given_blank_and_real_values_when_execute_then_ignores_empty_entries() {
+        let executor = SameSite::new(SameSiteOptions::new());
+        let mut headers =
+            common::normalized_headers_from(&[("Set-Cookie", "  \ntracking=optin; Path=/")]);
+
+        executor
+            .execute(&mut headers)
+            .expect("execute should succeed");
+
+        let result = headers.into_result();
+        let updated = result
+            .get("Set-Cookie")
+            .expect("expected rewritten set-cookie header");
+        assert_eq!(
+            updated,
+            "tracking=optin; Path=/; Secure; HttpOnly; SameSite=Lax"
+        );
     }
 }
 
