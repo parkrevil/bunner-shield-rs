@@ -53,7 +53,7 @@ impl FeatureOptions for CsrfOptions {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum CsrfOptionsError {
     #[error("csrf cookie must start with secure prefix")]
     InvalidCookiePrefix,
@@ -64,3 +64,7 @@ pub enum CsrfOptionsError {
         maximum: usize,
     },
 }
+
+#[cfg(test)]
+#[path = "options_test.rs"]
+mod options_test;

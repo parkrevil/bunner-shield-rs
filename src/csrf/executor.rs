@@ -58,3 +58,7 @@ pub enum CsrfError {
     #[error("failed to generate csrf token: {0}")]
     TokenGeneration(CsrfTokenError),
 }
+
+#[cfg(test)]
+#[path = "executor_test.rs"]
+mod executor_test;

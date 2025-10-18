@@ -52,10 +52,14 @@ impl HmacCsrfService {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum CsrfTokenError {
     #[error("invalid secret length for HMAC")]
     InvalidSecretLength,
     #[error("token length {0} exceeds allowable range")]
     InvalidTokenLength(usize),
 }
+
+#[cfg(test)]
+#[path = "token_test.rs"]
+mod token_test;
