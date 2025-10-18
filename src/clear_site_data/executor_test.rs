@@ -65,9 +65,7 @@ mod execute {
 
     #[test]
     fn given_executor_when_execute_multiple_times_then_reuses_cached_header_value() {
-        let executor = ClearSiteData::new(
-            ClearSiteDataOptions::new().cache().storage(),
-        );
+        let executor = ClearSiteData::new(ClearSiteDataOptions::new().cache().storage());
         let mut first_headers = common::normalized_headers_from(&[]);
         let mut second_headers = common::normalized_headers_from(&[]);
 

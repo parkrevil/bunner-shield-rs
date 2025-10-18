@@ -32,14 +32,15 @@ mod issue {
         use core::sync::atomic::Ordering;
 
         let service = HmacCsrfService::new(secret());
-        service
-            .counter
-            .store(u64::MAX - 1, Ordering::Relaxed);
+        service.counter.store(u64::MAX - 1, Ordering::Relaxed);
 
         let first = service.issue(32).expect("issue before wrap should succeed");
         let second = service.issue(32).expect("issue after wrap should succeed");
 
-        assert_ne!(first, second, "wrapping counter must not reuse the same token");
+        assert_ne!(
+            first, second,
+            "wrapping counter must not reuse the same token"
+        );
     }
 
     #[test]

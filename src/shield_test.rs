@@ -204,13 +204,22 @@ mod secure {
         let observed = Arc::new(Mutex::new(Vec::new()));
 
         shield
-            .add_feature(3, Box::new(SequencingExecutor::new("third", Arc::clone(&observed))))
+            .add_feature(
+                3,
+                Box::new(SequencingExecutor::new("third", Arc::clone(&observed))),
+            )
             .expect("failed to add third executor");
         shield
-            .add_feature(1, Box::new(SequencingExecutor::new("first", Arc::clone(&observed))))
+            .add_feature(
+                1,
+                Box::new(SequencingExecutor::new("first", Arc::clone(&observed))),
+            )
             .expect("failed to add first executor");
         shield
-            .add_feature(2, Box::new(SequencingExecutor::new("second", Arc::clone(&observed))))
+            .add_feature(
+                2,
+                Box::new(SequencingExecutor::new("second", Arc::clone(&observed))),
+            )
             .expect("failed to add second executor");
 
         let headers = common::headers_with(&[("X-Test", "value")]);
