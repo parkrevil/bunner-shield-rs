@@ -1790,3 +1790,7 @@ pub enum CspNonceManagerError {
     #[error("nonce length must be greater than zero")]
     InvalidLength,
 }
+
+#[cfg(test)]
+#[path = "options_test.rs"]
+mod options_test;
