@@ -30,3 +30,7 @@ impl FeatureExecutor for PermissionsPolicy {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "executor_test.rs"]
+mod executor_test;
