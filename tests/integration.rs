@@ -668,7 +668,7 @@ mod success {
 
         let mut headers = empty_headers();
         headers.insert("Host".into(), "example.com".into());
-    headers.insert("Referer".into(), "https://example.com/path".to_string());
+        headers.insert("Referer".into(), "https://example.com/path".to_string());
 
         let secured = shield.secure(headers).expect("secure");
         assert!(secured.contains_key("X-CSRF-Token"));
@@ -760,7 +760,9 @@ mod failure {
         assert!(matches!(error, CspOptionsError::MissingDirectives));
     }
 
-    fn exec_error_message(result: Result<std::collections::HashMap<String, String>, ShieldError>) -> String {
+    fn exec_error_message(
+        result: Result<std::collections::HashMap<String, String>, ShieldError>,
+    ) -> String {
         match result {
             Err(ShieldError::ExecutionFailed(err)) => err.to_string(),
             other => panic!("expected execution error, got {other:?}"),

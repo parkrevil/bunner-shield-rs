@@ -155,7 +155,10 @@ mod execute {
         let secret = secret();
         let options = CsrfOptions::new(secret).origin_validation(true, false);
         let executor = Csrf::new(options);
-        let mut headers = common::normalized_headers_from(&[("Host", "example.com"), ("Origin", "https://example.com")]);
+        let mut headers = common::normalized_headers_from(&[
+            ("Host", "example.com"),
+            ("Origin", "https://example.com"),
+        ]);
 
         let result = executor.execute(&mut headers);
         assert!(result.is_ok());
@@ -166,7 +169,10 @@ mod execute {
         let secret = secret();
         let options = CsrfOptions::new(secret).origin_validation(true, false);
         let executor = Csrf::new(options);
-        let mut headers = common::normalized_headers_from(&[("Host", "example.com"), ("Origin", "https://evil.com")]);
+        let mut headers = common::normalized_headers_from(&[
+            ("Host", "example.com"),
+            ("Origin", "https://evil.com"),
+        ]);
 
         let err = executor
             .execute(&mut headers)
@@ -175,11 +181,15 @@ mod execute {
     }
 
     #[test]
-    fn given_origin_validation_enabled_no_origin_use_referer_true_when_execute_then_ok_if_referer_matches() {
+    fn given_origin_validation_enabled_no_origin_use_referer_true_when_execute_then_ok_if_referer_matches()
+     {
         let secret = secret();
         let options = CsrfOptions::new(secret).origin_validation(true, true);
         let executor = Csrf::new(options);
-        let mut headers = common::normalized_headers_from(&[("Host", "example.com"), ("Referer", "https://example.com/path")]);
+        let mut headers = common::normalized_headers_from(&[
+            ("Host", "example.com"),
+            ("Referer", "https://example.com/path"),
+        ]);
 
         assert!(executor.execute(&mut headers).is_ok());
     }

@@ -31,12 +31,12 @@ mod origin {
     #[test]
     fn given_null_or_empty_origin_when_fallback_disabled_then_missing_origin() {
         let h_null = common::headers_with(&[("Origin", "null")]);
-        let err = validate_origin(&h_null, false, &["https://example.com"]) 
+        let err = validate_origin(&h_null, false, &["https://example.com"])
             .expect_err("expected missing origin");
         assert_eq!(err, OriginCheckError::MissingOrigin);
 
         let h_empty = common::headers_with(&[("Origin", " ")]);
-        let err = validate_origin(&h_empty, false, &["https://example.com"]) 
+        let err = validate_origin(&h_empty, false, &["https://example.com"])
             .expect_err("expected missing origin");
         assert_eq!(err, OriginCheckError::MissingOrigin);
     }

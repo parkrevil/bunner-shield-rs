@@ -336,7 +336,8 @@ mod verify_and_consume_errors {
     fn given_too_short_v2_when_verify_and_consume_then_invalid_structure() {
         let service = HmacCsrfService::new(secret());
         let store = InMemoryReplayStore::new();
-        let token = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode([super::TOKEN_VERSION_V2]);
+        let token =
+            base64::engine::general_purpose::URL_SAFE_NO_PAD.encode([super::TOKEN_VERSION_V2]);
         let err = service
             .verify_and_consume(&token, &store)
             .expect_err("expected invalid structure");
