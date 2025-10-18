@@ -1,10 +1,8 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use url::Url;
 
-use super::config::{
-    CspOptions, CspOptionsError, CspOptionsWarning, CspOptionsWarningKind, CspWarningSeverity,
-};
+use super::config::{CspOptions, CspOptionsError, CspOptionsWarning};
 use super::sandbox::SandboxToken;
 use super::types::CspDirective;
 
@@ -33,9 +31,9 @@ pub(crate) fn validate_with_warnings(
     validate_strict_dynamic_host_sources(script_src, script_src_elem)?;
 
     let mut warnings = Vec::new();
-    validate_worker_fallback(options, &mut warnings)?;
-    emit_mixed_content_dependency_warnings(options, &mut warnings);
-    emit_risky_scheme_warnings(options, &mut warnings);
+    options.validate_worker_fallback(&mut warnings)?;
+    options.emit_mixed_content_dependency_warnings(&mut warnings);
+    options.emit_risky_scheme_warnings(&mut warnings);
 
     Ok(warnings)
 }
@@ -610,117 +608,6 @@ pub(crate) fn validate_path_source(token: &str) -> Result<(), CspOptionsError> {
 
 pub(crate) fn is_permissive_default_source(value: &str) -> bool {
     value.split_whitespace().any(|token| token == "*")
-}
-
-fn validate_worker_fallback(
-    options: &CspOptions,
-    warnings: &mut Vec<CspOptionsWarning>,
-) -> Result<(), CspOptionsError> {
-    if options
-        .directive_value(CspDirective::WorkerSrc.as_str())
-        .is_some()
-    {
-        return Ok(());
-    }
-
-    let has_script = options
-        .directive_value(CspDirective::ScriptSrc.as_str())
-        .is_some();
-    if has_script {
-        return Ok(());
-    }
-
-    if let Some(default_value) = options.directive_value(CspDirective::DefaultSrc.as_str()) {
-        if is_permissive_default_source(default_value) {
-            warnings.push(CspOptionsWarning::warning(
-                CspOptionsWarningKind::WeakWorkerSrcFallback,
-            ));
-        }
-        return Ok(());
-    }
-
-    warnings.push(CspOptionsWarning::critical(
-        CspOptionsWarningKind::MissingWorkerSrcFallback,
-    ));
-    Ok(())
-}
-
-fn emit_mixed_content_dependency_warnings(
-    options: &CspOptions,
-    warnings: &mut Vec<CspOptionsWarning>,
-) {
-    let has_upgrade = options.has_directive(CspDirective::UpgradeInsecureRequests.as_str());
-    let has_block = options.has_directive(CspDirective::BlockAllMixedContent.as_str());
-
-    if has_upgrade && !has_block {
-        warnings.push(CspOptionsWarning::warning(
-            CspOptionsWarningKind::UpgradeInsecureRequestsWithoutBlockAllMixedContent,
-        ));
-    }
-
-    if has_block && !has_upgrade {
-        warnings.push(CspOptionsWarning::warning(
-            CspOptionsWarningKind::BlockAllMixedContentWithoutUpgradeInsecureRequests,
-        ));
-    }
-}
-
-fn emit_risky_scheme_warnings(options: &CspOptions, warnings: &mut Vec<CspOptionsWarning>) {
-    const RISKY_SCHEMES: [(&str, CspWarningSeverity); 3] = [
-        ("data:", CspWarningSeverity::Critical),
-        ("blob:", CspWarningSeverity::Warning),
-        ("filesystem:", CspWarningSeverity::Critical),
-    ];
-
-    struct SchemeAggregation {
-        schemes: HashSet<String>,
-        severity: CspWarningSeverity,
-    }
-
-    let mut aggregated: HashMap<String, SchemeAggregation> = HashMap::new();
-
-    for (directive, value) in &options.directives {
-        if !directive_expects_sources(directive) {
-            continue;
-        }
-
-        for token in value.split_whitespace() {
-            let lowered = token.to_ascii_lowercase();
-
-            for &(scheme, severity) in RISKY_SCHEMES.iter() {
-                if lowered.starts_with(scheme) {
-                    let entry =
-                        aggregated
-                            .entry(directive.clone())
-                            .or_insert_with(|| SchemeAggregation {
-                                schemes: HashSet::new(),
-                                severity: CspWarningSeverity::Info,
-                            });
-                    entry.severity = entry.severity.max(severity);
-                    entry
-                        .schemes
-                        .insert(scheme.trim_end_matches(':').to_string());
-                }
-            }
-        }
-    }
-
-    let mut aggregated_entries: Vec<_> = aggregated.into_iter().collect();
-    aggregated_entries.sort_by(|a, b| a.0.cmp(&b.0));
-
-    for (directive, entry) in aggregated_entries {
-        let mut schemes: Vec<String> = entry.schemes.into_iter().collect();
-        schemes.sort();
-
-        let kind = CspOptionsWarningKind::RiskySchemes { directive, schemes };
-        let warning = match entry.severity {
-            CspWarningSeverity::Critical => CspOptionsWarning::critical(kind),
-            CspWarningSeverity::Warning => CspOptionsWarning::warning(kind),
-            CspWarningSeverity::Info => CspOptionsWarning::info(kind),
-        };
-
-        warnings.push(warning);
-    }
 }
 
 pub(crate) fn has_invalid_header_text(value: &str) -> bool {
