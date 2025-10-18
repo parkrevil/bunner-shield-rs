@@ -55,7 +55,7 @@ impl FeatureExecutor for Csp {
                     .options
                     .runtime_nonce_config()
                     .expect("runtime nonce configuration missing for dynamic CSP executor");
-                let nonce_value = config.issue_nonce();
+                let nonce_value = config.issue_runtime_value();
                 let header_value = runtime.options.render_with_runtime_nonce(&nonce_value);
                 headers.insert(CONTENT_SECURITY_POLICY, Cow::Owned(header_value));
                 Ok(())

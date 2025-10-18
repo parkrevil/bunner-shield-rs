@@ -1,5 +1,5 @@
 mod executor;
-mod options;
+pub mod options;
 
 pub use executor::Csp;
 pub use options::{

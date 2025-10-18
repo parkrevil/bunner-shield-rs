@@ -61,14 +61,14 @@ mod from_str {
 
     #[test]
     fn given_known_token_when_from_str_then_returns_matching_variant() {
-        let token = SandboxToken::from_str("allow-popups");
+        let token = SandboxToken::parse("allow-popups");
 
         assert_eq!(token, Some(SandboxToken::AllowPopups));
     }
 
     #[test]
     fn given_unknown_token_when_from_str_then_returns_none() {
-        let token = SandboxToken::from_str("allow-everything");
+        let token = SandboxToken::parse("allow-everything");
 
         assert!(token.is_none());
     }
@@ -990,7 +990,7 @@ mod sandbox_tokens {
 
         for (token, expected) in expectations {
             assert_eq!(token.as_str(), expected);
-            assert_eq!(SandboxToken::from_str(expected), Some(token));
+            assert_eq!(SandboxToken::parse(expected), Some(token));
         }
     }
 }
