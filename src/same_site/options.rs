@@ -87,3 +87,7 @@ pub enum SameSiteOptionsError {
     #[error("SameSite=None requires Secure cookies")]
     SameSiteNoneRequiresSecure,
 }
+
+#[cfg(test)]
+#[path = "options_test.rs"]
+mod options_test;

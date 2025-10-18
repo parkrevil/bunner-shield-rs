@@ -92,3 +92,7 @@ fn apply_policy(cookie: &str, meta: &CookieMeta) -> String {
 
     result
 }
+
+#[cfg(test)]
+#[path = "executor_test.rs"]
+mod executor_test;
