@@ -32,3 +32,7 @@ impl FeatureExecutor for XContentTypeOptions {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "executor_test.rs"]
+mod executor_test;
