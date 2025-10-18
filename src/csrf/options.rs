@@ -11,6 +11,8 @@ pub struct CsrfOptions {
     pub(crate) cookie_name: String,
     pub(crate) token_length: usize,
     pub(crate) secret_key: [u8; 32],
+    pub(crate) origin_validation: bool,
+    pub(crate) use_referer: bool,
 }
 
 impl CsrfOptions {
@@ -19,6 +21,8 @@ impl CsrfOptions {
             cookie_name: DEFAULT_COOKIE_NAME.to_string(),
             token_length: DEFAULT_TOKEN_LENGTH,
             secret_key,
+            origin_validation: false,
+            use_referer: true,
         }
     }
 
@@ -29,6 +33,12 @@ impl CsrfOptions {
 
     pub fn token_length(mut self, length: usize) -> Self {
         self.token_length = length;
+        self
+    }
+
+    pub fn origin_validation(mut self, enabled: bool, use_referer: bool) -> Self {
+        self.origin_validation = enabled;
+        self.use_referer = use_referer;
         self
     }
 }
