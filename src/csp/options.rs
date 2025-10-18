@@ -551,34 +551,12 @@ impl CspOptions {
         self
     }
 
-    pub fn trusted_types_tokens<I>(mut self, tokens: I) -> Self
+    pub fn trusted_types<F>(mut self, configure: F) -> Self
     where
-        I: IntoIterator<Item = TrustedTypesToken>,
+        F: FnOnce(TrustedTypesBuilder<'_>) -> TrustedTypesBuilder<'_>,
     {
-        let mut rendered: Vec<String> = Vec::new();
-        let mut seen = HashSet::new();
-
-        for token in tokens.into_iter() {
-            let value = token.into_string();
-            if seen.insert(value.clone()) {
-                rendered.push(value);
-            }
-        }
-
-        let value = rendered.join(" ");
-        self.set_directive(CspDirective::TrustedTypes.as_str(), &value);
-        self
-    }
-
-    pub fn trusted_types_policies<I>(self, policies: I) -> Self
-    where
-        I: IntoIterator<Item = TrustedTypesPolicy>,
-    {
-        self.trusted_types_tokens(policies.into_iter().map(TrustedTypesToken::from))
-    }
-
-    pub fn trusted_types_none(mut self) -> Self {
-        self.set_directive(CspDirective::TrustedTypes.as_str(), "'none'");
+        let builder = TrustedTypesBuilder::new(&mut self);
+        let _ = configure(builder);
         self
     }
 
@@ -851,6 +829,84 @@ impl<'a> ScriptSrcBuilder<'a> {
     pub fn strict_dynamic(self) -> Self {
         self.options.add_script_src_token("'strict-dynamic'");
         self
+    }
+}
+
+#[derive(Debug)]
+pub struct TrustedTypesBuilder<'a> {
+    options: &'a mut CspOptions,
+}
+
+impl<'a> TrustedTypesBuilder<'a> {
+    fn new(options: &'a mut CspOptions) -> Self {
+        Self { options }
+    }
+
+    pub fn tokens<I>(self, tokens: I) -> Self
+    where
+        I: IntoIterator<Item = TrustedTypesToken>,
+    {
+        let mut rendered: Vec<String> = Vec::new();
+        let mut seen = HashSet::new();
+
+        for token in tokens.into_iter() {
+            let value = token.into_string();
+            if seen.insert(value.clone()) {
+                rendered.push(value);
+            }
+        }
+
+        let value = rendered.join(" ");
+        self.options
+            .set_directive(CspDirective::TrustedTypes.as_str(), &value);
+        self
+    }
+
+    pub fn policies<I>(self, policies: I) -> Self
+    where
+        I: IntoIterator<Item = TrustedTypesPolicy>,
+    {
+        self.tokens(policies.into_iter().map(TrustedTypesToken::from))
+    }
+
+    pub fn policy(mut self, policy: TrustedTypesPolicy) -> Self {
+        self.add_token(policy.into_string());
+        self
+    }
+
+    pub fn token(mut self, token: TrustedTypesToken) -> Self {
+        self.add_token(token.into_string());
+        self
+    }
+
+    pub fn allow_duplicates(self) -> Self {
+        self.token(TrustedTypesToken::AllowDuplicates)
+    }
+
+    pub fn none(self) -> Self {
+        self.options
+            .set_directive(CspDirective::TrustedTypes.as_str(), "'none'");
+        self
+    }
+
+    fn add_token(&mut self, token: String) {
+        if token.is_empty() {
+            return;
+        }
+
+        let directive = CspDirective::TrustedTypes.as_str();
+
+        if let Some((_, existing)) = self
+            .options
+            .directives
+            .iter_mut()
+            .find(|(name, _)| name == directive)
+            && contains_token(existing, "'none'")
+        {
+            existing.clear();
+        }
+
+        self.options.add_directive_token(directive, &token);
     }
 }
 

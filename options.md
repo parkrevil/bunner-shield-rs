@@ -34,9 +34,7 @@
 - `form_action<I, S>(self, sources: I) -> Self` `form-action` directive를 설정합니다.
 
 #### Trusted Types 설정
-- `trusted_types_tokens<I>(self, tokens: I) -> Self` Trusted Types 토큰 목록을 설정합니다.
-- `trusted_types_policies<I>(self, policies: I) -> Self` 정책 컬렉션을 Trusted Types 토큰으로 변환해 설정합니다.
-- `trusted_types_none(self) -> Self` `trusted-types 'none'` directive를 지정합니다.
+- `trusted_types<F>(self, configure: F) -> Self` `F: FnOnce(TrustedTypesBuilder<'_>) -> TrustedTypesBuilder<'_>` 클로저를 통해 `trusted-types` directive 값을 구성합니다.
 
 #### 보안 플래그 및 리포트
 - `require_trusted_types_for_scripts(self) -> Self` `require-trusted-types-for 'script'` directive를 추가합니다.
@@ -75,6 +73,15 @@
 - `elem_hash(self, algorithm: CspHashAlgorithm, hash: impl Into<String>) -> Self` `style-src-elem` directive에 hash 토큰을 추가합니다.
 - `attr_nonce(self, nonce: impl Into<String>) -> Self` `style-src-attr` directive에 nonce 토큰을 추가합니다.
 - `attr_hash(self, algorithm: CspHashAlgorithm, hash: impl Into<String>) -> Self` `style-src-attr` directive에 hash 토큰을 추가합니다.
+
+#### TrustedTypesBuilder (`src/csp/options.rs`)
+`trusted_types` 클로저는 `TrustedTypesBuilder<'_>`를 통해 Trusted Types directive를 구성합니다.
+- `tokens<I>(self, tokens: I) -> Self` `TrustedTypesToken` 목록을 설정합니다.
+- `policies<I>(self, policies: I) -> Self` 정책 컬렉션을 토큰으로 변환해 설정합니다.
+- `policy(self, policy: TrustedTypesPolicy) -> Self` 단일 정책을 추가합니다.
+- `token(self, token: TrustedTypesToken) -> Self` 커스텀 토큰을 추가합니다.
+- `allow_duplicates(self) -> Self` `'allow-duplicates'` 토큰을 추가합니다.
+- `none(self) -> Self` `trusted-types 'none'` directive를 지정합니다.
 
 ### 관련 타입 (`src/csp/options.rs`)
 - `CspSource` (enum): SelfKeyword, None, UnsafeInline, UnsafeEval, UnsafeHashes, WasmUnsafeEval, StrictDynamic, ReportSample, Wildcard, Scheme(Cow<'static, str>), Host(Cow<'static, str>), Nonce(String), Hash { algorithm, value }, Custom(String); 생성자 `scheme(...)`, `host(...)`, `raw(...)`를 제공합니다.

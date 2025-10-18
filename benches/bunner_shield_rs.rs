@@ -7,7 +7,7 @@ use bunner_shield_rs::{
     CorpPolicy, CspDirective, CspHashAlgorithm, CspNonceManager, CspOptions, CspSource,
     CsrfOptions, HstsOptions, OriginAgentClusterOptions, PermissionsPolicyOptions,
     ReferrerPolicyOptions, ReferrerPolicyValue, SameSiteOptions, SameSitePolicy, SandboxToken,
-    Shield, TrustedTypesPolicy, TrustedTypesToken, XFrameOptionsOptions, XFrameOptionsPolicy,
+    Shield, TrustedTypesPolicy, XFrameOptionsOptions, XFrameOptionsPolicy,
     XdnsPrefetchControlOptions, XdnsPrefetchControlPolicy,
 };
 use criterion::{BatchSize, Criterion, black_box, criterion_group, criterion_main};
@@ -233,10 +233,7 @@ fn build_comprehensive_csp_options() -> CspOptions {
                 .attr_nonce(attr_nonce.clone())
                 .attr_hash(CspHashAlgorithm::Sha384, sha384_hash.clone())
         })
-        .trusted_types_tokens([
-            TrustedTypesToken::policy(trusted_policy),
-            TrustedTypesToken::allow_duplicates(),
-        ])
+        .trusted_types(|trusted| trusted.policy(trusted_policy).allow_duplicates())
         .require_trusted_types_for_scripts();
 
     options = options.add_source(

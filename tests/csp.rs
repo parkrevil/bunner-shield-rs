@@ -15,7 +15,7 @@ fn with_csp(value: &str) -> HashMap<String, String> {
 
 mod success {
     use super::*;
-    use bunner_shield_rs::{CspHashAlgorithm, SandboxToken, TrustedTypesPolicy, TrustedTypesToken};
+    use bunner_shield_rs::{CspHashAlgorithm, SandboxToken, TrustedTypesPolicy};
     use std::collections::HashMap;
 
     fn parse_csp_header(header: &str) -> HashMap<String, Vec<String>> {
@@ -117,8 +117,7 @@ mod success {
 
         let options = CspOptions::new()
             .default_src([CspSource::SelfKeyword])
-            .trusted_types_policies([policy.clone(), policy])
-            .trusted_types_none();
+            .trusted_types(|trusted| trusted.policies([policy.clone(), policy]).none());
         let shield = Shield::new().csp(options).expect("feature");
 
         let result = shield.secure(empty_headers()).expect("secure");
@@ -360,12 +359,13 @@ mod success {
         let backup = TrustedTypesPolicy::new("appBackup").expect("policy");
         let options = CspOptions::new()
             .default_src([CspSource::SelfKeyword])
-            .trusted_types_tokens([
-                TrustedTypesToken::from(main.clone()),
-                TrustedTypesToken::from(main),
-                TrustedTypesToken::from(backup),
-                TrustedTypesToken::allow_duplicates(),
-            ])
+            .trusted_types(|trusted| {
+                trusted
+                    .policy(main.clone())
+                    .policy(main)
+                    .policy(backup)
+                    .allow_duplicates()
+            })
             .require_trusted_types_for_scripts();
         let shield = Shield::new().csp(options).expect("feature");
 
@@ -399,10 +399,7 @@ mod success {
                     .nonce(nonce.clone())
                     .hash(CspHashAlgorithm::Sha256, hash.clone())
             })
-            .trusted_types_tokens([
-                TrustedTypesToken::from(ui_primary.clone()),
-                TrustedTypesToken::from(ui_audit.clone()),
-            ])
+            .trusted_types(|trusted| trusted.policy(ui_primary.clone()).policy(ui_audit.clone()))
             .require_trusted_types_for_scripts();
         let shield = Shield::new().csp(options).expect("feature");
 
@@ -432,8 +429,7 @@ mod success {
         let main = TrustedTypesPolicy::new("mainPolicy").expect("policy");
         let options = CspOptions::new()
             .default_src([CspSource::SelfKeyword])
-            .trusted_types_policies([main])
-            .trusted_types_none();
+            .trusted_types(|trusted| trusted.policies([main]).none());
         let shield = Shield::new().csp(options).expect("feature");
 
         let header = shield

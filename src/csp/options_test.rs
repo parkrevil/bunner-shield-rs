@@ -571,13 +571,13 @@ mod report_to {
     }
 }
 
-mod trusted_types_policies {
+mod trusted_types_builder {
     use super::*;
 
     #[test]
-    fn given_policy_when_trusted_types_policies_then_adds_trusted_types_directive() {
+    fn given_policy_when_trusted_types_policy_then_adds_trusted_types_directive() {
         let policy = TrustedTypesPolicy::new("appPolicy").expect("valid policy");
-        let options = CspOptions::new().trusted_types_policies([policy]);
+        let options = CspOptions::new().trusted_types(|trusted| trusted.policy(policy));
 
         assert!(options.header_value().contains("trusted-types appPolicy"));
     }
