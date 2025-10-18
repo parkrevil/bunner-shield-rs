@@ -107,3 +107,16 @@ mod options_builder {
         assert_eq!(options.policy, CoepPolicy::RequireCorp);
     }
 }
+
+mod validate {
+    use super::*;
+
+    #[test]
+    fn given_any_options_when_validate_then_returns_ok() {
+        let options = CoepOptions::new().policy(CoepPolicy::Credentialless);
+
+        let result = options.validate();
+
+        assert!(result.is_ok());
+    }
+}

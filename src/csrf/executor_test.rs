@@ -1,5 +1,53 @@
 use super::*;
+use crate::csrf::CsrfOptionsError;
+use crate::executor::FeatureExecutor;
 use crate::tests_common as common;
+
+mod validate_options {
+    use super::*;
+
+    #[test]
+    fn given_secure_cookie_prefix_when_validate_options_then_returns_ok() {
+        let executor = Csrf::new(CsrfOptions::new(secret()));
+
+        let result = executor.validate_options();
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn given_custom_cookie_without_host_prefix_when_validate_options_then_returns_prefix_error() {
+        let executor = Csrf::new(CsrfOptions::new(secret()).cookie_name("csrf-token"));
+
+        let error = executor
+            .validate_options()
+            .expect_err("expected cookie prefix error");
+
+        assert_eq!(
+            error.to_string(),
+            CsrfOptionsError::InvalidCookiePrefix.to_string()
+        );
+    }
+
+    #[test]
+    fn given_token_length_outside_range_when_validate_options_then_returns_length_error() {
+        let executor = Csrf::new(CsrfOptions::new(secret()).token_length(10));
+
+        let error = executor
+            .validate_options()
+            .expect_err("expected token length error");
+
+        assert_eq!(
+            error.to_string(),
+            CsrfOptionsError::InvalidTokenLength {
+                requested: 10,
+                minimum: 32,
+                maximum: 64,
+            }
+            .to_string()
+        );
+    }
+}
 
 fn secret() -> [u8; 32] {
     [0xAB; 32]

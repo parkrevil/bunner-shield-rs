@@ -13,6 +13,46 @@ mod new {
 
         assert_eq!(values, &[Cow::Borrowed("value")]);
     }
+
+    #[test]
+    fn given_huge_header_value_when_new_then_preserves_entire_payload() {
+        let large_value = "a".repeat(12_288);
+        let headers = NormalizedHeaders::new(common::headers_with(&[(
+            "X-Large",
+            large_value.as_str(),
+        )]));
+
+        let values = headers.get_all("x-large").expect("values");
+
+        assert_eq!(values.len(), 1);
+        assert_eq!(values[0], large_value.as_str());
+    }
+
+    #[test]
+    fn given_unicode_header_value_when_new_then_preserves_multilingual_text() {
+        let headers = NormalizedHeaders::new(common::headers_with(&[(
+            "Emoji",
+            "한글😊中文🚀",
+        )]));
+
+        let values = headers.get_all("emoji").expect("values");
+
+        assert_eq!(values, &[Cow::Borrowed("한글😊中文🚀")]);
+    }
+
+    #[test]
+    fn given_special_character_header_when_new_then_retains_original_value() {
+        let headers = NormalizedHeaders::new(common::headers_with(&[(
+            "X-Feature_!@#$%^&*()",
+            "Token=\"Value\"; Path=/; Secure; HttpOnly",
+        )]));
+
+        let values = headers
+            .get_all("x-feature_!@#$%^&*()")
+            .expect("values");
+
+        assert_eq!(values, &[Cow::Borrowed("Token=\"Value\"; Path=/; Secure; HttpOnly")]);
+    }
 }
 
 mod insert {
@@ -40,6 +80,17 @@ mod insert {
         assert_eq!(values[0], "session=one");
         assert_eq!(values[1], "token=two");
         assert_eq!(values[2], "theme=dark");
+    }
+
+    #[test]
+    fn given_special_character_value_when_insert_then_stores_literal_text() {
+        let mut headers = NormalizedHeaders::new(common::headers_with(&[]));
+        let value = "token=\"abc123\"; path=/; secure; httponly; version=1";
+
+        headers.insert("Set-Cookie", value);
+
+        let values = headers.get_all("set-cookie").expect("values");
+        assert_eq!(values, &[Cow::Borrowed(value)]);
     }
 }
 
@@ -78,6 +129,29 @@ mod get_all {
         let headers = NormalizedHeaders::new(common::headers_with(&[]));
 
         assert!(headers.get_all("missing").is_none());
+    }
+
+    #[test]
+    fn given_many_case_variations_when_get_all_then_collates_all_matches() {
+        let mut headers = NormalizedHeaders::new(common::headers_with(&[]));
+        for index in 0..120 {
+            let name = if index % 2 == 0 {
+                format!("X-Custom-{index}")
+            } else {
+                format!("x-CUSTOM-{index}")
+            };
+            headers.insert_owned(&name, format!("value-{index}"));
+        }
+
+        let mut found_count = 0;
+        for index in 0..120 {
+            let key = format!("x-custom-{index}");
+            if headers.get_all(&key).is_some() {
+                found_count += 1;
+            }
+        }
+
+        assert_eq!(found_count, 120);
     }
 }
 

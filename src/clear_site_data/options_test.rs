@@ -1,5 +1,82 @@
 use super::*;
 
+mod new {
+    use super::*;
+
+    #[test]
+    fn given_no_args_when_new_then_creates_empty_options() {
+        let options = ClearSiteDataOptions::new();
+
+        let value = options.header_value();
+
+        assert!(value.is_empty());
+    }
+}
+
+mod execution_contexts {
+    use super::*;
+
+    #[test]
+    fn given_new_options_when_execution_contexts_then_enables_section() {
+        let options = ClearSiteDataOptions::new().execution_contexts();
+
+        let value = options.header_value();
+
+        assert_eq!(value, "\"executionContexts\"");
+    }
+
+    #[test]
+    fn given_other_sections_when_execution_contexts_then_adds_to_list() {
+        let options = ClearSiteDataOptions::new()
+            .cache()
+            .execution_contexts();
+
+        let value = options.header_value();
+
+        assert!(value.contains("\"cache\""));
+        assert!(value.contains("\"executionContexts\""));
+    }
+}
+
+mod cache {
+    use super::*;
+
+    #[test]
+    fn given_new_options_when_cache_then_enables_cache_section() {
+        let options = ClearSiteDataOptions::new().cache();
+
+        let value = options.header_value();
+
+        assert_eq!(value, "\"cache\"");
+    }
+}
+
+mod cookies {
+    use super::*;
+
+    #[test]
+    fn given_new_options_when_cookies_then_enables_cookies_section() {
+        let options = ClearSiteDataOptions::new().cookies();
+
+        let value = options.header_value();
+
+        assert_eq!(value, "\"cookies\"");
+    }
+}
+
+mod storage {
+    use super::*;
+
+    #[test]
+    fn given_new_options_when_storage_then_enables_storage_section() {
+        let options = ClearSiteDataOptions::new().storage();
+
+        let value = options.header_value();
+
+        assert_eq!(value, "\"storage\"");
+    }
+}
+
 mod header_value {
     use super::*;
 

@@ -1,5 +1,34 @@
 use super::*;
+use crate::executor::FeatureExecutor;
+use crate::hsts::HstsOptionsError;
 use crate::tests_common as common;
+
+mod validate_options {
+    use super::*;
+
+    #[test]
+    fn given_valid_options_when_validate_options_then_returns_ok() {
+        let executor = Hsts::new(HstsOptions::new());
+
+        let result = executor.validate_options();
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn given_zero_max_age_when_validate_options_then_returns_invalid_max_age_error() {
+        let executor = Hsts::new(HstsOptions::new().max_age(0));
+
+        let error = executor
+            .validate_options()
+            .expect_err("expected invalid max-age error");
+
+        assert_eq!(
+            error.to_string(),
+            HstsOptionsError::InvalidMaxAge.to_string()
+        );
+    }
+}
 
 mod options_access {
     use super::*;

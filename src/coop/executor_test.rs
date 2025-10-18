@@ -62,3 +62,16 @@ mod execute {
         );
     }
 }
+
+mod validate_options {
+    use super::*;
+
+    #[test]
+    fn given_valid_options_when_validate_options_then_returns_ok() {
+        let executor = Coop::new(CoopOptions::new());
+
+        let result = FeatureExecutor::validate_options(&executor);
+
+        assert!(result.is_ok());
+    }
+}

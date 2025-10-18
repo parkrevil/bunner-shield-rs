@@ -1,5 +1,19 @@
 use super::*;
+use crate::executor::FeatureExecutor;
 use crate::tests_common as common;
+
+mod validate_options {
+    use super::*;
+
+    #[test]
+    fn given_executor_when_validate_options_then_returns_ok() {
+        let executor = OriginAgentCluster::new(OriginAgentClusterOptions::new());
+
+        let result = executor.validate_options();
+
+        assert!(result.is_ok());
+    }
+}
 
 mod options_access {
     use super::*;

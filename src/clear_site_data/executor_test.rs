@@ -1,5 +1,34 @@
 use super::*;
+use crate::clear_site_data::ClearSiteDataOptionsError;
 use crate::tests_common as common;
+
+mod validate_options {
+    use super::*;
+    use crate::executor::FeatureExecutor;
+
+    #[test]
+    fn given_selected_section_when_validate_options_then_returns_ok() {
+        let executor = ClearSiteData::new(ClearSiteDataOptions::new().cache());
+
+        let result = executor.validate_options();
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn given_no_section_selected_when_validate_options_then_returns_error() {
+        let executor = ClearSiteData::new(ClearSiteDataOptions::new());
+
+        let error = executor
+            .validate_options()
+            .expect_err("expected validation failure");
+
+        assert_eq!(
+            error.to_string(),
+            ClearSiteDataOptionsError::NoSectionsSelected.to_string()
+        );
+    }
+}
 
 mod options_access {
     use super::*;

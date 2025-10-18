@@ -528,6 +528,102 @@ mod success {
     }
 
     #[test]
+    fn given_large_chaining_when_secure_then_applies_all_features_in_order() {
+        let shield = Shield::new()
+            .csp(
+                CspOptions::new()
+                    .default_src([CspSource::SelfKeyword])
+                    .base_uri([CspSource::None])
+                    .frame_ancestors([CspSource::None]),
+            )
+            .expect("csp")
+            .x_powered_by()
+            .expect("x-powered-by")
+            .hsts(HstsOptions::new())
+            .expect("hsts")
+            .x_content_type_options()
+            .expect("xcto")
+            .csrf(CsrfOptions::new(base_secret()))
+            .expect("csrf")
+            .same_site(SameSiteOptions::new())
+            .expect("same-site")
+            .coep(CoepOptions::new())
+            .expect("coep")
+            .coop(CoopOptions::new())
+            .expect("coop")
+            .corp(CorpOptions::new())
+            .expect("corp")
+            .x_frame_options(XFrameOptionsOptions::new())
+            .expect("xfo")
+            .referrer_policy(ReferrerPolicyOptions::new())
+            .expect("referrer")
+            .origin_agent_cluster(OriginAgentClusterOptions::new())
+            .expect("oac")
+            .permissions_policy(PermissionsPolicyOptions::new("geolocation=()"))
+            .expect("permissions")
+            .x_dns_prefetch_control(XdnsPrefetchControlOptions::new())
+            .expect("dns");
+
+        let mut headers = empty_headers();
+        headers.insert("X-Powered-By".to_string(), "Express".to_string());
+        headers.insert("Content-Type".to_string(), "text/html".to_string());
+
+        let secured = shield.secure(headers).expect("secure");
+
+        assert!(secured.contains_key("Content-Security-Policy"));
+        assert!(!secured.contains_key("X-Powered-By"));
+        assert!(secured.contains_key("Strict-Transport-Security"));
+        assert_eq!(
+            secured.get("X-Content-Type-Options").map(String::as_str),
+            Some("nosniff")
+        );
+        assert!(secured.contains_key("X-CSRF-Token"));
+        assert!(secured.contains_key("Set-Cookie"));
+        assert_eq!(
+            secured
+                .get("Cross-Origin-Embedder-Policy")
+                .map(String::as_str),
+            Some("require-corp")
+        );
+        assert_eq!(
+            secured
+                .get("Cross-Origin-Opener-Policy")
+                .map(String::as_str),
+            Some("same-origin")
+        );
+        assert_eq!(
+            secured
+                .get("Cross-Origin-Resource-Policy")
+                .map(String::as_str),
+            Some("same-origin")
+        );
+        assert_eq!(
+            secured.get("X-Frame-Options").map(String::as_str),
+            Some("DENY")
+        );
+        assert_eq!(
+            secured.get("Referrer-Policy").map(String::as_str),
+            Some("strict-origin-when-cross-origin")
+        );
+        assert_eq!(
+            secured.get("Origin-Agent-Cluster").map(String::as_str),
+            Some("?1")
+        );
+        assert_eq!(
+            secured.get("Permissions-Policy").map(String::as_str),
+            Some("geolocation=()")
+        );
+        assert_eq!(
+            secured.get("X-DNS-Prefetch-Control").map(String::as_str),
+            Some("off")
+        );
+        assert_eq!(
+            secured.get("Content-Type").map(String::as_str),
+            Some("text/html")
+        );
+    }
+
+    #[test]
     fn given_strict_dynamic_with_nonce_when_secure_then_emits_expected_tokens() {
         let nonce_manager = CspNonceManager::new();
         let nonce = nonce_manager.issue();
