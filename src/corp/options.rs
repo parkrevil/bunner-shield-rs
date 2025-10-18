@@ -85,3 +85,7 @@ pub enum CorpOptionsError {
     )]
     InvalidPolicy(String),
 }
+
+#[cfg(test)]
+#[path = "options_test.rs"]
+mod options_test;
