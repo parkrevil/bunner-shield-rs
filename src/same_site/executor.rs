@@ -25,7 +25,7 @@ impl FeatureExecutor for SameSite {
             return Ok(());
         };
 
-    let mut cookies: Vec<String> = Vec::with_capacity(values.len());
+        let mut cookies: Vec<String> = Vec::with_capacity(values.len());
 
         for value in values {
             let cookie = value.to_string();

@@ -263,8 +263,8 @@ mod nonce_generation {
     fn given_generate_nonce_when_called_then_returns_base64_value() {
         let value = CspOptions::generate_nonce();
 
-    assert_eq!(value.len(), 44);
-    assert!(value.is_ascii());
+        assert_eq!(value.len(), 44);
+        assert!(value.is_ascii());
     }
 }
 
@@ -948,8 +948,8 @@ mod nonce_manager_behaviour {
         let nonce = manager.issue();
 
         assert_eq!(manager.byte_len(), CspNonceManager::new().byte_len());
-    assert_eq!(nonce.as_str().len(), 44);
-    assert!(nonce.as_str().is_ascii());
+        assert_eq!(nonce.as_str().len(), 44);
+        assert!(nonce.as_str().is_ascii());
     }
 }
 
