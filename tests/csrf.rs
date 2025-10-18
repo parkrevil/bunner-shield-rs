@@ -1,4 +1,4 @@
-use bunner_shield_rs::{CsrfOptions, CsrfOptionsError, Shield, ShieldError};
+use bunner_shield_rs::{CsrfOptions, CsrfOptionsError, HmacCsrfService, Shield, ShieldError};
 mod common;
 use common::empty_headers;
 
@@ -9,11 +9,6 @@ fn secret() -> [u8; 32] {
 mod success {
     use super::*;
 
-    fn assert_hex(value: &str, expected_len: usize) {
-        assert_eq!(value.len(), expected_len);
-        assert!(value.chars().all(|c| c.is_ascii_hexdigit()));
-    }
-
     #[test]
     fn given_valid_configuration_when_secure_then_sets_token_and_cookie_attributes() {
         let shield = Shield::new()
@@ -22,8 +17,10 @@ mod success {
 
         let result = shield.secure(empty_headers()).expect("secure");
 
-        let token = result.get("X-CSRF-Token").expect("csrf token present");
-        assert_hex(token, 64);
+    let token = result.get("X-CSRF-Token").expect("csrf token present");
+    // Verify token signature using the same secret
+    let service = HmacCsrfService::new(secret());
+    assert!(service.verify(token).is_ok());
 
         let cookie = result.get("Set-Cookie").expect("csrf cookie present");
         assert!(cookie.contains("__Host-csrf-token="));
@@ -42,8 +39,10 @@ mod success {
 
         let result = shield.secure(empty_headers()).expect("secure");
 
-        let token = result.get("X-CSRF-Token").expect("csrf token present");
-        assert_hex(token, 40);
+    let token = result.get("X-CSRF-Token").expect("csrf token present");
+    // Length differs due to base64url encoding; ensure token verifies
+    let service = HmacCsrfService::new(secret());
+    assert!(service.verify(token).is_ok());
     }
 
     #[test]

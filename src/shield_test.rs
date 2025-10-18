@@ -342,7 +342,7 @@ mod hsts {
 
 mod csrf {
     use super::*;
-    use crate::csrf::{CsrfOptions, CsrfOptionsError};
+    use crate::csrf::{CsrfOptions, CsrfOptionsError, HmacCsrfService};
 
     fn secret_key() -> [u8; 32] {
         [0x5Au8; 32]
@@ -359,7 +359,9 @@ mod csrf {
         let token = result.get("X-CSRF-Token").expect("csrf token header");
         let cookie = result.get("Set-Cookie").expect("csrf cookie header");
 
-        assert_eq!(token.len(), 64);
+        // Token format is base64url (no padding); verify signature instead of fixed length
+        let service = HmacCsrfService::new(secret_key());
+        assert!(service.verify(token).is_ok());
         assert!(cookie.starts_with("__Host-csrf-token="));
         assert!(cookie.contains("; Path=/; Secure; HttpOnly; SameSite=Lax"));
     }
