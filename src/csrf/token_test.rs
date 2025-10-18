@@ -28,6 +28,54 @@ mod issue {
     }
 
     #[test]
+    fn given_counter_near_overflow_when_issue_then_wraps_without_duplicates() {
+        use core::sync::atomic::Ordering;
+
+        let service = HmacCsrfService::new(secret());
+        service
+            .counter
+            .store(u64::MAX - 1, Ordering::Relaxed);
+
+        let first = service.issue(32).expect("issue before wrap should succeed");
+        let second = service.issue(32).expect("issue after wrap should succeed");
+
+        assert_ne!(first, second, "wrapping counter must not reuse the same token");
+    }
+
+    #[test]
+    fn given_parallel_requests_when_issue_then_tokens_remain_unique() {
+        use std::collections::HashSet;
+        use std::sync::{Arc, Barrier};
+        use std::thread;
+
+        let service = Arc::new(HmacCsrfService::new(secret()));
+        let workers = 32;
+        let barrier = Arc::new(Barrier::new(workers));
+        let mut handles = Vec::with_capacity(workers);
+
+        for _ in 0..workers {
+            let service = Arc::clone(&service);
+            let barrier = Arc::clone(&barrier);
+            handles.push(thread::spawn(move || {
+                barrier.wait();
+                service.issue(48)
+            }));
+        }
+
+        let mut tokens = HashSet::with_capacity(workers);
+        for handle in handles {
+            let token = handle
+                .join()
+                .expect("thread panicked")
+                .expect("issuing token must succeed");
+            let inserted = tokens.insert(token);
+            assert!(inserted, "duplicate token detected under parallel load");
+        }
+
+        assert_eq!(tokens.len(), workers);
+    }
+
+    #[test]
     fn given_zero_length_when_issue_then_returns_invalid_length_error() {
         let service = HmacCsrfService::new(secret());
 

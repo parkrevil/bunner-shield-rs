@@ -81,9 +81,21 @@ mod validate_options {
         let message = result.expect_err("expected error").to_string();
         assert_eq!(message, "invalid toggle");
     }
+    
+    #[test]
+    fn given_dyn_feature_executor_when_validate_options_then_delegates_to_validate() {
+        let executor: Box<dyn DynFeatureExecutor> = Box::new(ToggleExecutor::new(
+            ToggleOptions { valid: true },
+            Arc::default(),
+        ));
+
+        let result = executor.validate_options();
+
+        assert!(result.is_ok());
+    }
 }
 
-mod dyn_feature_executor {
+mod execute {
     use super::*;
 
     #[test]
@@ -107,20 +119,9 @@ mod dyn_feature_executor {
         assert_eq!(observed_values, vec!["applied".to_string()]);
     }
 
-    #[test]
-    fn given_dyn_feature_executor_when_validate_options_then_delegates_to_validate() {
-        let executor: Box<dyn DynFeatureExecutor> = Box::new(ToggleExecutor::new(
-            ToggleOptions { valid: true },
-            Arc::default(),
-        ));
-
-        let result = executor.validate_options();
-
-        assert!(result.is_ok());
-    }
 }
 
-mod cached_header {
+mod new {
     use super::*;
 
     #[test]

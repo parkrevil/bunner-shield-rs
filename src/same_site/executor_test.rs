@@ -35,7 +35,7 @@ mod validate_options {
     }
 }
 
-mod options_access {
+mod options {
     use super::*;
 
     #[test]
@@ -89,7 +89,7 @@ mod execute {
     }
 }
 
-mod apply_policy_fn {
+mod apply_policy {
     use super::*;
 
     #[test]

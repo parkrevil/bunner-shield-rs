@@ -53,7 +53,7 @@ fn secret() -> [u8; 32] {
     [0xAB; 32]
 }
 
-mod options_access {
+mod options {
     use super::*;
 
     #[test]
@@ -99,6 +99,30 @@ mod execute {
     }
 
     #[test]
+    fn given_custom_cookie_name_when_execute_then_sets_cookie_with_custom_prefix() {
+        let secret = secret();
+        let options = CsrfOptions::new(secret).cookie_name("__Host-custom-csrf");
+        let expected_service = HmacCsrfService::new(secret);
+        let expected_token = expected_service
+            .issue(64)
+            .expect("expected issue to succeed");
+        let executor = Csrf::new(options);
+        let mut headers = common::normalized_headers_from(&[]);
+
+        executor
+            .execute(&mut headers)
+            .expect("execute should succeed");
+
+        let cookie = headers
+            .into_result()
+            .get("Set-Cookie")
+            .expect("expected set-cookie header")
+            .to_string();
+        assert!(cookie.starts_with("__Host-custom-csrf="));
+        assert!(cookie.contains(&expected_token));
+    }
+
+    #[test]
     fn given_invalid_token_length_when_execute_then_returns_token_generation_error() {
         let options = CsrfOptions::new(secret()).token_length(70);
         let mut headers = common::normalized_headers_from(&[]);
@@ -109,6 +133,20 @@ mod execute {
             .expect_err("expected token generation error");
 
         let expected = CsrfError::TokenGeneration(CsrfTokenError::InvalidTokenLength(70));
+        assert_eq!(error.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn given_zero_token_length_when_execute_then_returns_token_generation_error() {
+        let options = CsrfOptions::new(secret()).token_length(0);
+        let mut headers = common::normalized_headers_from(&[]);
+        let executor = Csrf::new(options);
+
+        let error = executor
+            .execute(&mut headers)
+            .expect_err("expected token generation error");
+
+        let expected = CsrfError::TokenGeneration(CsrfTokenError::InvalidTokenLength(0));
         assert_eq!(error.to_string(), expected.to_string());
     }
 }

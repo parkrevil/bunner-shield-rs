@@ -15,7 +15,7 @@ mod validate_options {
     }
 }
 
-mod options_access {
+mod options {
     use super::*;
 
     #[test]

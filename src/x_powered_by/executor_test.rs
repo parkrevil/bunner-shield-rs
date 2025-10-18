@@ -2,7 +2,7 @@ use super::*;
 use crate::executor::FeatureExecutor;
 use crate::tests_common as common;
 
-mod validation {
+mod validate_options {
     use super::*;
 
     #[test]

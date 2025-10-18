@@ -14,7 +14,7 @@ mod header_value {
     }
 }
 
-mod enable_disable {
+mod enable {
     use super::*;
 
     #[test]
@@ -23,6 +23,10 @@ mod enable_disable {
 
         assert_eq!(options.header_value(), ORIGIN_AGENT_CLUSTER_ENABLE);
     }
+}
+
+mod disable {
+    use super::*;
 
     #[test]
     fn given_options_when_disable_then_sets_disable_constant() {

@@ -1,6 +1,6 @@
 use super::*;
 
-mod hash_algorithm_prefix {
+mod prefix {
     use super::*;
 
     #[test]
@@ -14,7 +14,7 @@ mod hash_algorithm_prefix {
     }
 }
 
-mod directive_as_str {
+mod as_str {
     use super::*;
 
     #[test]
@@ -28,7 +28,7 @@ mod directive_as_str {
     }
 }
 
-mod sandbox_token_from_str {
+mod from_str {
     use super::*;
 
     #[test]
@@ -46,7 +46,7 @@ mod sandbox_token_from_str {
     }
 }
 
-mod trusted_types_policy_new {
+mod new {
     use super::*;
 
     #[test]
@@ -74,7 +74,7 @@ mod trusted_types_policy_new {
     }
 }
 
-mod trusted_types_token_display {
+mod into_string {
     use super::*;
 
     #[test]
@@ -93,7 +93,7 @@ mod trusted_types_token_display {
     }
 }
 
-mod csp_source_display {
+mod to_string {
     use super::*;
 
     #[test]
@@ -114,7 +114,7 @@ mod csp_source_display {
     }
 }
 
-mod csp_nonce_manager {
+mod with_size {
     use super::*;
 
     #[test]
@@ -123,6 +123,10 @@ mod csp_nonce_manager {
 
         assert_eq!(error, CspNonceManagerError::InvalidLength);
     }
+}
+
+mod issue_header_value {
+    use super::*;
 
     #[test]
     fn given_manager_when_issue_header_value_then_returns_nonce_prefix() {
@@ -146,7 +150,7 @@ mod generate_nonce_with_size {
     }
 }
 
-mod options_directives {
+mod default_src {
     use super::*;
 
     #[test]
@@ -162,6 +166,10 @@ mod options_directives {
             vec![("default-src".to_string(), "'self' *".to_string())]
         );
     }
+}
+
+mod script_src_nonce {
+    use super::*;
 
     #[test]
     fn given_nonce_with_quotes_when_script_src_nonce_then_sanitizes_token_entry() {
@@ -360,7 +368,7 @@ mod report_to {
     }
 }
 
-mod trusted_types {
+mod trusted_types_policies {
     use super::*;
 
     #[test]
@@ -372,7 +380,7 @@ mod trusted_types {
     }
 }
 
-mod require_trusted_types_for {
+mod require_trusted_types_for_scripts {
     use super::*;
 
     #[test]
@@ -409,7 +417,7 @@ mod block_all_mixed_content {
     }
 }
 
-mod sandbox {
+mod sandbox_with {
     use super::*;
 
     #[test]
@@ -423,6 +431,10 @@ mod sandbox {
         assert!(value.contains("allow-forms"));
         assert!(value.contains("allow-scripts"));
     }
+}
+
+mod sandbox {
+    use super::*;
 
     #[test]
     fn given_no_tokens_when_sandbox_then_adds_empty_sandbox_directive() {

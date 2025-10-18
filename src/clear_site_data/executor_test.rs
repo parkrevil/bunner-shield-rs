@@ -30,7 +30,7 @@ mod validate_options {
     }
 }
 
-mod options_access {
+mod options {
     use super::*;
 
     #[test]
@@ -61,5 +61,32 @@ mod execute {
             Some(&"\"cookies\"".to_string())
         );
         assert_eq!(result.get("X-Test"), Some(&"1".to_string()));
+    }
+
+    #[test]
+    fn given_executor_when_execute_multiple_times_then_reuses_cached_header_value() {
+        let executor = ClearSiteData::new(
+            ClearSiteDataOptions::new().cache().storage(),
+        );
+        let mut first_headers = common::normalized_headers_from(&[]);
+        let mut second_headers = common::normalized_headers_from(&[]);
+
+        executor
+            .execute(&mut first_headers)
+            .expect("first execute should succeed");
+        executor
+            .execute(&mut second_headers)
+            .expect("second execute should succeed");
+
+        let first = first_headers.into_result();
+        let second = second_headers.into_result();
+        assert_eq!(
+            first.get("Clear-Site-Data"),
+            Some(&"\"cache\", \"storage\"".to_string())
+        );
+        assert_eq!(
+            second.get("Clear-Site-Data"),
+            Some(&"\"cache\", \"storage\"".to_string())
+        );
     }
 }

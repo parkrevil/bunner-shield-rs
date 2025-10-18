@@ -1,6 +1,6 @@
 use super::*;
 
-mod defaults {
+mod new {
     use super::*;
 
     #[test]
@@ -13,7 +13,7 @@ mod defaults {
     }
 }
 
-mod builder {
+mod max_age {
     use super::*;
 
     #[test]
@@ -22,6 +22,10 @@ mod builder {
 
         assert_eq!(options.max_age, 120);
     }
+}
+
+mod include_subdomains {
+    use super::*;
 
     #[test]
     fn given_include_subdomains_when_include_subdomains_then_sets_flag_true() {
@@ -29,6 +33,10 @@ mod builder {
 
         assert!(options.include_subdomains);
     }
+}
+
+mod preload {
+    use super::*;
 
     #[test]
     fn given_preload_when_preload_then_sets_preload_flag_true() {
@@ -54,7 +62,7 @@ mod header_value {
     }
 }
 
-mod validation {
+mod validate {
     use super::*;
 
     #[test]

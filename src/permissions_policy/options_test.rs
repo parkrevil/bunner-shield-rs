@@ -1,6 +1,6 @@
 use super::*;
 
-mod creation {
+mod new {
     use super::*;
 
     #[test]
@@ -11,7 +11,7 @@ mod creation {
     }
 }
 
-mod builder {
+mod policy {
     use super::*;
 
     #[test]
@@ -22,7 +22,7 @@ mod builder {
     }
 }
 
-mod validation {
+mod validate {
     use super::*;
 
     #[test]

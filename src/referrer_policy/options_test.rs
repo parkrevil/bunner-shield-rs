@@ -1,7 +1,7 @@
 use super::*;
 use crate::constants::header_values as values;
 
-mod value_as_str {
+mod as_str {
     use super::*;
 
     #[test]
@@ -29,7 +29,7 @@ mod value_as_str {
     }
 }
 
-mod defaults {
+mod new {
     use super::*;
 
     #[test]
@@ -43,7 +43,7 @@ mod defaults {
     }
 }
 
-mod builder {
+mod policy {
     use super::*;
 
     #[test]
@@ -67,7 +67,7 @@ mod header_value {
     }
 }
 
-mod validation {
+mod validate {
     use super::*;
 
     #[test]

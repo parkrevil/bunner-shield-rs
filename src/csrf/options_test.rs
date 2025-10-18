@@ -4,7 +4,7 @@ fn secret() -> [u8; 32] {
     [0x11; 32]
 }
 
-mod defaults {
+mod new {
     use super::*;
 
     #[test]
@@ -16,25 +16,29 @@ mod defaults {
     }
 }
 
-mod builder {
+mod cookie_name {
     use super::*;
 
     #[test]
-    fn given_custom_cookie_name_when_cookie_name_then_updates_field() {
+    fn given_custom_cookie_name_when_cookie_name_then_updates_cookie_field() {
         let options = CsrfOptions::new(secret()).cookie_name("__Host-custom");
 
         assert_eq!(options.cookie_name, "__Host-custom");
     }
+}
+
+mod token_length {
+    use super::*;
 
     #[test]
-    fn given_custom_length_when_token_length_then_updates_length() {
+    fn given_custom_length_when_token_length_then_updates_length_field() {
         let options = CsrfOptions::new(secret()).token_length(48);
 
         assert_eq!(options.token_length, 48);
     }
 }
 
-mod validation {
+mod validate {
     use super::*;
 
     #[test]

@@ -2,7 +2,7 @@ use super::*;
 use crate::CspSource;
 use crate::tests_common as common;
 
-mod options_access {
+mod options {
     use super::*;
 
     #[test]

@@ -185,4 +185,24 @@ mod split_multi_values {
         assert_eq!(values[0], "session=one");
         assert_eq!(values[1], "token=two");
     }
+
+    #[test]
+    fn given_windows_line_endings_when_split_multi_values_then_ignores_carriage_returns() {
+        let values = split_multi_values(
+            "session=alpha\r\nSet-Cookie: beta=two\r\n\r\nSet-Cookie: gamma=three".to_string(),
+        );
+
+        let tokens: Vec<&str> = values.iter().map(|value| value.as_ref()).collect();
+        assert_eq!(tokens, vec!["session=alpha", "beta=two", "gamma=three"]);
+    }
+
+    #[test]
+    fn given_prefixed_segment_when_split_multi_values_then_trims_marker_only_once() {
+        let values = split_multi_values(
+            "Set-Cookie: session=one; Path=/\n  Set-Cookie: theme=dark; Secure".to_string(),
+        );
+
+        let tokens: Vec<&str> = values.iter().map(|value| value.as_ref()).collect();
+        assert_eq!(tokens, vec!["session=one; Path=/", "theme=dark; Secure"]);
+    }
 }

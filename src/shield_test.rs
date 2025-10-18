@@ -15,7 +15,7 @@ mod new {
     }
 }
 
-mod x_powered_by_feature {
+mod x_powered_by {
     use super::*;
 
     #[test]
@@ -30,8 +30,12 @@ mod x_powered_by_feature {
     }
 }
 
-mod multi_feature_pipeline {
+mod secure {
     use super::*;
+    use crate::executor::{Executor, FeatureExecutor, NoopOptions};
+    use std::fmt;
+    use std::sync::atomic::{AtomicUsize, Ordering as AtomicOrdering};
+    use std::sync::{Arc, Mutex};
 
     #[test]
     fn given_multiple_features_when_secure_then_applies_in_configured_order() {
@@ -50,21 +54,172 @@ mod multi_feature_pipeline {
         );
         assert!(!result.contains_key("X-Powered-By"));
     }
-}
 
-mod validation_failure {
-    use super::*;
-    use crate::csp::CspOptions;
+    #[derive(Debug)]
+    struct IntentionalFailure;
+
+    impl fmt::Display for IntentionalFailure {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.write_str("intentional failure")
+        }
+    }
+
+    impl std::error::Error for IntentionalFailure {}
+
+    struct FailingExecutor {
+        options: NoopOptions,
+    }
+
+    impl FailingExecutor {
+        fn new() -> Self {
+            Self {
+                options: NoopOptions,
+            }
+        }
+    }
+
+    impl FeatureExecutor for FailingExecutor {
+        type Options = NoopOptions;
+
+        fn options(&self) -> &Self::Options {
+            &self.options
+        }
+
+        fn execute(&self, _headers: &mut NormalizedHeaders) -> Result<(), ExecutorError> {
+            Err(Box::new(IntentionalFailure))
+        }
+    }
 
     #[test]
-    fn given_invalid_options_when_feature_added_then_returns_executor_validation_error() {
-        let error = Shield::new().csp(CspOptions::new());
+    fn given_executor_failure_when_secure_then_returns_execution_error() {
+        let mut shield = Shield::new();
+        let executor: Executor = Box::new(FailingExecutor::new());
+
+        shield
+            .add_feature(0, executor)
+            .expect("failed to register failing executor");
+
+        let error = shield
+            .secure(common::headers_with(&[]))
+            .expect_err("expected execution failure");
 
         match error {
-            Err(ShieldError::ExecutorValidationFailed(_)) => {}
-            Err(other) => panic!("unexpected error: {other:?}"),
-            Ok(_) => panic!("expected validation failure"),
+            ShieldError::ExecutionFailed(inner) => {
+                assert_eq!(inner.to_string(), "intentional failure");
+            }
+            other => panic!("unexpected error: {other:?}"),
         }
+    }
+
+    struct RecordingExecutor {
+        options: NoopOptions,
+        counter: Arc<AtomicUsize>,
+    }
+
+    impl RecordingExecutor {
+        fn new(counter: Arc<AtomicUsize>) -> Self {
+            Self {
+                options: NoopOptions,
+                counter,
+            }
+        }
+    }
+
+    impl FeatureExecutor for RecordingExecutor {
+        type Options = NoopOptions;
+
+        fn options(&self) -> &Self::Options {
+            &self.options
+        }
+
+        fn execute(&self, _headers: &mut NormalizedHeaders) -> Result<(), ExecutorError> {
+            self.counter.fetch_add(1, AtomicOrdering::SeqCst);
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn given_executor_failure_when_secure_then_does_not_invoke_subsequent_features() {
+        let mut shield = Shield::new();
+        let failure: Executor = Box::new(FailingExecutor::new());
+        let executions = Arc::new(AtomicUsize::new(0));
+        let recorder: Executor = Box::new(RecordingExecutor::new(Arc::clone(&executions)));
+
+        shield
+            .add_feature(0, failure)
+            .expect("failed to register failing executor");
+        shield
+            .add_feature(1, recorder)
+            .expect("failed to register recording executor");
+
+        let error = shield
+            .secure(common::headers_with(&[]))
+            .expect_err("expected execution failure");
+
+        match error {
+            ShieldError::ExecutionFailed(inner) => {
+                assert_eq!(inner.to_string(), "intentional failure");
+            }
+            other => panic!("unexpected error: {other:?}"),
+        }
+
+        assert_eq!(executions.load(AtomicOrdering::SeqCst), 0);
+    }
+
+    struct SequencingExecutor {
+        options: NoopOptions,
+        id: &'static str,
+        observed: Arc<Mutex<Vec<&'static str>>>,
+    }
+
+    impl SequencingExecutor {
+        fn new(id: &'static str, observed: Arc<Mutex<Vec<&'static str>>>) -> Self {
+            Self {
+                options: NoopOptions,
+                id,
+                observed,
+            }
+        }
+    }
+
+    impl FeatureExecutor for SequencingExecutor {
+        type Options = NoopOptions;
+
+        fn options(&self) -> &Self::Options {
+            &self.options
+        }
+
+        fn execute(&self, _headers: &mut NormalizedHeaders) -> Result<(), ExecutorError> {
+            self.observed
+                .lock()
+                .expect("lock to record execution order")
+                .push(self.id);
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn given_unsorted_registration_when_secure_then_executes_in_priority_order() {
+        let mut shield = Shield::new();
+        let observed = Arc::new(Mutex::new(Vec::new()));
+
+        shield
+            .add_feature(3, Box::new(SequencingExecutor::new("third", Arc::clone(&observed))))
+            .expect("failed to add third executor");
+        shield
+            .add_feature(1, Box::new(SequencingExecutor::new("first", Arc::clone(&observed))))
+            .expect("failed to add first executor");
+        shield
+            .add_feature(2, Box::new(SequencingExecutor::new("second", Arc::clone(&observed))))
+            .expect("failed to add second executor");
+
+        let headers = common::headers_with(&[("X-Test", "value")]);
+        let result = shield.secure(headers).expect("secure should succeed");
+
+        assert_eq!(result.get("X-Test").map(String::as_str), Some("value"));
+
+        let recorded = observed.lock().expect("lock").clone();
+        assert_eq!(recorded, vec!["first", "second", "third"]);
     }
 }
 
@@ -87,6 +242,17 @@ mod csp {
             result.get("Content-Security-Policy").map(String::as_str),
             Some("default-src 'self'; base-uri 'none'; frame-ancestors 'none'")
         );
+    }
+
+    #[test]
+    fn given_invalid_csp_options_when_feature_added_then_returns_validation_error() {
+        let error = Shield::new().csp(CspOptions::new());
+
+        match error {
+            Err(ShieldError::ExecutorValidationFailed(_)) => {}
+            Err(other) => panic!("unexpected error: {other:?}"),
+            Ok(_) => panic!("expected validation failure"),
+        }
     }
 }
 
@@ -416,68 +582,5 @@ mod coep {
                 .map(String::as_str),
             Some("credentialless")
         );
-    }
-}
-
-mod execution_failure {
-    use super::*;
-    use crate::executor::{Executor, FeatureExecutor, NoopOptions};
-    use crate::tests_common as common;
-    use std::fmt;
-
-    #[derive(Debug)]
-    struct IntentionalFailure;
-
-    impl fmt::Display for IntentionalFailure {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            f.write_str("intentional failure")
-        }
-    }
-
-    impl std::error::Error for IntentionalFailure {}
-
-    struct FailingExecutor {
-        options: NoopOptions,
-    }
-
-    impl FailingExecutor {
-        fn new() -> Self {
-            Self {
-                options: NoopOptions,
-            }
-        }
-    }
-
-    impl FeatureExecutor for FailingExecutor {
-        type Options = NoopOptions;
-
-        fn options(&self) -> &Self::Options {
-            &self.options
-        }
-
-        fn execute(&self, _headers: &mut NormalizedHeaders) -> Result<(), ExecutorError> {
-            Err(Box::new(IntentionalFailure))
-        }
-    }
-
-    #[test]
-    fn given_executor_failure_when_secure_then_returns_execution_error() {
-        let mut shield = Shield::new();
-        let executor: Executor = Box::new(FailingExecutor::new());
-
-        shield
-            .add_feature(0, executor)
-            .expect("failed to register failing executor");
-
-        let error = shield
-            .secure(common::headers_with(&[]))
-            .expect_err("expected execution failure");
-
-        match error {
-            ShieldError::ExecutionFailed(inner) => {
-                assert_eq!(inner.to_string(), "intentional failure");
-            }
-            other => panic!("unexpected error: {other:?}"),
-        }
     }
 }

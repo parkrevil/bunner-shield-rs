@@ -1,7 +1,7 @@
 use super::*;
 use crate::constants::header_values::{CORP_CROSS_ORIGIN, CORP_SAME_ORIGIN, CORP_SAME_SITE};
 
-mod policy_as_str {
+mod as_str {
     use super::*;
 
     #[test]
@@ -32,7 +32,7 @@ mod policy_as_str {
     }
 }
 
-mod policy_from_str {
+mod from_str {
     use super::*;
 
     #[test]
@@ -74,7 +74,7 @@ mod policy_from_str {
     }
 }
 
-mod options_default {
+mod new {
     use super::*;
 
     #[test]
@@ -85,7 +85,7 @@ mod options_default {
     }
 }
 
-mod options_builder {
+mod policy {
     use super::*;
 
     #[test]

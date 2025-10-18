@@ -1,7 +1,7 @@
 use super::*;
 use crate::constants::header_values::{SAMESITE_LAX, SAMESITE_NONE, SAMESITE_STRICT};
 
-mod policy_as_str {
+mod as_str {
     use super::*;
 
     #[test]
@@ -26,7 +26,7 @@ mod policy_as_str {
     }
 }
 
-mod defaults {
+mod new {
     use super::*;
 
     #[test]
@@ -39,7 +39,7 @@ mod defaults {
     }
 }
 
-mod builder {
+mod secure {
     use super::*;
 
     #[test]
@@ -48,6 +48,10 @@ mod builder {
 
         assert!(!options.meta.secure);
     }
+}
+
+mod http_only {
+    use super::*;
 
     #[test]
     fn given_false_when_http_only_then_updates_http_only_flag() {
@@ -55,6 +59,10 @@ mod builder {
 
         assert!(!options.meta.http_only);
     }
+}
+
+mod same_site {
+    use super::*;
 
     #[test]
     fn given_policy_when_same_site_then_updates_policy_field() {
@@ -64,7 +72,7 @@ mod builder {
     }
 }
 
-mod validation {
+mod validate {
     use super::*;
 
     #[test]
