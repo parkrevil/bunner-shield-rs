@@ -51,3 +51,7 @@ impl FeatureOptions for XFrameOptionsOptions {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "options_test.rs"]
+mod options_test;
