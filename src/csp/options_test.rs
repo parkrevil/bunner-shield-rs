@@ -194,9 +194,7 @@ mod connect_src {
     fn given_sources_when_connect_src_then_adds_connect_src_directive() {
         let options = CspOptions::new().connect_src([CspSource::SelfKeyword]);
 
-        assert!(options
-            .header_value()
-            .contains("connect-src 'self'"));
+        assert!(options.header_value().contains("connect-src 'self'"));
     }
 }
 
@@ -218,9 +216,7 @@ mod form_action {
     fn given_sources_when_form_action_then_adds_form_action_directive() {
         let options = CspOptions::new().form_action([CspSource::SelfKeyword]);
 
-        assert!(options
-            .header_value()
-            .contains("form-action 'self'"));
+        assert!(options.header_value().contains("form-action 'self'"));
     }
 }
 
@@ -231,9 +227,7 @@ mod frame_ancestors {
     fn given_sources_when_frame_ancestors_then_adds_frame_ancestors_directive() {
         let options = CspOptions::new().frame_ancestors([CspSource::None]);
 
-        assert!(options
-            .header_value()
-            .contains("frame-ancestors 'none'"));
+        assert!(options.header_value().contains("frame-ancestors 'none'"));
     }
 }
 
@@ -266,9 +260,7 @@ mod manifest_src {
     fn given_sources_when_manifest_src_then_adds_manifest_src_directive() {
         let options = CspOptions::new().manifest_src([CspSource::SelfKeyword]);
 
-        assert!(options
-            .header_value()
-            .contains("manifest-src 'self'"));
+        assert!(options.header_value().contains("manifest-src 'self'"));
     }
 }
 
@@ -301,9 +293,7 @@ mod script_src_elem {
     fn given_sources_when_script_src_elem_then_adds_script_src_elem_directive() {
         let options = CspOptions::new().script_src_elem([CspSource::SelfKeyword]);
 
-        assert!(options
-            .header_value()
-            .contains("script-src-elem 'self'"));
+        assert!(options.header_value().contains("script-src-elem 'self'"));
     }
 }
 
@@ -314,9 +304,11 @@ mod script_src_attr {
     fn given_sources_when_script_src_attr_then_adds_script_src_attr_directive() {
         let options = CspOptions::new().script_src_attr([CspSource::UnsafeInline]);
 
-        assert!(options
-            .header_value()
-            .contains("script-src-attr 'unsafe-inline'"));
+        assert!(
+            options
+                .header_value()
+                .contains("script-src-attr 'unsafe-inline'")
+        );
     }
 }
 
@@ -327,9 +319,7 @@ mod style_src_elem {
     fn given_sources_when_style_src_elem_then_adds_style_src_elem_directive() {
         let options = CspOptions::new().style_src_elem([CspSource::SelfKeyword]);
 
-        assert!(options
-            .header_value()
-            .contains("style-src-elem 'self'"));
+        assert!(options.header_value().contains("style-src-elem 'self'"));
     }
 }
 
@@ -340,9 +330,11 @@ mod style_src_attr {
     fn given_sources_when_style_src_attr_then_adds_style_src_attr_directive() {
         let options = CspOptions::new().style_src_attr([CspSource::UnsafeInline]);
 
-        assert!(options
-            .header_value()
-            .contains("style-src-attr 'unsafe-inline'"));
+        assert!(
+            options
+                .header_value()
+                .contains("style-src-attr 'unsafe-inline'")
+        );
     }
 }
 
@@ -376,9 +368,7 @@ mod trusted_types {
         let policy = TrustedTypesPolicy::new("appPolicy").expect("valid policy");
         let options = CspOptions::new().trusted_types_policies([policy]);
 
-        assert!(options
-            .header_value()
-            .contains("trusted-types appPolicy"));
+        assert!(options.header_value().contains("trusted-types appPolicy"));
     }
 }
 
@@ -389,9 +379,11 @@ mod require_trusted_types_for {
     fn given_script_requirement_when_require_trusted_types_for_scripts_then_adds_directive() {
         let options = CspOptions::new().require_trusted_types_for_scripts();
 
-        assert!(options
-            .header_value()
-            .contains("require-trusted-types-for 'script'"));
+        assert!(
+            options
+                .header_value()
+                .contains("require-trusted-types-for 'script'")
+        );
     }
 }
 
@@ -402,9 +394,7 @@ mod upgrade_insecure_requests {
     fn given_options_when_upgrade_insecure_requests_then_adds_flag_directive() {
         let options = CspOptions::new().upgrade_insecure_requests();
 
-        assert!(options
-            .header_value()
-            .contains("upgrade-insecure-requests"));
+        assert!(options.header_value().contains("upgrade-insecure-requests"));
     }
 }
 
@@ -415,9 +405,7 @@ mod block_all_mixed_content {
     fn given_options_when_block_all_mixed_content_then_adds_flag_directive() {
         let options = CspOptions::new().block_all_mixed_content();
 
-        assert!(options
-            .header_value()
-            .contains("block-all-mixed-content"));
+        assert!(options.header_value().contains("block-all-mixed-content"));
     }
 }
 
@@ -426,10 +414,8 @@ mod sandbox {
 
     #[test]
     fn given_tokens_when_sandbox_with_then_adds_sandbox_directive() {
-        let options = CspOptions::new().sandbox_with([
-            SandboxToken::AllowForms,
-            SandboxToken::AllowScripts,
-        ]);
+        let options =
+            CspOptions::new().sandbox_with([SandboxToken::AllowForms, SandboxToken::AllowScripts]);
 
         let value = options.header_value();
 
@@ -463,7 +449,8 @@ mod validate_with_warnings {
     use super::*;
 
     #[test]
-    fn given_no_worker_script_or_default_when_validate_with_warnings_then_emits_missing_worker_fallback_critical() {
+    fn given_no_worker_script_or_default_when_validate_with_warnings_then_emits_missing_worker_fallback_critical()
+     {
         // no worker-src, no script-src, no default-src, but at least one directive present
         let options = CspOptions::new().base_uri([CspSource::SelfKeyword]);
 
@@ -481,7 +468,8 @@ mod validate_with_warnings {
     }
 
     #[test]
-    fn given_permissive_default_only_when_validate_with_warnings_then_emits_weak_worker_fallback_warning() {
+    fn given_permissive_default_only_when_validate_with_warnings_then_emits_weak_worker_fallback_warning()
+     {
         // default-src * without worker-src/script-src -> weak fallback
         let options = CspOptions::new().default_src([CspSource::Wildcard]);
 
@@ -533,12 +521,20 @@ mod validate_with_warnings {
     }
 
     #[test]
-    fn given_risky_schemes_when_validate_with_warnings_then_aggregates_by_directive_with_max_severity() {
+    fn given_risky_schemes_when_validate_with_warnings_then_aggregates_by_directive_with_max_severity()
+     {
         // style-src includes data: (Critical) and blob: (Warning) -> overall Critical with schemes ["blob", "data"]
         // img-src includes filesystem: (Critical) -> Critical with schemes ["filesystem"]
         let options = CspOptions::new()
-            .style_src([CspSource::raw("data:"), CspSource::raw("blob:"), CspSource::SelfKeyword])
-            .img_src([CspSource::raw("filesystem:"), CspSource::host("cdn.example.com")]);
+            .style_src([
+                CspSource::raw("data:"),
+                CspSource::raw("blob:"),
+                CspSource::SelfKeyword,
+            ])
+            .img_src([
+                CspSource::raw("filesystem:"),
+                CspSource::host("cdn.example.com"),
+            ]);
 
         let mut warnings = options
             .validate_with_warnings()
@@ -554,11 +550,17 @@ mod validate_with_warnings {
         warnings.sort_by(|a, b| format!("{:?}", a.kind).cmp(&format!("{:?}", b.kind)));
 
         // assert style-src aggregation
-        let style_warning = warnings.iter().find(|w| match &w.kind {
-            CspOptionsWarningKind::RiskySchemes { directive, .. } => directive == "style-src",
-            _ => false,
-        }).expect("style-src risky schemes warning");
-        assert!(matches!(style_warning.severity, CspWarningSeverity::Critical));
+        let style_warning = warnings
+            .iter()
+            .find(|w| match &w.kind {
+                CspOptionsWarningKind::RiskySchemes { directive, .. } => directive == "style-src",
+                _ => false,
+            })
+            .expect("style-src risky schemes warning");
+        assert!(matches!(
+            style_warning.severity,
+            CspWarningSeverity::Critical
+        ));
         if let CspOptionsWarningKind::RiskySchemes { directive, schemes } = &style_warning.kind {
             assert_eq!(directive, "style-src");
             let mut expected = vec!["blob".to_string(), "data".to_string()];
@@ -571,10 +573,13 @@ mod validate_with_warnings {
         }
 
         // assert img-src aggregation
-        let img_warning = warnings.iter().find(|w| match &w.kind {
-            CspOptionsWarningKind::RiskySchemes { directive, .. } => directive == "img-src",
-            _ => false,
-        }).expect("img-src risky schemes warning");
+        let img_warning = warnings
+            .iter()
+            .find(|w| match &w.kind {
+                CspOptionsWarningKind::RiskySchemes { directive, .. } => directive == "img-src",
+                _ => false,
+            })
+            .expect("img-src risky schemes warning");
         assert!(matches!(img_warning.severity, CspWarningSeverity::Critical));
         if let CspOptionsWarningKind::RiskySchemes { directive, schemes } = &img_warning.kind {
             assert_eq!(directive, "img-src");

@@ -84,9 +84,7 @@ mod csp {
         let result = shield.secure(headers).expect("secure");
 
         assert_eq!(
-            result
-                .get("Content-Security-Policy")
-                .map(String::as_str),
+            result.get("Content-Security-Policy").map(String::as_str),
             Some("default-src 'self'; base-uri 'none'; frame-ancestors 'none'")
         );
     }
@@ -106,9 +104,7 @@ mod coop {
         let result = shield.secure(headers).expect("secure");
 
         assert_eq!(
-            result
-                .get("Cross-Origin-Opener-Policy")
-                .map(String::as_str),
+            result.get("Cross-Origin-Opener-Policy").map(String::as_str),
             Some("same-origin-allow-popups")
         );
     }
@@ -142,17 +138,13 @@ mod hsts {
 
     #[test]
     fn given_default_hsts_options_when_feature_applied_then_sets_hsts_header() {
-        let shield = Shield::new()
-            .hsts(HstsOptions::new())
-            .expect("feature");
+        let shield = Shield::new().hsts(HstsOptions::new()).expect("feature");
         let headers = common::headers_with(&[]);
 
         let result = shield.secure(headers).expect("secure");
 
         assert_eq!(
-            result
-                .get("Strict-Transport-Security")
-                .map(String::as_str),
+            result.get("Strict-Transport-Security").map(String::as_str),
             Some("max-age=31536000")
         );
     }
@@ -163,7 +155,10 @@ mod hsts {
 
         match result {
             Err(ShieldError::ExecutorValidationFailed(error)) => {
-                assert_eq!(error.to_string(), HstsOptionsError::InvalidMaxAge.to_string());
+                assert_eq!(
+                    error.to_string(),
+                    HstsOptionsError::InvalidMaxAge.to_string()
+                );
             }
             _ => panic!("expected validation failure"),
         }
@@ -186,12 +181,8 @@ mod csrf {
         let headers = common::headers_with(&[]);
 
         let result = shield.secure(headers).expect("secure");
-        let token = result
-            .get("X-CSRF-Token")
-            .expect("csrf token header");
-        let cookie = result
-            .get("Set-Cookie")
-            .expect("csrf cookie header");
+        let token = result.get("X-CSRF-Token").expect("csrf token header");
+        let cookie = result.get("Set-Cookie").expect("csrf cookie header");
 
         assert_eq!(token.len(), 64);
         assert!(cookie.starts_with("__Host-csrf-token="));
@@ -200,8 +191,7 @@ mod csrf {
 
     #[test]
     fn given_cookie_without_host_prefix_when_feature_added_then_returns_validation_error() {
-        let result = Shield::new()
-            .csrf(CsrfOptions::new(secret_key()).cookie_name("csrf"));
+        let result = Shield::new().csrf(CsrfOptions::new(secret_key()).cookie_name("csrf"));
 
         match result {
             Err(ShieldError::ExecutorValidationFailed(error)) => {
@@ -266,9 +256,7 @@ mod x_dns_prefetch_control {
         let result = shield.secure(headers).expect("secure");
 
         assert_eq!(
-            result
-                .get("X-DNS-Prefetch-Control")
-                .map(String::as_str),
+            result.get("X-DNS-Prefetch-Control").map(String::as_str),
             Some("on")
         );
     }
@@ -291,9 +279,7 @@ mod clear_site_data {
         let result = shield.secure(headers).expect("secure");
 
         assert_eq!(
-            result
-                .get("Clear-Site-Data")
-                .map(String::as_str),
+            result.get("Clear-Site-Data").map(String::as_str),
             Some("\"cache\", \"cookies\", \"storage\", \"executionContexts\"")
         );
     }
@@ -321,9 +307,7 @@ mod x_frame_options {
     #[test]
     fn given_same_origin_policy_when_feature_applied_then_sets_x_frame_options_header() {
         let shield = Shield::new()
-            .x_frame_options(
-                XFrameOptionsOptions::new().policy(XFrameOptionsPolicy::SameOrigin),
-            )
+            .x_frame_options(XFrameOptionsOptions::new().policy(XFrameOptionsPolicy::SameOrigin))
             .expect("feature");
         let headers = common::headers_with(&[]);
 
@@ -343,9 +327,7 @@ mod referrer_policy {
     #[test]
     fn given_referrer_policy_when_feature_applied_then_sets_header_value() {
         let options = ReferrerPolicyOptions::new().policy(ReferrerPolicyValue::NoReferrer);
-        let shield = Shield::new()
-            .referrer_policy(options)
-            .expect("feature");
+        let shield = Shield::new().referrer_policy(options).expect("feature");
         let headers = common::headers_with(&[]);
 
         let result = shield.secure(headers).expect("secure");
@@ -384,9 +366,7 @@ mod same_site {
     #[test]
     fn given_same_site_strict_when_feature_applied_then_overrides_cookies() {
         let options = SameSiteOptions::new().same_site(SameSitePolicy::Strict);
-        let shield = Shield::new()
-            .same_site(options)
-            .expect("feature");
+        let shield = Shield::new().same_site(options).expect("feature");
         let headers = common::headers_with(&[("Set-Cookie", "session=1; Secure")]);
 
         let result = shield.secure(headers).expect("secure");
@@ -501,4 +481,3 @@ mod execution_failure {
         }
     }
 }
-

@@ -17,10 +17,8 @@ mod new {
     #[test]
     fn given_huge_header_value_when_new_then_preserves_entire_payload() {
         let large_value = "a".repeat(12_288);
-        let headers = NormalizedHeaders::new(common::headers_with(&[(
-            "X-Large",
-            large_value.as_str(),
-        )]));
+        let headers =
+            NormalizedHeaders::new(common::headers_with(&[("X-Large", large_value.as_str())]));
 
         let values = headers.get_all("x-large").expect("values");
 
@@ -30,10 +28,7 @@ mod new {
 
     #[test]
     fn given_unicode_header_value_when_new_then_preserves_multilingual_text() {
-        let headers = NormalizedHeaders::new(common::headers_with(&[(
-            "Emoji",
-            "한글😊中文🚀",
-        )]));
+        let headers = NormalizedHeaders::new(common::headers_with(&[("Emoji", "한글😊中文🚀")]));
 
         let values = headers.get_all("emoji").expect("values");
 
@@ -47,11 +42,12 @@ mod new {
             "Token=\"Value\"; Path=/; Secure; HttpOnly",
         )]));
 
-        let values = headers
-            .get_all("x-feature_!@#$%^&*()")
-            .expect("values");
+        let values = headers.get_all("x-feature_!@#$%^&*()").expect("values");
 
-        assert_eq!(values, &[Cow::Borrowed("Token=\"Value\"; Path=/; Secure; HttpOnly")]);
+        assert_eq!(
+            values,
+            &[Cow::Borrowed("Token=\"Value\"; Path=/; Secure; HttpOnly")]
+        );
     }
 }
 

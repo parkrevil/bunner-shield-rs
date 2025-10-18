@@ -1,7 +1,7 @@
 use super::*;
+use crate::SameSitePolicy;
 use crate::executor::FeatureExecutor;
 use crate::same_site::SameSiteOptionsError;
-use crate::SameSitePolicy;
 use crate::tests_common as common;
 
 mod validate_options {
@@ -139,7 +139,10 @@ mod apply_policy_fn {
 
         let updated = apply_policy(cookie, &meta);
 
-        assert_eq!(updated, "id=123; Path=/; Domain=example.com; Secure; SameSite=Strict");
+        assert_eq!(
+            updated,
+            "id=123; Path=/; Domain=example.com; Secure; SameSite=Strict"
+        );
     }
 
     #[test]

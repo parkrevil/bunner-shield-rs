@@ -27,9 +27,7 @@ mod execution_contexts {
 
     #[test]
     fn given_other_sections_when_execution_contexts_then_adds_to_list() {
-        let options = ClearSiteDataOptions::new()
-            .cache()
-            .execution_contexts();
+        let options = ClearSiteDataOptions::new().cache().execution_contexts();
 
         let value = options.header_value();
 

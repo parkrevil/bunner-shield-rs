@@ -1,6 +1,6 @@
 use super::*;
-use crate::executor::FeatureExecutor;
 use crate::XdnsPrefetchControlPolicy;
+use crate::executor::FeatureExecutor;
 use crate::tests_common as common;
 
 mod validate_options {
