@@ -5,14 +5,34 @@ use crate::normalized_headers::NormalizedHeaders;
 use std::borrow::Cow;
 
 pub struct Csp {
-    cached: CachedHeader<CspOptions>,
+    state: CspExecutorState,
+}
+
+enum CspExecutorState {
+    Static(CachedHeader<CspOptions>),
+    Runtime(CspRuntimeState),
+}
+
+struct CspRuntimeState {
+    options: CspOptions,
 }
 
 impl Csp {
     pub fn new(options: CspOptions) -> Self {
-        let header_value = options.header_value();
-        Self {
-            cached: CachedHeader::new(options, Cow::Owned(header_value)),
+        let state = if options.runtime_nonce_config().is_some() {
+            CspExecutorState::Runtime(CspRuntimeState { options })
+        } else {
+            let header_value = options.header_value();
+            CspExecutorState::Static(CachedHeader::new(options, Cow::Owned(header_value)))
+        };
+
+        Self { state }
+    }
+
+    fn options_ref(&self) -> &CspOptions {
+        match &self.state {
+            CspExecutorState::Static(cached) => cached.options(),
+            CspExecutorState::Runtime(runtime) => &runtime.options,
         }
     }
 }
@@ -21,13 +41,26 @@ impl FeatureExecutor for Csp {
     type Options = CspOptions;
 
     fn options(&self) -> &Self::Options {
-        self.cached.options()
+        self.options_ref()
     }
 
     fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), ExecutorError> {
-        headers.insert(CONTENT_SECURITY_POLICY, self.cached.cloned_header_value());
-
-        Ok(())
+        match &self.state {
+            CspExecutorState::Static(cached) => {
+                headers.insert(CONTENT_SECURITY_POLICY, cached.cloned_header_value());
+                Ok(())
+            }
+            CspExecutorState::Runtime(runtime) => {
+                let config = runtime
+                    .options
+                    .runtime_nonce_config()
+                    .expect("runtime nonce configuration missing for dynamic CSP executor");
+                let nonce_value = config.issue_nonce();
+                let header_value = runtime.options.render_with_runtime_nonce(&nonce_value);
+                headers.insert(CONTENT_SECURITY_POLICY, Cow::Owned(header_value));
+                Ok(())
+            }
+        }
     }
 }
 

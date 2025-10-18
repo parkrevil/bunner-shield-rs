@@ -1,4 +1,5 @@
 use super::*;
+use crate::CspNonceManager;
 use crate::CspSource;
 use crate::tests_common as common;
 
@@ -65,5 +66,38 @@ mod execute {
             second.get("Content-Security-Policy"),
             Some(&"default-src *".to_string())
         );
+    }
+
+    #[test]
+    fn given_runtime_nonce_configuration_when_execute_then_emits_unique_nonce_per_request() {
+        let options = CspOptions::new()
+            .runtime_nonce_manager(CspNonceManager::with_size(16).expect("nonce size"))
+            .default_src([CspSource::SelfKeyword])
+            .script_src(|script| script.runtime_nonce().strict_dynamic());
+        let executor = Csp::new(options);
+        let mut first_headers = common::normalized_headers_from(&[]);
+        let mut second_headers = common::normalized_headers_from(&[]);
+
+        executor
+            .execute(&mut first_headers)
+            .expect("first execute should succeed");
+        executor
+            .execute(&mut second_headers)
+            .expect("second execute should succeed");
+
+        let first = first_headers.into_result();
+        let second = second_headers.into_result();
+        let first_value = first
+            .get("Content-Security-Policy")
+            .expect("expected csp header on first execution");
+        let second_value = second
+            .get("Content-Security-Policy")
+            .expect("expected csp header on second execution");
+
+        assert!(first_value.contains("'nonce-"));
+        assert!(second_value.contains("'nonce-"));
+        assert!(first_value.contains("'strict-dynamic'"));
+        assert!(second_value.contains("'strict-dynamic'"));
+        assert_ne!(first_value, second_value, "nonce should differ per request");
     }
 }

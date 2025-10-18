@@ -352,6 +352,57 @@ pub enum TrustedTypesPolicyError {
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct CspOptions {
     pub(crate) directives: Vec<(String, String)>,
+    pub(crate) runtime_nonce: Option<RuntimeNonceConfig>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct RuntimeNonceConfig {
+    manager: CspNonceManager,
+    directives: HashMap<String, String>,
+}
+
+impl RuntimeNonceConfig {
+    fn new() -> Self {
+        Self {
+            manager: CspNonceManager::new(),
+            directives: HashMap::new(),
+        }
+    }
+
+    fn with_manager(manager: CspNonceManager) -> Self {
+        Self {
+            manager,
+            directives: HashMap::new(),
+        }
+    }
+
+    fn set_manager(&mut self, manager: CspNonceManager) {
+        self.manager = manager;
+    }
+
+    fn record_directive(&mut self, directive: &str, token: String) {
+        self.directives
+            .entry(directive.to_string())
+            .or_insert(token);
+    }
+
+    fn merge(&mut self, other: &RuntimeNonceConfig) {
+        for (name, token) in &other.directives {
+            self.directives.entry(name.clone()).or_insert(token.clone());
+        }
+    }
+
+    fn directives(&self) -> impl Iterator<Item = (&String, &String)> {
+        self.directives.iter()
+    }
+
+    pub(crate) fn issue_nonce(&self) -> String {
+        self.manager.issue().into_inner()
+    }
+
+    fn has_directive(&self, directive: &str) -> bool {
+        self.directives.contains_key(directive)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -416,6 +467,18 @@ impl CspOptions {
         Self::default()
     }
 
+    pub fn runtime_nonce_manager(mut self, manager: CspNonceManager) -> Self {
+        self.set_runtime_nonce_manager(manager);
+        self
+    }
+
+    fn set_runtime_nonce_manager(&mut self, manager: CspNonceManager) {
+        match self.runtime_nonce {
+            Some(ref mut config) => config.set_manager(manager),
+            None => self.runtime_nonce = Some(RuntimeNonceConfig::with_manager(manager)),
+        }
+    }
+
     pub fn default_src<I, S>(mut self, sources: I) -> Self
     where
         I: IntoIterator<Item = S>,
@@ -432,6 +495,31 @@ impl CspOptions {
         let builder = ScriptSrcBuilder::new(&mut self);
         let _ = configure(builder);
         self
+    }
+
+    fn enable_runtime_nonce(&mut self, directive: CspDirective) {
+        let directive_name = directive.as_str();
+        if self
+            .runtime_nonce
+            .as_ref()
+            .map(|config| config.has_directive(directive_name))
+            .unwrap_or(false)
+        {
+            return;
+        }
+
+        let token = {
+            let config = self
+                .runtime_nonce
+                .get_or_insert_with(RuntimeNonceConfig::new);
+            config.manager.issue().header_value()
+        };
+
+        self.add_directive_token(directive_name, &token);
+
+        if let Some(config) = self.runtime_nonce.as_mut() {
+            config.record_directive(directive_name, token);
+        }
     }
 
     pub fn style_src<F>(mut self, configure: F) -> Self
@@ -637,7 +725,25 @@ impl CspOptions {
             }
         }
 
+        self.merge_runtime_nonce(other);
+
         self
+    }
+
+    fn merge_runtime_nonce(&mut self, other: &CspOptions) {
+        if let Some(other_config) = other.runtime_nonce.as_ref() {
+            match self.runtime_nonce.as_mut() {
+                Some(config) => {
+                    if config.directives.is_empty() {
+                        config.set_manager(other_config.manager);
+                    }
+                    config.merge(other_config);
+                }
+                None => {
+                    self.runtime_nonce = Some(other_config.clone());
+                }
+            }
+        }
     }
 
     fn set_directive_sources<I, S>(&mut self, directive: CspDirective, sources: I)
@@ -690,6 +796,63 @@ impl CspOptions {
             })
             .collect::<Vec<_>>()
             .join("; ")
+    }
+
+    pub(crate) fn runtime_nonce_config(&self) -> Option<&RuntimeNonceConfig> {
+        self.runtime_nonce.as_ref()
+    }
+
+    pub(crate) fn render_with_runtime_nonce(&self, nonce_value: &str) -> String {
+        let Some(config) = self.runtime_nonce.as_ref() else {
+            return self.header_value();
+        };
+
+        let sanitized = sanitize_token_input(nonce_value.to_string());
+        let replacement = format!("'nonce-{}'", sanitized);
+        let mappings: Vec<(String, String)> = config
+            .directives()
+            .map(|(name, placeholder)| (name.clone(), placeholder.clone()))
+            .collect();
+        let mut clone = self.clone();
+
+        for (directive, placeholder) in &mappings {
+            clone.replace_nonce_token(directive, placeholder, &replacement);
+        }
+
+        clone.header_value()
+    }
+
+    fn replace_nonce_token(&mut self, directive: &str, placeholder: &str, replacement: &str) {
+        if let Some((_, value)) = self
+            .directives
+            .iter_mut()
+            .find(|(name, _)| name == directive)
+        {
+            if value.trim().is_empty() {
+                *value = replacement.to_string();
+                return;
+            }
+
+            let mut tokens: Vec<String> = value
+                .split_whitespace()
+                .map(|token| {
+                    if token == placeholder {
+                        replacement.to_string()
+                    } else {
+                        token.to_string()
+                    }
+                })
+                .collect();
+
+            if !tokens.iter().any(|token| token == replacement) {
+                tokens.push(replacement.to_string());
+            }
+
+            *value = tokens.join(" ");
+        } else {
+            self.directives
+                .push((directive.to_string(), replacement.to_string()));
+        }
     }
 
     fn add_script_src_token(&mut self, token: &str) {
@@ -823,6 +986,29 @@ impl<'a> ScriptSrcBuilder<'a> {
         );
         self.options
             .add_directive_token(CspDirective::ScriptSrcAttr.as_str(), &token);
+        self
+    }
+
+    pub fn runtime_nonce(self) -> Self {
+        self.options.enable_runtime_nonce(CspDirective::ScriptSrc);
+        self
+    }
+
+    pub fn runtime_nonce_with_manager(self, manager: CspNonceManager) -> Self {
+        self.options.set_runtime_nonce_manager(manager);
+        self.options.enable_runtime_nonce(CspDirective::ScriptSrc);
+        self
+    }
+
+    pub fn elem_runtime_nonce(self) -> Self {
+        self.options
+            .enable_runtime_nonce(CspDirective::ScriptSrcElem);
+        self
+    }
+
+    pub fn attr_runtime_nonce(self) -> Self {
+        self.options
+            .enable_runtime_nonce(CspDirective::ScriptSrcAttr);
         self
     }
 
@@ -1001,6 +1187,29 @@ impl<'a> StyleSrcBuilder<'a> {
         );
         self.options
             .add_directive_token(CspDirective::StyleSrcAttr.as_str(), &token);
+        self
+    }
+
+    pub fn runtime_nonce(self) -> Self {
+        self.options.enable_runtime_nonce(CspDirective::StyleSrc);
+        self
+    }
+
+    pub fn runtime_nonce_with_manager(self, manager: CspNonceManager) -> Self {
+        self.options.set_runtime_nonce_manager(manager);
+        self.options.enable_runtime_nonce(CspDirective::StyleSrc);
+        self
+    }
+
+    pub fn elem_runtime_nonce(self) -> Self {
+        self.options
+            .enable_runtime_nonce(CspDirective::StyleSrcElem);
+        self
+    }
+
+    pub fn attr_runtime_nonce(self) -> Self {
+        self.options
+            .enable_runtime_nonce(CspDirective::StyleSrcAttr);
         self
     }
 }

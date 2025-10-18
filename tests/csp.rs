@@ -220,6 +220,64 @@ mod success {
     }
 
     #[test]
+    fn given_runtime_nonce_when_secure_multiple_times_then_produces_unique_nonce_tokens() {
+        let options = CspOptions::new()
+            .runtime_nonce_manager(CspNonceManager::with_size(24).expect("nonce size"))
+            .default_src([CspSource::SelfKeyword])
+            .script_src(|script| script.runtime_nonce().strict_dynamic());
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let first = shield
+            .secure(empty_headers())
+            .expect("first secure should succeed");
+        let second = shield
+            .secure(empty_headers())
+            .expect("second secure should succeed");
+
+        let first_header = first
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("first csp header");
+        let second_header = second
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("second csp header");
+
+        assert!(first_header.contains("script-src"));
+        assert!(first_header.contains("'nonce-"));
+        assert!(first_header.contains("'strict-dynamic'"));
+        assert!(second_header.contains("script-src"));
+        assert!(second_header.contains("'nonce-"));
+        assert!(second_header.contains("'strict-dynamic'"));
+        assert_ne!(
+            first_header, second_header,
+            "runtime nonce must differ per request"
+        );
+    }
+
+    #[test]
+    fn given_style_runtime_nonce_when_secure_then_injects_runtime_nonce_token() {
+        let options = CspOptions::new()
+            .runtime_nonce_manager(CspNonceManager::new())
+            .default_src([CspSource::SelfKeyword])
+            .style_src(|style| style.runtime_nonce());
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let secured = shield.secure(empty_headers()).expect("secure");
+        let header = secured
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("csp header");
+        let directives = parse_csp_header(&header);
+
+        let style_tokens = directives
+            .get("style-src")
+            .expect("style-src tokens present");
+        assert_eq!(style_tokens.len(), 1, "expected single runtime nonce token");
+        assert!(style_tokens[0].starts_with("'nonce-"));
+    }
+
+    #[test]
     fn given_style_src_inline_and_hash_when_secure_then_emits_expected_tokens() {
         let nonce = "d".repeat(22);
         let hash = "E".repeat(64);

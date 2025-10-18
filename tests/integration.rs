@@ -645,6 +645,36 @@ mod success {
     }
 
     #[test]
+    fn given_runtime_nonce_configuration_when_secure_then_nonces_differ_across_requests() {
+        let shield = Shield::new()
+            .csp(
+                CspOptions::new()
+                    .runtime_nonce_manager(CspNonceManager::with_size(20).expect("nonce size"))
+                    .default_src([CspSource::SelfKeyword])
+                    .script_src(|script| script.runtime_nonce().strict_dynamic()),
+            )
+            .expect("csp");
+
+        let first = shield.secure(empty_headers()).expect("first secure");
+        let second = shield.secure(empty_headers()).expect("second secure");
+
+        let first_header = first
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("first csp header");
+        let second_header = second
+            .get("Content-Security-Policy")
+            .cloned()
+            .expect("second csp header");
+
+        assert!(first_header.contains("'nonce-"));
+        assert!(first_header.contains("'strict-dynamic'"));
+        assert!(second_header.contains("'nonce-"));
+        assert!(second_header.contains("'strict-dynamic'"));
+        assert_ne!(first_header, second_header);
+    }
+
+    #[test]
     fn given_csrf_origin_validation_matching_origin_then_secure_ok() {
         let shield = Shield::new()
             .csrf(CsrfOptions::new(base_secret()).origin_validation(true, false))

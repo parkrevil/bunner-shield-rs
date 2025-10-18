@@ -265,6 +265,90 @@ mod style_source_helpers {
     }
 }
 
+mod runtime_nonce {
+    use super::*;
+
+    #[test]
+    fn given_runtime_nonce_configuration_when_render_then_substitutes_placeholder() {
+        let options = CspOptions::new()
+            .runtime_nonce_manager(CspNonceManager::with_size(18).expect("nonce size"))
+            .default_src([CspSource::SelfKeyword])
+            .script_src(|script| script.runtime_nonce().strict_dynamic());
+
+        let placeholder_header = options.header_value();
+        let config = options
+            .runtime_nonce_config()
+            .expect("runtime nonce config should exist");
+
+        let placeholder_token = config
+            .directives()
+            .find(|(name, _)| name.as_str() == "script-src")
+            .map(|(_, token)| token.clone())
+            .expect("placeholder token for script-src");
+        assert!(placeholder_header.contains(&placeholder_token));
+        assert!(placeholder_header.contains("'strict-dynamic'"));
+
+        let rendered = options.render_with_runtime_nonce("dynamic-nonce-value");
+        assert!(rendered.contains("default-src 'self'"));
+        assert!(rendered.contains("'strict-dynamic'"));
+        assert!(rendered.contains("'nonce-dynamic-nonce-value'"));
+        assert!(!rendered.contains(&placeholder_token));
+
+        // Ensure configuration still retains placeholder for future invocations
+        let config_after = options
+            .runtime_nonce_config()
+            .expect("runtime nonce config should persist");
+        let retained = config_after
+            .directives()
+            .find(|(name, _)| name.as_str() == "script-src")
+            .map(|(_, token)| token.clone())
+            .expect("retained placeholder");
+        assert_eq!(retained, placeholder_token);
+    }
+
+    #[test]
+    fn given_style_runtime_nonce_helper_when_used_then_registers_placeholder() {
+        let options = CspOptions::new()
+            .runtime_nonce_manager(CspNonceManager::new())
+            .style_src(|style| style.runtime_nonce());
+
+        let config = options
+            .runtime_nonce_config()
+            .expect("runtime nonce config should exist");
+        let placeholder = config
+            .directives()
+            .find(|(name, _)| name.as_str() == "style-src")
+            .map(|(_, token)| token.clone())
+            .expect("style-src placeholder");
+
+        let header = options.render_with_runtime_nonce("abc123");
+        assert!(header.contains("style-src 'nonce-abc123'"));
+        assert!(options.header_value().contains(&placeholder));
+    }
+
+    #[test]
+    fn given_runtime_nonce_options_merge_when_combined_then_preserves_placeholders() {
+        let base = CspOptions::new()
+            .runtime_nonce_manager(CspNonceManager::new())
+            .script_src(|script| script.runtime_nonce());
+        let overlay = CspOptions::new().style_src(|style| style.runtime_nonce());
+
+        let merged = base.merge(&overlay);
+        let config = merged
+            .runtime_nonce_config()
+            .expect("merged runtime nonce config");
+
+        let directive_names: std::collections::HashSet<_> =
+            config.directives().map(|(name, _)| name.clone()).collect();
+        assert!(directive_names.contains("script-src"));
+        assert!(directive_names.contains("style-src"));
+
+        let header = merged.render_with_runtime_nonce("nonce-value");
+        assert!(header.contains("script-src 'nonce-nonce-value'"));
+        assert!(header.contains("style-src 'nonce-nonce-value'"));
+    }
+}
+
 mod nonce_generation {
     use super::*;
 
@@ -982,6 +1066,7 @@ mod merge_edge_cases {
         let base = CspOptions::new();
         let overlay = CspOptions {
             directives: vec![("img-src".to_string(), "   ".to_string())],
+            runtime_nonce: None,
         };
 
         let merged = base.merge(&overlay);
@@ -999,6 +1084,7 @@ mod merge_edge_cases {
         let base = CspOptions::new().img_src([CspSource::SelfKeyword]);
         let overlay = CspOptions {
             directives: vec![("img-src".to_string(), "   ".to_string())],
+            runtime_nonce: None,
         };
 
         let merged = base.clone().merge(&overlay);
@@ -1042,6 +1128,7 @@ mod directive_helpers {
     fn given_invalid_directive_name_when_validate_then_returns_error() {
         let options = CspOptions {
             directives: vec![("bogus".to_string(), "value".to_string())],
+            runtime_nonce: None,
         };
 
         let error = options
