@@ -59,11 +59,9 @@ impl FeatureExecutor for Csrf {
                 // Assume https by default; production servers should run behind TLS.
                 let allowed0 = format!("https://{}", host);
                 let allowed_refs = [allowed0.as_str()];
-                    if let Err(err) = validate_origin(
-                        &req_headers,
-                        self.options.use_referer,
-                        &allowed_refs,
-                    ) {
+                if let Err(err) =
+                    validate_origin(&req_headers, self.options.use_referer, &allowed_refs)
+                {
                     return Err(Box::new(CsrfError::OriginValidation(err)) as ExecutorError);
                 }
             }

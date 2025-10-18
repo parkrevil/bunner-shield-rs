@@ -1,7 +1,7 @@
 mod executor;
 mod options;
-mod token;
 mod origin;
+mod token;
 
 pub use executor::{Csrf, CsrfError};
 pub use options::{CsrfOptions, CsrfOptionsError};

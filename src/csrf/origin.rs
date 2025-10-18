@@ -1,6 +1,6 @@
+use std::collections::HashMap;
 use thiserror::Error;
 use url::Url;
-use std::collections::HashMap;
 
 /// Represents a normalized origin (scheme, host, port).
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -69,7 +69,11 @@ pub(crate) fn validate_origin(
         } else {
             let req_origin = parse_origin_str(origin_val)?;
             let matched = allow_list.iter().any(|o| o == &req_origin);
-            return if matched { Ok(()) } else { Err(OriginCheckError::CrossOrigin) };
+            return if matched {
+                Ok(())
+            } else {
+                Err(OriginCheckError::CrossOrigin)
+            };
         }
     }
 
@@ -98,9 +102,9 @@ pub enum OriginCheckError {
     MissingOrigin,
     #[error("missing Referer header")]
     MissingReferer,
-    #[error("invalid {0} header value")] 
+    #[error("invalid {0} header value")]
     InvalidHeader(&'static str),
-    #[error("request is cross-origin")] 
+    #[error("request is cross-origin")]
     CrossOrigin,
 }
 
