@@ -16,9 +16,3 @@ pub fn headers_with(entries: &[(&str, &str)]) -> HashMap<String, String> {
 pub fn normalized_headers_from(entries: &[(&str, &str)]) -> NormalizedHeaders {
     NormalizedHeaders::new(headers_with(entries))
 }
-
-pub fn into_owned_pairs(headers: HashMap<String, String>) -> Vec<(String, String)> {
-    let mut pairs: Vec<_> = headers.into_iter().collect();
-    pairs.sort_by(|a, b| a.0.cmp(&b.0));
-    pairs
-}
