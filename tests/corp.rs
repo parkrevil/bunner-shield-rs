@@ -2,10 +2,8 @@ use bunner_shield_rs::{
     CorpOptions, CorpOptionsError, CorpPolicy, Shield, header_keys, header_values,
 };
 use std::collections::HashMap;
-
-fn empty_headers() -> HashMap<String, String> {
-    HashMap::new()
-}
+mod common;
+use common::empty_headers;
 
 fn with_corp(value: &str) -> HashMap<String, String> {
     let mut headers = empty_headers();

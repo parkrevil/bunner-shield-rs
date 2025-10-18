@@ -2,10 +2,8 @@ use bunner_shield_rs::{
     SameSiteOptions, SameSiteOptionsError, SameSitePolicy, Shield, ShieldError,
 };
 use std::collections::HashMap;
-
-fn empty_headers() -> HashMap<String, String> {
-    HashMap::new()
-}
+mod common;
+use common::empty_headers;
 
 fn with_cookie(value: &str) -> HashMap<String, String> {
     let mut headers = empty_headers();

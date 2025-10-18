@@ -2,10 +2,8 @@ use bunner_shield_rs::{
     CspNonceManager, CspOptions, CspOptionsError, CspSource, Shield, ShieldError,
 };
 use std::collections::HashMap;
-
-fn empty_headers() -> HashMap<String, String> {
-    HashMap::new()
-}
+mod common;
+use common::empty_headers;
 
 fn with_csp(value: &str) -> HashMap<String, String> {
     let mut headers = empty_headers();

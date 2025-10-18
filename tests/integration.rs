@@ -7,11 +7,8 @@ use bunner_shield_rs::{
     SameSitePolicy, Shield, ShieldError, XFrameOptionsOptions, XFrameOptionsPolicy,
     XdnsPrefetchControlOptions, XdnsPrefetchControlPolicy,
 };
-use std::collections::HashMap;
-
-fn empty_headers() -> HashMap<String, String> {
-    HashMap::new()
-}
+mod common;
+use common::empty_headers;
 
 fn base_secret() -> [u8; 32] {
     [0x11; 32]

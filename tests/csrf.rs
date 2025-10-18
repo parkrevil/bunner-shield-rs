@@ -1,12 +1,9 @@
 use bunner_shield_rs::{CsrfOptions, CsrfOptionsError, Shield, ShieldError};
-use std::collections::HashMap;
+mod common;
+use common::empty_headers;
 
 fn secret() -> [u8; 32] {
     [0x55; 32]
-}
-
-fn empty_headers() -> HashMap<String, String> {
-    HashMap::new()
 }
 
 mod success {

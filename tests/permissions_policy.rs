@@ -2,10 +2,8 @@ use bunner_shield_rs::{
     PermissionsPolicyOptions, PermissionsPolicyOptionsError, Shield, ShieldError,
 };
 use std::collections::HashMap;
-
-fn empty_headers() -> HashMap<String, String> {
-    HashMap::new()
-}
+mod common;
+use common::empty_headers;
 
 fn with_permissions_policy(value: &str) -> HashMap<String, String> {
     let mut headers = empty_headers();

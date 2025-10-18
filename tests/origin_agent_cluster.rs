@@ -1,9 +1,7 @@
 use bunner_shield_rs::{OriginAgentClusterOptions, Shield};
 use std::collections::HashMap;
-
-fn empty_headers() -> HashMap<String, String> {
-    HashMap::new()
-}
+mod common;
+use common::empty_headers;
 
 fn with_oac(value: &str) -> HashMap<String, String> {
     let mut headers = empty_headers();
