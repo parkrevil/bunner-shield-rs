@@ -1,11 +1,11 @@
 use bunner_shield_rs::{
     ClearSiteDataOptions, CoepOptions, CoepPolicy, CoopOptions, CoopPolicy, CorpOptions,
     CorpPolicy, CspDirective, CspHashAlgorithm, CspNonceManager, CspOptions, CspOptionsError,
-    CspSource, CsrfOptions, CsrfOptionsError, HstsOptions, HstsOptionsError,
+    CspSource, CsrfOptions, CsrfOptionsError, HmacCsrfService, HstsOptions, HstsOptionsError,
     OriginAgentClusterOptions, PermissionsPolicyOptions, PermissionsPolicyOptionsError,
     ReferrerPolicyOptions, ReferrerPolicyValue, SameSiteOptions, SameSiteOptionsError,
     SameSitePolicy, Shield, ShieldError, XFrameOptionsOptions, XFrameOptionsPolicy,
-    XdnsPrefetchControlOptions, XdnsPrefetchControlPolicy, HmacCsrfService,
+    XdnsPrefetchControlOptions, XdnsPrefetchControlPolicy,
 };
 mod common;
 use common::empty_headers;
@@ -178,9 +178,9 @@ mod success {
             Some("application/json")
         );
 
-    let csrf_token = secured.get("X-CSRF-Token").expect("csrf token present");
-    let service = HmacCsrfService::new(base_secret());
-    assert!(service.verify(csrf_token).is_ok());
+        let csrf_token = secured.get("X-CSRF-Token").expect("csrf token present");
+        let service = HmacCsrfService::new(base_secret());
+        assert!(service.verify(csrf_token).is_ok());
 
         let cookie = secured.get("Set-Cookie").expect("csrf cookie present");
         assert!(cookie.contains("SameSite=Strict"));
@@ -319,9 +319,9 @@ mod success {
 
         let secured = shield.secure(headers).expect("secure");
 
-    let token = secured.get("X-CSRF-Token").expect("csrf token present");
-    let service = HmacCsrfService::new(base_secret());
-    assert!(service.verify(token).is_ok());
+        let token = secured.get("X-CSRF-Token").expect("csrf token present");
+        let service = HmacCsrfService::new(base_secret());
+        assert!(service.verify(token).is_ok());
 
         let cookies = secured.get("Set-Cookie").expect("cookies present");
         let mut lines: Vec<&str> = cookies.split('\n').collect();
@@ -393,10 +393,10 @@ mod success {
 
         let token_one = first.get("X-CSRF-Token").expect("first token");
         let token_two = second.get("X-CSRF-Token").expect("second token");
-    assert_ne!(token_one, token_two);
-    let service = HmacCsrfService::new(base_secret());
-    assert!(service.verify(token_one).is_ok());
-    assert!(service.verify(token_two).is_ok());
+        assert_ne!(token_one, token_two);
+        let service = HmacCsrfService::new(base_secret());
+        assert!(service.verify(token_one).is_ok());
+        assert!(service.verify(token_two).is_ok());
 
         let expected_clear_site_data = ["\"cookies\"", "\"storage\""];
         let first_clear = first

@@ -17,10 +17,10 @@ mod success {
 
         let result = shield.secure(empty_headers()).expect("secure");
 
-    let token = result.get("X-CSRF-Token").expect("csrf token present");
-    // Verify token signature using the same secret
-    let service = HmacCsrfService::new(secret());
-    assert!(service.verify(token).is_ok());
+        let token = result.get("X-CSRF-Token").expect("csrf token present");
+        // Verify token signature using the same secret
+        let service = HmacCsrfService::new(secret());
+        assert!(service.verify(token).is_ok());
 
         let cookie = result.get("Set-Cookie").expect("csrf cookie present");
         assert!(cookie.contains("__Host-csrf-token="));
@@ -39,10 +39,10 @@ mod success {
 
         let result = shield.secure(empty_headers()).expect("secure");
 
-    let token = result.get("X-CSRF-Token").expect("csrf token present");
-    // Length differs due to base64url encoding; ensure token verifies
-    let service = HmacCsrfService::new(secret());
-    assert!(service.verify(token).is_ok());
+        let token = result.get("X-CSRF-Token").expect("csrf token present");
+        // Length differs due to base64url encoding; ensure token verifies
+        let service = HmacCsrfService::new(secret());
+        assert!(service.verify(token).is_ok());
     }
 
     #[test]

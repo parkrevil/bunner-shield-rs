@@ -1,5 +1,5 @@
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine as _;
+use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use core::sync::atomic::{AtomicU64, Ordering};
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
@@ -40,7 +40,9 @@ impl HmacCsrfService {
 
         // Historically `length` was hex chars, two chars per byte.
         // Keep the effective MAC truncation security equivalent.
-        let mac_len = length.checked_div(2).ok_or(CsrfTokenError::InvalidTokenLength(length))?;
+        let mac_len = length
+            .checked_div(2)
+            .ok_or(CsrfTokenError::InvalidTokenLength(length))?;
         if mac_len == 0 {
             return Err(CsrfTokenError::InvalidTokenLength(length));
         }
@@ -48,10 +50,7 @@ impl HmacCsrfService {
             return Err(CsrfTokenError::InvalidTokenLength(length));
         }
 
-        let nonce = self
-            .counter
-            .fetch_add(1, Ordering::Relaxed)
-            .wrapping_add(1);
+        let nonce = self.counter.fetch_add(1, Ordering::Relaxed).wrapping_add(1);
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|_| CsrfTokenError::InvalidTimestamp)?

@@ -106,8 +106,13 @@ mod issue {
             let flipped = if last == 'A' { 'B' } else { 'A' };
             token.push(flipped);
         }
-        let err = service.verify(&token).expect_err("expected verification error");
-        assert!(matches!(err, CsrfTokenError::InvalidSignature | CsrfTokenError::InvalidEncoding));
+        let err = service
+            .verify(&token)
+            .expect_err("expected verification error");
+        assert!(matches!(
+            err,
+            CsrfTokenError::InvalidSignature | CsrfTokenError::InvalidEncoding
+        ));
     }
 }
 
@@ -131,12 +136,8 @@ mod expiry_v2 {
         ts.copy_from_slice(&raw[1..9]);
         let issued = u64::from_be_bytes(ts);
 
-        assert!(service
-            .verify_with_max_age(&token, 60, issued)
-            .is_ok());
-        assert!(service
-            .verify_with_max_age(&token, 60, issued + 30)
-            .is_ok());
+        assert!(service.verify_with_max_age(&token, 60, issued).is_ok());
+        assert!(service.verify_with_max_age(&token, 60, issued + 30).is_ok());
     }
 
     #[test]
