@@ -30,3 +30,7 @@ impl FeatureExecutor for Hsts {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "executor_test.rs"]
+mod executor_test;
