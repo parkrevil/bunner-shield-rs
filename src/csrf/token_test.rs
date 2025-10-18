@@ -202,3 +202,150 @@ mod replay_v2 {
         assert_eq!(err, CsrfTokenError::Replayed);
     }
 }
+
+mod invalid_inputs_and_edges {
+    use super::*;
+
+    #[test]
+    fn given_empty_string_when_verify_then_invalid_structure() {
+        let service = HmacCsrfService::new(secret());
+        let err = service.verify("").expect_err("expected error");
+        assert_eq!(err, CsrfTokenError::InvalidStructure);
+    }
+
+    #[test]
+    fn given_invalid_base64_when_verify_then_invalid_encoding() {
+        let service = HmacCsrfService::new(secret());
+        let err = service
+            .verify("%%%%")
+            .expect_err("expected invalid encoding");
+        assert_eq!(err, CsrfTokenError::InvalidEncoding);
+    }
+
+    #[test]
+    fn given_unsupported_version_when_verify_then_unsupported_version() {
+        let service = HmacCsrfService::new(secret());
+        // raw: [0xFF]
+        let token = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode([0xFFu8]);
+        let err = service
+            .verify(&token)
+            .expect_err("expected unsupported version");
+        assert_eq!(err, CsrfTokenError::UnsupportedVersion(0xFF));
+    }
+
+    #[test]
+    fn given_too_short_v1_when_verify_then_invalid_structure() {
+        let service = HmacCsrfService::new(secret());
+        let token = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode([1u8]);
+        let err = service
+            .verify(&token)
+            .expect_err("expected invalid structure");
+        assert_eq!(err, CsrfTokenError::InvalidStructure);
+    }
+
+    #[test]
+    fn given_too_short_v2_when_verify_then_invalid_structure() {
+        let service = HmacCsrfService::new(secret());
+        // minimal but too short for v2 (needs 1+8+8+16 at least)
+        let mut raw = vec![2u8; 10];
+        raw[0] = super::TOKEN_VERSION_V2;
+        let token = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(raw);
+        let err = service
+            .verify(&token)
+            .expect_err("expected invalid structure");
+        assert_eq!(err, CsrfTokenError::InvalidStructure);
+    }
+
+    #[test]
+    fn given_odd_requested_length_when_issue_then_token_verifies() {
+        let service = HmacCsrfService::new(secret());
+        // Options allow 33..64, ensure service accepts and token verifies
+        let token = service.issue(33).expect("issue should succeed");
+        assert!(service.verify(&token).is_ok());
+    }
+}
+
+mod verify_with_max_age_errors {
+    use super::*;
+
+    #[test]
+    fn given_zero_max_age_when_verify_with_max_age_then_invalid_max_age() {
+        let service = HmacCsrfService::new(secret());
+        let token = service.issue(64).expect("token");
+        let err = service
+            .verify_with_max_age(&token, 0, 0)
+            .expect_err("expected invalid max age");
+        assert_eq!(err, CsrfTokenError::InvalidMaxAge(0));
+    }
+
+    #[test]
+    fn given_tampered_mac_when_verify_with_max_age_then_invalid_signature() {
+        let service = HmacCsrfService::new(secret());
+        let token = service.issue(64).expect("token");
+        let mut raw = base64::engine::general_purpose::URL_SAFE_NO_PAD
+            .decode(&token)
+            .unwrap();
+        assert_eq!(raw[0], super::TOKEN_VERSION_V2);
+        // Flip last byte of provided mac while preserving base64 validity
+        let last = raw.last_mut().unwrap();
+        *last ^= 0x01;
+        let tampered = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(raw);
+
+        let err = service
+            .verify_with_max_age(&tampered, 60, u64::MAX)
+            .expect_err("expected signature error");
+        assert_eq!(err, CsrfTokenError::InvalidSignature);
+    }
+}
+
+mod verify_and_consume_errors {
+    use super::*;
+
+    #[test]
+    fn given_v1_token_when_verify_and_consume_then_missing_timestamp() {
+        // Build minimal v1 token: [1][nonce(8)][mac(16)]
+        let service = HmacCsrfService::new(secret());
+        let nonce: u64 = 42;
+        let mut mac = hmac::Hmac::<sha2::Sha256>::new_from_slice(&secret()).unwrap();
+        mac.update(&nonce.to_be_bytes());
+        let mac = mac.finalize().into_bytes();
+        let mut raw = Vec::with_capacity(1 + 8 + 16);
+        raw.push(super::TOKEN_VERSION_V1);
+        raw.extend_from_slice(&nonce.to_be_bytes());
+        raw.extend_from_slice(&mac[..16]);
+        let token = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(raw);
+
+        let store = InMemoryReplayStore::new();
+        let err = service
+            .verify_and_consume(&token, &store)
+            .expect_err("expected missing timestamp");
+        assert_eq!(err, CsrfTokenError::MissingTimestamp);
+    }
+
+    #[test]
+    fn given_invalid_encoding_when_verify_and_consume_then_invalid_encoding() {
+        let service = HmacCsrfService::new(secret());
+        let store = InMemoryReplayStore::new();
+        let err = service
+            .verify_and_consume("not-base64*", &store)
+            .expect_err("expected invalid encoding");
+        assert_eq!(err, CsrfTokenError::InvalidEncoding);
+    }
+
+    #[test]
+    fn given_too_short_v2_when_verify_and_consume_then_invalid_structure() {
+        let service = HmacCsrfService::new(secret());
+        let store = InMemoryReplayStore::new();
+        let token = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode([super::TOKEN_VERSION_V2]);
+        let err = service
+            .verify_and_consume(&token, &store)
+            .expect_err("expected invalid structure");
+        assert_eq!(err, CsrfTokenError::InvalidStructure);
+    }
+
+    #[test]
+    fn given_store_with_short_id_when_consume_then_returns_false() {
+        let store = InMemoryReplayStore::new();
+        assert!(!store.consume_if_fresh(&[0u8; 15]));
+    }
+}

@@ -643,6 +643,49 @@ mod success {
         assert!(header.contains("'strict-dynamic'"));
         assert!(header.contains(&format!("'nonce-{nonce_value}'")));
     }
+
+    #[test]
+    fn given_csrf_origin_validation_matching_origin_then_secure_ok() {
+        let shield = Shield::new()
+            .csrf(CsrfOptions::new(base_secret()).origin_validation(true, false))
+            .expect("csrf");
+
+        let mut headers = empty_headers();
+        headers.insert("Host".into(), "example.com".into());
+        headers.insert("Origin".into(), "https://example.com".into());
+
+        let secured = shield.secure(headers).expect("secure");
+        let token = secured.get("X-CSRF-Token").expect("csrf token");
+        let service = HmacCsrfService::new(base_secret());
+        assert!(service.verify(token).is_ok());
+    }
+
+    #[test]
+    fn given_csrf_origin_validation_use_referer_true_then_referer_match_ok() {
+        let shield = Shield::new()
+            .csrf(CsrfOptions::new(base_secret()).origin_validation(true, true))
+            .expect("csrf");
+
+        let mut headers = empty_headers();
+        headers.insert("Host".into(), "example.com".into());
+    headers.insert("Referer".into(), "https://example.com/path".to_string());
+
+        let secured = shield.secure(headers).expect("secure");
+        assert!(secured.contains_key("X-CSRF-Token"));
+    }
+
+    #[test]
+    fn given_csrf_origin_validation_enabled_but_no_host_then_skips_validation() {
+        let shield = Shield::new()
+            .csrf(CsrfOptions::new(base_secret()).origin_validation(true, true))
+            .expect("csrf");
+
+        let mut headers = empty_headers();
+        headers.insert("Origin".into(), "https://evil.com".into());
+
+        let secured = shield.secure(headers).expect("secure");
+        assert!(secured.contains_key("X-CSRF-Token"));
+    }
 }
 
 mod failure {
@@ -715,6 +758,46 @@ mod failure {
         let error: CspOptionsError = expect_validation_error(Shield::new().csp(CspOptions::new()));
 
         assert!(matches!(error, CspOptionsError::MissingDirectives));
+    }
+
+    fn exec_error_message(result: Result<std::collections::HashMap<String, String>, ShieldError>) -> String {
+        match result {
+            Err(ShieldError::ExecutionFailed(err)) => err.to_string(),
+            other => panic!("expected execution error, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn given_csrf_origin_validation_mismatched_origin_then_secure_fails() {
+        let shield = Shield::new()
+            .csrf(CsrfOptions::new(base_secret()).origin_validation(true, false))
+            .expect("csrf");
+
+        let mut headers = empty_headers();
+        headers.insert("Host".into(), "example.com".into());
+        headers.insert("Origin".into(), "https://evil.com".into());
+
+        let msg = exec_error_message(shield.secure(headers));
+        assert!(msg.contains("origin/referer validation failed"));
+    }
+
+    #[test]
+    fn given_csrf_origin_validation_null_or_empty_origin_without_fallback_then_fails() {
+        let shield = Shield::new()
+            .csrf(CsrfOptions::new(base_secret()).origin_validation(true, false))
+            .expect("csrf");
+
+        let mut headers1 = empty_headers();
+        headers1.insert("Host".into(), "example.com".into());
+        headers1.insert("Origin".into(), "null".into());
+        let msg1 = exec_error_message(shield.secure(headers1));
+        assert!(msg1.contains("origin/referer validation failed"));
+
+        let mut headers2 = empty_headers();
+        headers2.insert("Host".into(), "example.com".into());
+        headers2.insert("Origin".into(), " ".into());
+        let msg2 = exec_error_message(shield.secure(headers2));
+        assert!(msg2.contains("origin/referer validation failed"));
     }
 }
 
