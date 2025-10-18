@@ -128,11 +128,6 @@ fn build_comprehensive_csp_options() -> CspOptions {
             CspSource::scheme("https"),
             CspSource::host("https://cdn.example.com"),
         ])
-        .style_src([
-            CspSource::SelfKeyword,
-            CspSource::scheme("https"),
-            CspSource::host("https://fonts.example.com"),
-        ])
         .img_src([
             CspSource::SelfKeyword,
             CspSource::scheme("data"),
@@ -178,66 +173,76 @@ fn build_comprehensive_csp_options() -> CspOptions {
         .block_all_mixed_content()
         .upgrade_insecure_requests()
         .sandbox_with(sandbox_tokens)
-        .script_src([
-            CspSource::SelfKeyword,
-            CspSource::Hash {
-                algorithm: CspHashAlgorithm::Sha256,
-                value: sha256_hash.clone(),
-            },
-            CspSource::ReportSample,
-        ])
-        .script_src_elem([
-            CspSource::SelfKeyword,
-            CspSource::host("https://modules.example.com"),
-            CspSource::Hash {
-                algorithm: CspHashAlgorithm::Sha384,
-                value: sha384_hash.clone(),
-            },
-        ])
-        .script_src_attr([
-            CspSource::SelfKeyword,
-            CspSource::Hash {
-                algorithm: CspHashAlgorithm::Sha512,
-                value: sha512_hash.clone(),
-            },
-        ])
-        .style_src_elem([
-            CspSource::from(style_nonce.clone()),
-            CspSource::Hash {
-                algorithm: CspHashAlgorithm::Sha384,
-                value: sha384_hash.clone(),
-            },
-        ])
-        .style_src_attr([
-            CspSource::from(attr_nonce.clone()),
-            CspSource::Hash {
-                algorithm: CspHashAlgorithm::Sha256,
-                value: sha256_hash.clone(),
-            },
-        ])
+        .script_src(|script| {
+            script
+                .sources([
+                    CspSource::SelfKeyword,
+                    CspSource::Hash {
+                        algorithm: CspHashAlgorithm::Sha256,
+                        value: sha256_hash.clone(),
+                    },
+                    CspSource::ReportSample,
+                ])
+                .elem([
+                    CspSource::SelfKeyword,
+                    CspSource::host("https://modules.example.com"),
+                    CspSource::Hash {
+                        algorithm: CspHashAlgorithm::Sha384,
+                        value: sha384_hash.clone(),
+                    },
+                ])
+                .attr([
+                    CspSource::SelfKeyword,
+                    CspSource::Hash {
+                        algorithm: CspHashAlgorithm::Sha512,
+                        value: sha512_hash.clone(),
+                    },
+                ])
+                .nonce(script_nonce.clone())
+                .hash(CspHashAlgorithm::Sha512, sha512_hash.clone())
+                .elem_nonce(script_nonce.clone())
+                .elem_hash(CspHashAlgorithm::Sha512, sha512_hash.clone())
+                .attr_nonce(attr_nonce.clone())
+                .attr_hash(CspHashAlgorithm::Sha256, sha256_hash.clone())
+        })
+        .style_src(|style| {
+            style
+                .sources([
+                    CspSource::SelfKeyword,
+                    CspSource::scheme("https"),
+                    CspSource::host("https://fonts.example.com"),
+                ])
+                .elem([
+                    CspSource::from(style_nonce.clone()),
+                    CspSource::Hash {
+                        algorithm: CspHashAlgorithm::Sha384,
+                        value: sha384_hash.clone(),
+                    },
+                ])
+                .attr([
+                    CspSource::from(attr_nonce.clone()),
+                    CspSource::Hash {
+                        algorithm: CspHashAlgorithm::Sha256,
+                        value: sha256_hash.clone(),
+                    },
+                ])
+                .nonce(style_nonce.clone())
+                .hash(CspHashAlgorithm::Sha256, sha256_hash.clone())
+                .elem_nonce(style_nonce.clone())
+                .elem_hash(CspHashAlgorithm::Sha512, sha512_hash.clone())
+                .attr_nonce(attr_nonce.clone())
+                .attr_hash(CspHashAlgorithm::Sha384, sha384_hash.clone())
+        })
         .trusted_types_tokens([
             TrustedTypesToken::policy(trusted_policy),
             TrustedTypesToken::allow_duplicates(),
         ])
         .require_trusted_types_for_scripts();
 
-    options = options
-        .script_src_nonce(script_nonce.clone())
-        .script_src_hash(CspHashAlgorithm::Sha512, sha512_hash.clone())
-        .style_src_nonce(style_nonce.clone())
-        .style_src_hash(CspHashAlgorithm::Sha256, sha256_hash.clone())
-        .style_src_elem_nonce(style_nonce.clone())
-        .style_src_elem_hash(CspHashAlgorithm::Sha512, sha512_hash.clone())
-        .style_src_attr_nonce(attr_nonce.clone())
-        .style_src_attr_hash(CspHashAlgorithm::Sha384, sha384_hash)
-        .script_src_elem_nonce(script_nonce.clone())
-        .script_src_elem_hash(CspHashAlgorithm::Sha512, sha512_hash.clone())
-        .script_src_attr_nonce(attr_nonce.clone())
-        .script_src_attr_hash(CspHashAlgorithm::Sha256, sha256_hash)
-        .add_source(
-            CspDirective::WorkerSrc,
-            CspSource::host("https://analytics.example.com"),
-        );
+    options = options.add_source(
+        CspDirective::WorkerSrc,
+        CspSource::host("https://analytics.example.com"),
+    );
 
     options
 }

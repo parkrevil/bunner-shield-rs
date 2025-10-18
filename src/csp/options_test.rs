@@ -33,8 +33,10 @@ mod risky_scheme_warnings_critical {
     #[test]
     fn given_critical_schemes_when_validate_with_warnings_then_escalates_severity() {
         let options = CspOptions::new()
-            .script_src([CspSource::raw("data:"), CspSource::raw("filesystem:")])
-            .style_src([CspSource::raw("blob:")]);
+            .script_src(|script| {
+                script.sources([CspSource::raw("data:"), CspSource::raw("filesystem:")])
+            })
+            .style_src(|style| style.sources([CspSource::raw("blob:")]));
 
         let warnings = options
             .validate_with_warnings()
@@ -175,12 +177,15 @@ mod script_source_helpers {
     #[test]
     fn given_helper_methods_when_invoked_then_append_expected_tokens() {
         let options = CspOptions::new()
-            .script_src_with_nonce(CspNonce {
-                value: " helper-nonce ".to_string(),
+            .script_src(|script| {
+                script
+                    .nonce_value(CspNonce {
+                        value: " helper-nonce ".to_string(),
+                    })
+                    .nonce("  inline-nonce  ")
+                    .hash(CspHashAlgorithm::Sha512, " 'hash-value' ")
+                    .strict_dynamic()
             })
-            .script_src_nonce("  inline-nonce  ")
-            .script_src_hash(CspHashAlgorithm::Sha512, " 'hash-value' ")
-            .enable_strict_dynamic()
             .require_trusted_types_for_scripts();
 
         let script_value = options
@@ -203,11 +208,13 @@ mod script_element_helpers {
 
     #[test]
     fn given_element_helpers_when_invoked_then_add_expected_tokens() {
-        let options = CspOptions::new()
-            .script_src_elem_nonce(" elem-nonce ")
-            .script_src_elem_hash(CspHashAlgorithm::Sha256, " elem-hash ")
-            .script_src_attr_nonce(" attr-nonce ")
-            .script_src_attr_hash(CspHashAlgorithm::Sha384, " attr-hash ");
+        let options = CspOptions::new().script_src(|script| {
+            script
+                .elem_nonce(" elem-nonce ")
+                .elem_hash(CspHashAlgorithm::Sha256, " elem-hash ")
+                .attr_nonce(" attr-nonce ")
+                .attr_hash(CspHashAlgorithm::Sha384, " attr-hash ")
+        });
 
         let elem_value = options
             .directive_value(CspDirective::ScriptSrcElem.as_str())
@@ -228,13 +235,15 @@ mod style_source_helpers {
 
     #[test]
     fn given_style_helpers_when_invoked_then_add_expected_tokens() {
-        let options = CspOptions::new()
-            .style_src_nonce(" style-nonce ")
-            .style_src_hash(CspHashAlgorithm::Sha384, " style-hash ")
-            .style_src_elem_nonce(" style-elem-nonce ")
-            .style_src_elem_hash(CspHashAlgorithm::Sha512, " style-elem-hash ")
-            .style_src_attr_nonce(" style-attr-nonce ")
-            .style_src_attr_hash(CspHashAlgorithm::Sha256, " style-attr-hash ");
+        let options = CspOptions::new().style_src(|style| {
+            style
+                .nonce(" style-nonce ")
+                .hash(CspHashAlgorithm::Sha384, " style-hash ")
+                .elem_nonce(" style-elem-nonce ")
+                .elem_hash(CspHashAlgorithm::Sha512, " style-elem-hash ")
+                .attr_nonce(" style-attr-nonce ")
+                .attr_hash(CspHashAlgorithm::Sha256, " style-attr-hash ")
+        });
 
         let style_value = options
             .directive_value(CspDirective::StyleSrc.as_str())
@@ -295,7 +304,7 @@ mod add_source_behavior {
     #[test]
     fn given_existing_directive_when_add_source_then_appends_unique_token() {
         let options = CspOptions::new()
-            .script_src([CspSource::SelfKeyword])
+            .script_src(|script| script.sources([CspSource::SelfKeyword]))
             .add_source(CspDirective::ScriptSrc, CspSource::host("cdn.example.com"));
 
         let value = options
@@ -367,7 +376,7 @@ mod script_src_nonce {
 
     #[test]
     fn given_nonce_with_quotes_when_script_src_nonce_then_sanitizes_token_entry() {
-        let options = CspOptions::new().script_src_nonce(" 'nonce value' ");
+        let options = CspOptions::new().script_src(|script| script.nonce(" 'nonce value' "));
 
         assert_eq!(
             options.directives,
@@ -493,7 +502,7 @@ mod script_src_elem {
 
     #[test]
     fn given_sources_when_script_src_elem_then_adds_script_src_elem_directive() {
-        let options = CspOptions::new().script_src_elem([CspSource::SelfKeyword]);
+        let options = CspOptions::new().script_src(|script| script.elem([CspSource::SelfKeyword]));
 
         assert!(options.header_value().contains("script-src-elem 'self'"));
     }
@@ -504,7 +513,7 @@ mod script_src_attr {
 
     #[test]
     fn given_sources_when_script_src_attr_then_adds_script_src_attr_directive() {
-        let options = CspOptions::new().script_src_attr([CspSource::UnsafeInline]);
+        let options = CspOptions::new().script_src(|script| script.attr([CspSource::UnsafeInline]));
 
         assert!(
             options
@@ -519,7 +528,7 @@ mod style_src_elem {
 
     #[test]
     fn given_sources_when_style_src_elem_then_adds_style_src_elem_directive() {
-        let options = CspOptions::new().style_src_elem([CspSource::SelfKeyword]);
+        let options = CspOptions::new().style_src(|style| style.elem([CspSource::SelfKeyword]));
 
         assert!(options.header_value().contains("style-src-elem 'self'"));
     }
@@ -530,7 +539,7 @@ mod style_src_attr {
 
     #[test]
     fn given_sources_when_style_src_attr_then_adds_style_src_attr_directive() {
-        let options = CspOptions::new().style_src_attr([CspSource::UnsafeInline]);
+        let options = CspOptions::new().style_src(|style| style.attr([CspSource::UnsafeInline]));
 
         assert!(
             options
@@ -732,11 +741,13 @@ mod validate_with_warnings {
         // style-src includes data: (Critical) and blob: (Warning) -> overall Critical with schemes ["blob", "data"]
         // img-src includes filesystem: (Critical) -> Critical with schemes ["filesystem"]
         let options = CspOptions::new()
-            .style_src([
-                CspSource::raw("data:"),
-                CspSource::raw("blob:"),
-                CspSource::SelfKeyword,
-            ])
+            .style_src(|style| {
+                style.sources([
+                    CspSource::raw("data:"),
+                    CspSource::raw("blob:"),
+                    CspSource::SelfKeyword,
+                ])
+            })
             .img_src([
                 CspSource::raw("filesystem:"),
                 CspSource::host("cdn.example.com"),

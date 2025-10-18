@@ -425,21 +425,21 @@ impl CspOptions {
         self
     }
 
-    pub fn script_src<I, S>(mut self, sources: I) -> Self
+    pub fn script_src<F>(mut self, configure: F) -> Self
     where
-        I: IntoIterator<Item = S>,
-        S: Into<CspSource>,
+        F: FnOnce(ScriptSrcBuilder<'_>) -> ScriptSrcBuilder<'_>,
     {
-        self.set_directive_sources(CspDirective::ScriptSrc, sources);
+        let builder = ScriptSrcBuilder::new(&mut self);
+        let _ = configure(builder);
         self
     }
 
-    pub fn style_src<I, S>(mut self, sources: I) -> Self
+    pub fn style_src<F>(mut self, configure: F) -> Self
     where
-        I: IntoIterator<Item = S>,
-        S: Into<CspSource>,
+        F: FnOnce(StyleSrcBuilder<'_>) -> StyleSrcBuilder<'_>,
     {
-        self.set_directive_sources(CspDirective::StyleSrc, sources);
+        let builder = StyleSrcBuilder::new(&mut self);
+        let _ = configure(builder);
         self
     }
 
@@ -548,42 +548,6 @@ impl CspOptions {
         S: Into<CspSource>,
     {
         self.set_directive_sources(CspDirective::FormAction, sources);
-        self
-    }
-
-    pub fn script_src_elem<I, S>(mut self, sources: I) -> Self
-    where
-        I: IntoIterator<Item = S>,
-        S: Into<CspSource>,
-    {
-        self.set_directive_sources(CspDirective::ScriptSrcElem, sources);
-        self
-    }
-
-    pub fn script_src_attr<I, S>(mut self, sources: I) -> Self
-    where
-        I: IntoIterator<Item = S>,
-        S: Into<CspSource>,
-    {
-        self.set_directive_sources(CspDirective::ScriptSrcAttr, sources);
-        self
-    }
-
-    pub fn style_src_elem<I, S>(mut self, sources: I) -> Self
-    where
-        I: IntoIterator<Item = S>,
-        S: Into<CspSource>,
-    {
-        self.set_directive_sources(CspDirective::StyleSrcElem, sources);
-        self
-    }
-
-    pub fn style_src_attr<I, S>(mut self, sources: I) -> Self
-    where
-        I: IntoIterator<Item = S>,
-        S: Into<CspSource>,
-    {
-        self.set_directive_sources(CspDirective::StyleSrcAttr, sources);
         self
     }
 
@@ -711,37 +675,6 @@ impl CspOptions {
         self.set_directive(directive.as_str(), "");
     }
 
-    pub fn script_src_nonce<S>(mut self, nonce: S) -> Self
-    where
-        S: Into<String>,
-    {
-        let token = format!("'nonce-{}'", sanitize_token_input(nonce.into()));
-        self.add_script_src_token(&token);
-        self
-    }
-
-    pub fn script_src_with_nonce(self, nonce: CspNonce) -> Self {
-        self.script_src_nonce(nonce.into_inner())
-    }
-
-    pub fn script_src_hash<S>(mut self, algorithm: CspHashAlgorithm, hash: S) -> Self
-    where
-        S: Into<String>,
-    {
-        let token = format!(
-            "'{}{}'",
-            algorithm.prefix(),
-            sanitize_token_input(hash.into())
-        );
-        self.add_script_src_token(&token);
-        self
-    }
-
-    pub fn enable_strict_dynamic(mut self) -> Self {
-        self.add_script_src_token("'strict-dynamic'");
-        self
-    }
-
     pub fn require_trusted_types_for_scripts(mut self) -> Self {
         self.set_directive(CspDirective::RequireTrustedTypesFor.as_str(), "'script'");
         self
@@ -759,116 +692,6 @@ impl CspOptions {
         let mut buffer = vec![0u8; byte_len];
         OsRng.fill_bytes(&mut buffer);
         general_purpose::STANDARD.encode(buffer)
-    }
-
-    pub fn script_src_elem_nonce<S>(mut self, nonce: S) -> Self
-    where
-        S: Into<String>,
-    {
-        let token = format!("'nonce-{}'", sanitize_token_input(nonce.into()));
-        self.add_directive_token(CspDirective::ScriptSrcElem.as_str(), &token);
-        self
-    }
-
-    pub fn script_src_elem_hash<S>(mut self, algorithm: CspHashAlgorithm, hash: S) -> Self
-    where
-        S: Into<String>,
-    {
-        let token = format!(
-            "'{}{}'",
-            algorithm.prefix(),
-            sanitize_token_input(hash.into())
-        );
-        self.add_directive_token(CspDirective::ScriptSrcElem.as_str(), &token);
-        self
-    }
-
-    pub fn script_src_attr_nonce<S>(mut self, nonce: S) -> Self
-    where
-        S: Into<String>,
-    {
-        let token = format!("'nonce-{}'", sanitize_token_input(nonce.into()));
-        self.add_directive_token(CspDirective::ScriptSrcAttr.as_str(), &token);
-        self
-    }
-
-    pub fn script_src_attr_hash<S>(mut self, algorithm: CspHashAlgorithm, hash: S) -> Self
-    where
-        S: Into<String>,
-    {
-        let token = format!(
-            "'{}{}'",
-            algorithm.prefix(),
-            sanitize_token_input(hash.into())
-        );
-        self.add_directive_token(CspDirective::ScriptSrcAttr.as_str(), &token);
-        self
-    }
-
-    pub fn style_src_nonce<S>(mut self, nonce: S) -> Self
-    where
-        S: Into<String>,
-    {
-        let token = format!("'nonce-{}'", sanitize_token_input(nonce.into()));
-        self.add_directive_token(CspDirective::StyleSrc.as_str(), &token);
-        self
-    }
-
-    pub fn style_src_hash<S>(mut self, algorithm: CspHashAlgorithm, hash: S) -> Self
-    where
-        S: Into<String>,
-    {
-        let token = format!(
-            "'{}{}'",
-            algorithm.prefix(),
-            sanitize_token_input(hash.into())
-        );
-        self.add_directive_token(CspDirective::StyleSrc.as_str(), &token);
-        self
-    }
-
-    pub fn style_src_elem_nonce<S>(mut self, nonce: S) -> Self
-    where
-        S: Into<String>,
-    {
-        let token = format!("'nonce-{}'", sanitize_token_input(nonce.into()));
-        self.add_directive_token(CspDirective::StyleSrcElem.as_str(), &token);
-        self
-    }
-
-    pub fn style_src_elem_hash<S>(mut self, algorithm: CspHashAlgorithm, hash: S) -> Self
-    where
-        S: Into<String>,
-    {
-        let token = format!(
-            "'{}{}'",
-            algorithm.prefix(),
-            sanitize_token_input(hash.into())
-        );
-        self.add_directive_token(CspDirective::StyleSrcElem.as_str(), &token);
-        self
-    }
-
-    pub fn style_src_attr_nonce<S>(mut self, nonce: S) -> Self
-    where
-        S: Into<String>,
-    {
-        let token = format!("'nonce-{}'", sanitize_token_input(nonce.into()));
-        self.add_directive_token(CspDirective::StyleSrcAttr.as_str(), &token);
-        self
-    }
-
-    pub fn style_src_attr_hash<S>(mut self, algorithm: CspHashAlgorithm, hash: S) -> Self
-    where
-        S: Into<String>,
-    {
-        let token = format!(
-            "'{}{}'",
-            algorithm.prefix(),
-            sanitize_token_input(hash.into())
-        );
-        self.add_directive_token(CspDirective::StyleSrcAttr.as_str(), &token);
-        self
     }
 
     pub(crate) fn is_valid_directive_name(name: &str) -> bool {
@@ -924,6 +747,205 @@ impl CspOptions {
             self.directives
                 .push((directive.to_string(), value.to_string()));
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct ScriptSrcBuilder<'a> {
+    options: &'a mut CspOptions,
+}
+
+impl<'a> ScriptSrcBuilder<'a> {
+    fn new(options: &'a mut CspOptions) -> Self {
+        Self { options }
+    }
+
+    pub fn sources<I, S>(self, sources: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<CspSource>,
+    {
+        self.options
+            .set_directive_sources(CspDirective::ScriptSrc, sources);
+        self
+    }
+
+    pub fn elem<I, S>(self, sources: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<CspSource>,
+    {
+        self.options
+            .set_directive_sources(CspDirective::ScriptSrcElem, sources);
+        self
+    }
+
+    pub fn attr<I, S>(self, sources: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<CspSource>,
+    {
+        self.options
+            .set_directive_sources(CspDirective::ScriptSrcAttr, sources);
+        self
+    }
+
+    pub fn nonce(self, nonce: impl Into<String>) -> Self {
+        let token = format!("'nonce-{}'", sanitize_token_input(nonce.into()));
+        self.options.add_script_src_token(&token);
+        self
+    }
+
+    pub fn nonce_value(self, nonce: CspNonce) -> Self {
+        let token = format!("'nonce-{}'", sanitize_token_input(nonce.into_inner()));
+        self.options.add_script_src_token(&token);
+        self
+    }
+
+    pub fn hash(self, algorithm: CspHashAlgorithm, hash: impl Into<String>) -> Self {
+        let token = format!(
+            "'{}{}'",
+            algorithm.prefix(),
+            sanitize_token_input(hash.into())
+        );
+        self.options.add_script_src_token(&token);
+        self
+    }
+
+    pub fn elem_nonce(self, nonce: impl Into<String>) -> Self {
+        let token = format!("'nonce-{}'", sanitize_token_input(nonce.into()));
+        self.options
+            .add_directive_token(CspDirective::ScriptSrcElem.as_str(), &token);
+        self
+    }
+
+    pub fn elem_hash(self, algorithm: CspHashAlgorithm, hash: impl Into<String>) -> Self {
+        let token = format!(
+            "'{}{}'",
+            algorithm.prefix(),
+            sanitize_token_input(hash.into())
+        );
+        self.options
+            .add_directive_token(CspDirective::ScriptSrcElem.as_str(), &token);
+        self
+    }
+
+    pub fn attr_nonce(self, nonce: impl Into<String>) -> Self {
+        let token = format!("'nonce-{}'", sanitize_token_input(nonce.into()));
+        self.options
+            .add_directive_token(CspDirective::ScriptSrcAttr.as_str(), &token);
+        self
+    }
+
+    pub fn attr_hash(self, algorithm: CspHashAlgorithm, hash: impl Into<String>) -> Self {
+        let token = format!(
+            "'{}{}'",
+            algorithm.prefix(),
+            sanitize_token_input(hash.into())
+        );
+        self.options
+            .add_directive_token(CspDirective::ScriptSrcAttr.as_str(), &token);
+        self
+    }
+
+    pub fn strict_dynamic(self) -> Self {
+        self.options.add_script_src_token("'strict-dynamic'");
+        self
+    }
+}
+
+#[derive(Debug)]
+pub struct StyleSrcBuilder<'a> {
+    options: &'a mut CspOptions,
+}
+
+impl<'a> StyleSrcBuilder<'a> {
+    fn new(options: &'a mut CspOptions) -> Self {
+        Self { options }
+    }
+
+    pub fn sources<I, S>(self, sources: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<CspSource>,
+    {
+        self.options
+            .set_directive_sources(CspDirective::StyleSrc, sources);
+        self
+    }
+
+    pub fn elem<I, S>(self, sources: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<CspSource>,
+    {
+        self.options
+            .set_directive_sources(CspDirective::StyleSrcElem, sources);
+        self
+    }
+
+    pub fn attr<I, S>(self, sources: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<CspSource>,
+    {
+        self.options
+            .set_directive_sources(CspDirective::StyleSrcAttr, sources);
+        self
+    }
+
+    pub fn nonce(self, nonce: impl Into<String>) -> Self {
+        let token = format!("'nonce-{}'", sanitize_token_input(nonce.into()));
+        self.options
+            .add_directive_token(CspDirective::StyleSrc.as_str(), &token);
+        self
+    }
+
+    pub fn hash(self, algorithm: CspHashAlgorithm, hash: impl Into<String>) -> Self {
+        let token = format!(
+            "'{}{}'",
+            algorithm.prefix(),
+            sanitize_token_input(hash.into())
+        );
+        self.options
+            .add_directive_token(CspDirective::StyleSrc.as_str(), &token);
+        self
+    }
+
+    pub fn elem_nonce(self, nonce: impl Into<String>) -> Self {
+        let token = format!("'nonce-{}'", sanitize_token_input(nonce.into()));
+        self.options
+            .add_directive_token(CspDirective::StyleSrcElem.as_str(), &token);
+        self
+    }
+
+    pub fn elem_hash(self, algorithm: CspHashAlgorithm, hash: impl Into<String>) -> Self {
+        let token = format!(
+            "'{}{}'",
+            algorithm.prefix(),
+            sanitize_token_input(hash.into())
+        );
+        self.options
+            .add_directive_token(CspDirective::StyleSrcElem.as_str(), &token);
+        self
+    }
+
+    pub fn attr_nonce(self, nonce: impl Into<String>) -> Self {
+        let token = format!("'nonce-{}'", sanitize_token_input(nonce.into()));
+        self.options
+            .add_directive_token(CspDirective::StyleSrcAttr.as_str(), &token);
+        self
+    }
+
+    pub fn attr_hash(self, algorithm: CspHashAlgorithm, hash: impl Into<String>) -> Self {
+        let token = format!(
+            "'{}{}'",
+            algorithm.prefix(),
+            sanitize_token_input(hash.into())
+        );
+        self.options
+            .add_directive_token(CspDirective::StyleSrcAttr.as_str(), &token);
+        self
     }
 }
 

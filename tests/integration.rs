@@ -57,7 +57,7 @@ mod success {
             .csp(
                 CspOptions::new()
                     .default_src([CspSource::SelfKeyword])
-                    .script_src([CspSource::SelfKeyword])
+                    .script_src(|script| script.sources([CspSource::SelfKeyword]))
                     .base_uri([CspSource::None])
                     .frame_ancestors([CspSource::None]),
             )
@@ -633,8 +633,7 @@ mod success {
             .csp(
                 CspOptions::new()
                     .default_src([CspSource::SelfKeyword])
-                    .enable_strict_dynamic()
-                    .script_src_with_nonce(nonce),
+                    .script_src(|script| script.strict_dynamic().nonce_value(nonce)),
             )
             .expect("csp");
 
@@ -793,13 +792,16 @@ mod stress {
     fn given_extreme_csp_composition_when_secure_then_emits_all_directives() {
         let mut options = CspOptions::new()
             .default_src([CspSource::SelfKeyword])
-            .style_src([CspSource::SelfKeyword])
+            .style_src(|style| style.sources([CspSource::SelfKeyword]))
             .img_src([CspSource::SelfKeyword])
             .base_uri([CspSource::None])
             .frame_ancestors([CspSource::None])
-            .enable_strict_dynamic()
-            .script_src_nonce("n".repeat(22))
-            .script_src_hash(CspHashAlgorithm::Sha256, "h".repeat(44))
+            .script_src(|script| {
+                script
+                    .strict_dynamic()
+                    .nonce("n".repeat(22))
+                    .hash(CspHashAlgorithm::Sha256, "h".repeat(44))
+            })
             .report_to("primary");
 
         for index in 0..200 {

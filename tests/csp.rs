@@ -96,7 +96,7 @@ mod success {
         let nonce = CspNonceManager::new().issue();
         let options = CspOptions::new()
             .default_src([CspSource::SelfKeyword])
-            .script_src_with_nonce(nonce.clone());
+            .script_src(|script| script.nonce_value(nonce.clone()));
         let shield = Shield::new().csp(options).expect("feature");
 
         let result = shield.secure(empty_headers()).expect("secure");
@@ -134,9 +134,12 @@ mod success {
         let hash = "B".repeat(44);
         let options = CspOptions::new()
             .default_src([CspSource::SelfKeyword])
-            .script_src_nonce(format!("  {nonce}  "))
-            .script_src_hash(CspHashAlgorithm::Sha256, &hash)
-            .enable_strict_dynamic();
+            .script_src(|script| {
+                script
+                    .nonce(format!("  {nonce}  "))
+                    .hash(CspHashAlgorithm::Sha256, hash.clone())
+                    .strict_dynamic()
+            });
         let shield = Shield::new().csp(options).expect("feature");
 
         let header = shield
@@ -164,8 +167,11 @@ mod success {
         let hash = "C".repeat(64);
         let options = CspOptions::new()
             .default_src([CspSource::SelfKeyword])
-            .script_src_elem_nonce(&nonce)
-            .script_src_elem_hash(CspHashAlgorithm::Sha384, &hash);
+            .script_src(|script| {
+                script
+                    .elem_nonce(nonce.clone())
+                    .elem_hash(CspHashAlgorithm::Sha384, hash.clone())
+            });
         let shield = Shield::new().csp(options).expect("feature");
 
         let header = shield
@@ -189,9 +195,12 @@ mod success {
         let hash = "D".repeat(88);
         let options = CspOptions::new()
             .default_src([CspSource::SelfKeyword])
-            .script_src_attr([CspSource::SelfKeyword])
-            .script_src_attr_nonce(&nonce)
-            .script_src_attr_hash(CspHashAlgorithm::Sha512, &hash);
+            .script_src(|script| {
+                script
+                    .attr([CspSource::SelfKeyword])
+                    .attr_nonce(nonce.clone())
+                    .attr_hash(CspHashAlgorithm::Sha512, hash.clone())
+            });
         let shield = Shield::new().csp(options).expect("feature");
 
         let header = shield
@@ -219,13 +228,16 @@ mod success {
         let hash = "E".repeat(64);
         let options = CspOptions::new()
             .default_src([CspSource::SelfKeyword])
-            .style_src([
-                CspSource::SelfKeyword,
-                CspSource::UnsafeInline,
-                CspSource::UnsafeHashes,
-            ])
-            .style_src_nonce(&nonce)
-            .style_src_hash(CspHashAlgorithm::Sha384, &hash);
+            .style_src(|style| {
+                style
+                    .sources([
+                        CspSource::SelfKeyword,
+                        CspSource::UnsafeInline,
+                        CspSource::UnsafeHashes,
+                    ])
+                    .nonce(nonce.clone())
+                    .hash(CspHashAlgorithm::Sha384, hash.clone())
+            });
         let shield = Shield::new().csp(options).expect("feature");
 
         let header = shield
@@ -255,9 +267,12 @@ mod success {
         let hash = "F".repeat(44);
         let options = CspOptions::new()
             .default_src([CspSource::SelfKeyword])
-            .style_src_elem([CspSource::SelfKeyword])
-            .style_src_elem_nonce(&nonce)
-            .style_src_elem_hash(CspHashAlgorithm::Sha256, &hash);
+            .style_src(|style| {
+                style
+                    .elem([CspSource::SelfKeyword])
+                    .elem_nonce(nonce.clone())
+                    .elem_hash(CspHashAlgorithm::Sha256, hash.clone())
+            });
         let shield = Shield::new().csp(options).expect("feature");
 
         let header = shield
@@ -285,9 +300,12 @@ mod success {
         let hash = "G".repeat(88);
         let options = CspOptions::new()
             .default_src([CspSource::SelfKeyword])
-            .style_src_attr([CspSource::SelfKeyword])
-            .style_src_attr_nonce(&nonce)
-            .style_src_attr_hash(CspHashAlgorithm::Sha512, &hash);
+            .style_src(|style| {
+                style
+                    .attr([CspSource::SelfKeyword])
+                    .attr_nonce(nonce.clone())
+                    .attr_hash(CspHashAlgorithm::Sha512, hash.clone())
+            });
         let shield = Shield::new().csp(options).expect("feature");
 
         let header = shield
@@ -314,8 +332,11 @@ mod success {
         let hash = "R".repeat(44);
         let options = CspOptions::new()
             .default_src([CspSource::SelfKeyword])
-            .script_src([CspSource::UnsafeHashes])
-            .script_src_hash(CspHashAlgorithm::Sha256, &hash);
+            .script_src(|script| {
+                script
+                    .sources([CspSource::UnsafeHashes])
+                    .hash(CspHashAlgorithm::Sha256, hash.clone())
+            });
         let shield = Shield::new().csp(options).expect("feature");
 
         let header = shield
@@ -373,8 +394,11 @@ mod success {
 
         let options = CspOptions::new()
             .default_src([CspSource::SelfKeyword])
-            .script_src_nonce(&nonce)
-            .script_src_hash(CspHashAlgorithm::Sha256, &hash)
+            .script_src(|script| {
+                script
+                    .nonce(nonce.clone())
+                    .hash(CspHashAlgorithm::Sha256, hash.clone())
+            })
             .trusted_types_tokens([
                 TrustedTypesToken::from(ui_primary.clone()),
                 TrustedTypesToken::from(ui_audit.clone()),
@@ -738,7 +762,9 @@ mod success {
     fn given_script_src_wasm_unsafe_eval_when_secure_then_includes_token() {
         let options = CspOptions::new()
             .default_src([CspSource::SelfKeyword])
-            .script_src([CspSource::SelfKeyword, CspSource::WasmUnsafeEval]);
+            .script_src(|script| {
+                script.sources([CspSource::SelfKeyword, CspSource::WasmUnsafeEval])
+            });
         let shield = Shield::new().csp(options).expect("feature");
 
         let header = shield
@@ -757,9 +783,12 @@ mod success {
         let nonce = "n".repeat(22);
         let options = CspOptions::new()
             .default_src([CspSource::SelfKeyword])
-            .script_src([CspSource::WasmUnsafeEval])
-            .script_src_nonce(&nonce)
-            .enable_strict_dynamic();
+            .script_src(|script| {
+                script
+                    .sources([CspSource::WasmUnsafeEval])
+                    .nonce(nonce.clone())
+                    .strict_dynamic()
+            });
         let shield = Shield::new().csp(options).expect("feature");
 
         let header = shield
@@ -785,7 +814,7 @@ mod success {
     fn given_style_src_report_sample_when_secure_then_includes_token() {
         let options = CspOptions::new()
             .default_src([CspSource::SelfKeyword])
-            .style_src([CspSource::SelfKeyword, CspSource::ReportSample]);
+            .style_src(|style| style.sources([CspSource::SelfKeyword, CspSource::ReportSample]));
         let shield = Shield::new().csp(options).expect("feature");
 
         let header = shield
@@ -859,7 +888,7 @@ mod edge {
     fn given_existing_header_when_secure_then_overwrites_with_new_policy() {
         let options = CspOptions::new()
             .default_src([CspSource::SelfKeyword])
-            .style_src([CspSource::SelfKeyword]);
+            .style_src(|style| style.sources([CspSource::SelfKeyword]));
         let shield = Shield::new().csp(options).expect("feature");
 
         let result = shield
@@ -935,7 +964,8 @@ mod failure {
 
     #[test]
     fn given_strict_dynamic_without_nonce_when_add_feature_then_returns_nonce_error() {
-        let options = CspOptions::new().script_src([CspSource::StrictDynamic]);
+        let options =
+            CspOptions::new().script_src(|script| script.sources([CspSource::StrictDynamic]));
 
         let error = expect_validation_error(Shield::new().csp(options));
 
@@ -962,7 +992,7 @@ mod failure {
 
     #[test]
     fn given_short_nonce_when_add_feature_then_returns_invalid_nonce_error() {
-        let options = CspOptions::new().script_src_nonce("short");
+        let options = CspOptions::new().script_src(|script| script.nonce("short"));
 
         let error = expect_validation_error(Shield::new().csp(options));
 
@@ -971,9 +1001,11 @@ mod failure {
 
     #[test]
     fn given_invalid_hash_length_when_add_feature_then_returns_invalid_hash_error() {
-        let options = CspOptions::new()
-            .script_src([CspSource::SelfKeyword])
-            .script_src_hash(CspHashAlgorithm::Sha256, "short");
+        let options = CspOptions::new().script_src(|script| {
+            script
+                .sources([CspSource::SelfKeyword])
+                .hash(CspHashAlgorithm::Sha256, "short")
+        });
 
         let error = expect_validation_error(Shield::new().csp(options));
 
@@ -982,7 +1014,7 @@ mod failure {
 
     #[test]
     fn given_unsafe_hashes_without_hash_when_add_feature_then_returns_semantic_error() {
-        let options = CspOptions::new().style_src([CspSource::UnsafeHashes]);
+        let options = CspOptions::new().style_src(|style| style.sources([CspSource::UnsafeHashes]));
 
         let error = expect_validation_error(Shield::new().csp(options));
 
@@ -995,10 +1027,12 @@ mod failure {
     #[test]
     fn given_strict_dynamic_with_unsafe_inline_when_add_feature_then_returns_conflict_error() {
         let nonce = "a".repeat(22);
-        let options = CspOptions::new()
-            .script_src([CspSource::UnsafeInline])
-            .script_src_nonce(nonce)
-            .enable_strict_dynamic();
+        let options = CspOptions::new().script_src(|script| {
+            script
+                .sources([CspSource::UnsafeInline])
+                .nonce(nonce.clone())
+                .strict_dynamic()
+        });
 
         let error = expect_validation_error(Shield::new().csp(options));
 
@@ -1008,10 +1042,12 @@ mod failure {
     #[test]
     fn given_strict_dynamic_with_host_when_add_feature_then_returns_host_conflict_error() {
         let nonce = "a".repeat(22);
-        let options = CspOptions::new()
-            .script_src([CspSource::SelfKeyword])
-            .script_src_nonce(nonce)
-            .enable_strict_dynamic();
+        let options = CspOptions::new().script_src(|script| {
+            script
+                .sources([CspSource::SelfKeyword])
+                .nonce(nonce.clone())
+                .strict_dynamic()
+        });
 
         let error = expect_validation_error(Shield::new().csp(options));
 
@@ -1020,7 +1056,8 @@ mod failure {
 
     #[test]
     fn given_disallowed_scheme_when_add_feature_then_returns_disallowed_scheme_error() {
-        let options = CspOptions::new().script_src([CspSource::scheme("javascript")]);
+        let options = CspOptions::new()
+            .script_src(|script| script.sources([CspSource::scheme("javascript")]));
 
         let error = expect_validation_error(Shield::new().csp(options));
 
@@ -1108,7 +1145,7 @@ mod failure {
     #[test]
     fn given_style_src_attr_with_unsafe_eval_when_add_feature_then_returns_token_not_allowed_error()
     {
-        let options = CspOptions::new().style_src_attr([CspSource::UnsafeEval]);
+        let options = CspOptions::new().style_src(|style| style.attr([CspSource::UnsafeEval]));
 
         let error = expect_validation_error(Shield::new().csp(options));
 
@@ -1123,7 +1160,7 @@ mod failure {
 
     #[test]
     fn given_nonce_with_invalid_characters_when_add_feature_then_returns_invalid_nonce_error() {
-        let options = CspOptions::new().script_src_nonce("invalid!!nonce");
+        let options = CspOptions::new().script_src(|script| script.nonce("invalid!!nonce"));
 
         let error = expect_validation_error(Shield::new().csp(options));
 
@@ -1133,7 +1170,8 @@ mod failure {
     #[test]
     fn given_style_src_with_wasm_unsafe_eval_when_add_feature_then_returns_token_not_allowed_error()
     {
-        let options = CspOptions::new().style_src([CspSource::WasmUnsafeEval]);
+        let options =
+            CspOptions::new().style_src(|style| style.sources([CspSource::WasmUnsafeEval]));
 
         let error = expect_validation_error(Shield::new().csp(options));
 

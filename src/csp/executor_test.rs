@@ -25,7 +25,7 @@ mod execute {
         let executor = Csp::new(
             CspOptions::new()
                 .default_src([CspSource::SelfKeyword])
-                .script_src([CspSource::StrictDynamic]),
+                .script_src(|script| script.sources([CspSource::StrictDynamic])),
         );
         let mut headers = common::normalized_headers_from(&[("X-Test", "1")]);
 
