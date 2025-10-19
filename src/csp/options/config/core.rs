@@ -316,17 +316,15 @@ impl CspOptions {
                     if matches!(
                         directive,
                         "script-src" | "script-src-elem" | "script-src-attr"
-                    )
-                        || matches!(
-                            directive,
-                            "object-src"
-                                | "frame-src"
-                                | "frame-ancestors"
-                                | "navigate-to"
-                                | "base-uri"
-                                | "form-action"
-                        )
-                    {
+                    ) || matches!(
+                        directive,
+                        "object-src"
+                            | "frame-src"
+                            | "frame-ancestors"
+                            | "navigate-to"
+                            | "base-uri"
+                            | "form-action"
+                    ) {
                         Some(CspWarningSeverity::Critical)
                     } else if matches!(
                         directive,
