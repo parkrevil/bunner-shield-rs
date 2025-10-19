@@ -9,6 +9,7 @@ mod types;
 mod utils;
 mod validation;
 
+pub use config::ReportToMergeStrategy;
 pub use config::{
     CspOptions, CspOptionsError, CspOptionsWarning, CspOptionsWarningKind, CspWarningSeverity,
 };

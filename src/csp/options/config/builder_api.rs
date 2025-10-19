@@ -7,6 +7,7 @@ use crate::csp::options::{
     types::CspDirective,
 };
 
+use super::ReportToMergeStrategy;
 use super::core::CspOptions;
 
 impl CspOptions {
@@ -212,8 +213,59 @@ impl CspOptions {
     pub fn merge(mut self, other: &CspOptions) -> Self {
         for (name, value) in &other.directives {
             if name == CspDirective::ReportTo.as_str() {
-                if self.directives.iter().all(|(existing, _)| existing != name) {
-                    self.set_directive(name, value);
+                match self.report_to_merge_strategy {
+                    ReportToMergeStrategy::FirstWins => {
+                        if self.directives.iter().all(|(existing, _)| existing != name) {
+                            self.set_directive(name, value);
+                        }
+                    }
+                    ReportToMergeStrategy::LastWins => {
+                        // overwrite or set
+                        let mut found = false;
+                        for (existing, existing_value) in &mut self.directives {
+                            if existing == name {
+                                *existing_value = value.clone();
+                                found = true;
+                                break;
+                            }
+                        }
+                        if !found {
+                            self.set_directive(name, value);
+                        }
+                    }
+                    ReportToMergeStrategy::Union => {
+                        // order-preserving unique union
+                        let mut seen: HashSet<&str> = HashSet::new();
+                        let mut ordered: Vec<String> = Vec::new();
+                        if let Some((_, existing_value)) = self
+                            .directives
+                            .iter()
+                            .find(|(existing, _)| existing == name)
+                        {
+                            for t in existing_value.split_whitespace() {
+                                if !t.is_empty() && seen.insert(t) {
+                                    ordered.push(t.to_string());
+                                }
+                            }
+                        }
+                        for t in value.split_whitespace() {
+                            if !t.is_empty() && seen.insert(t) {
+                                ordered.push(t.to_string());
+                            }
+                        }
+                        let merged = ordered.join(" ");
+                        let mut updated = false;
+                        for (existing, existing_value) in &mut self.directives {
+                            if existing == name {
+                                *existing_value = merged.clone();
+                                updated = true;
+                                break;
+                            }
+                        }
+                        if !updated {
+                            self.set_directive(name, &merged);
+                        }
+                    }
                 }
                 continue;
             }

@@ -16,10 +16,19 @@ use super::warnings::{CspOptionsWarning, CspOptionsWarningKind, CspWarningSeveri
 #[cfg(test)]
 use crate::csp::options::validation::TokenValidationCache;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ReportToMergeStrategy {
+    #[default]
+    FirstWins,
+    LastWins,
+    Union,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct CspOptions {
     pub(crate) directives: Vec<(String, String)>,
     pub(crate) runtime_nonce: Option<RuntimeNonceConfig>,
+    pub(crate) report_to_merge_strategy: ReportToMergeStrategy,
 }
 
 impl CspOptions {
@@ -99,6 +108,11 @@ impl CspOptions {
 
     pub fn generate_nonce_with_size(byte_len: usize) -> String {
         nonce::generate_nonce_with_size(byte_len)
+    }
+
+    pub fn report_to_merge_strategy(mut self, strategy: ReportToMergeStrategy) -> Self {
+        self.report_to_merge_strategy = strategy;
+        self
     }
 
     pub(crate) fn is_valid_directive_name(name: &str) -> bool {

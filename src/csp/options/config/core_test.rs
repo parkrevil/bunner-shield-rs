@@ -45,14 +45,60 @@ mod runtime_nonce_integration {
 }
 
 mod directive_helpers_and_validation {
+    mod report_to_merge_strategy {
+        use super::*;
+
+        #[test]
+        fn given_first_wins_when_merge_then_keeps_initial_group() {
+            let base = CspOptions::new().report_to("grpA");
+            let other = CspOptions::new().report_to("grpB");
+
+            let merged = base.clone().merge(&other);
+            assert_eq!(
+                merged
+                    .directive_value(CspDirective::ReportTo.as_str())
+                    .unwrap(),
+                "grpA"
+            );
+        }
+
+        #[test]
+        fn given_last_wins_when_merge_then_overwrites_group() {
+            let base = CspOptions::new()
+                .report_to("grpA")
+                .report_to_merge_strategy(ReportToMergeStrategy::LastWins);
+            let other = CspOptions::new().report_to("grpB");
+
+            let merged = base.merge(&other);
+            assert_eq!(
+                merged
+                    .directive_value(CspDirective::ReportTo.as_str())
+                    .unwrap(),
+                "grpB"
+            );
+        }
+
+        #[test]
+        fn given_union_when_merge_then_joins_unique_tokens() {
+            let base = CspOptions::new()
+                .report_to("grpA grpB")
+                .report_to_merge_strategy(ReportToMergeStrategy::Union);
+            let other = CspOptions::new().report_to("grpB grpC");
+
+            let merged = base.merge(&other);
+            let value = merged
+                .directive_value(CspDirective::ReportTo.as_str())
+                .unwrap();
+            // Order-preserving unique union: grpA grpB grpC
+            assert_eq!(value, "grpA grpB grpC");
+        }
+    }
     use super::*;
 
     #[test]
     fn given_invalid_directive_name_when_validate_then_returns_error() {
-        let options = CspOptions {
-            directives: vec![("bogus".to_string(), "value".to_string())],
-            runtime_nonce: None,
-        };
+        let mut options = CspOptions::new();
+        options.set_directive("bogus", "value");
         let error = options
             .validate_with_warnings()
             .expect_err("expected invalid directive name");
