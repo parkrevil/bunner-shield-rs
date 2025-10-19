@@ -204,6 +204,18 @@ mod execute {
         // With no Host, validator is skipped and token is still issued
         assert!(executor.execute(&mut headers).is_ok());
     }
+
+    #[test]
+    fn given_verification_keys_when_executor_created_then_accepts_configuration() {
+        // This ensures the executor wires verification_keys into service without panicking.
+        let secret = secret();
+        let options = CsrfOptions::new(secret).verification_keys(vec![[0xCD; 32]]);
+        let executor = Csrf::new(options);
+        let mut headers = common::normalized_headers_from(&[]);
+
+        // Execute should succeed and not depend on verification path
+        assert!(executor.execute(&mut headers).is_ok());
+    }
 }
 
 mod origin_validation_option_builder {

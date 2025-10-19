@@ -11,6 +11,8 @@ pub struct CsrfOptions {
     pub(crate) cookie_name: String,
     pub(crate) token_length: usize,
     pub(crate) secret_key: [u8; 32],
+    // Additional keys accepted for verification to support key rotation.
+    pub(crate) verification_keys: Vec<[u8; 32]>,
     pub(crate) origin_validation: bool,
     pub(crate) use_referer: bool,
 }
@@ -21,6 +23,7 @@ impl CsrfOptions {
             cookie_name: DEFAULT_COOKIE_NAME.to_string(),
             token_length: DEFAULT_TOKEN_LENGTH,
             secret_key,
+            verification_keys: Vec::new(),
             origin_validation: false,
             use_referer: true,
         }
@@ -39,6 +42,13 @@ impl CsrfOptions {
     pub fn origin_validation(mut self, enabled: bool, use_referer: bool) -> Self {
         self.origin_validation = enabled;
         self.use_referer = use_referer;
+        self
+    }
+
+    /// Configures additional keys that will be accepted during verification.
+    /// Issued tokens always use the primary `secret_key`.
+    pub fn verification_keys(mut self, keys: Vec<[u8; 32]>) -> Self {
+        self.verification_keys = keys;
         self
     }
 }

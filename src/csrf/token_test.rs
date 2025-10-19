@@ -265,6 +265,47 @@ mod invalid_inputs_and_edges {
     }
 }
 
+mod multi_key_verification {
+    use super::*;
+
+    fn k1() -> [u8; 32] {
+        [0x11; 32]
+    }
+    fn k2() -> [u8; 32] {
+        [0x22; 32]
+    }
+
+    #[test]
+    fn given_token_issued_with_primary_when_verification_keys_include_old_then_verifies_with_old() {
+        // Rotate from k1 to k2: issuing uses k2, verification accepts k1 as fallback
+        let issuer = HmacCsrfService::new(k2());
+        let token = issuer.issue(64).expect("token");
+
+        let verifier = HmacCsrfService::with_verification_keys(k2(), vec![k1()]);
+        assert!(verifier.verify(&token).is_ok());
+    }
+
+    #[test]
+    fn given_token_issued_with_old_when_verifier_primary_is_new_and_old_present_then_verifies() {
+        // Older tokens issued with k1 must still verify while k1 is present as fallback
+        let legacy_issuer = HmacCsrfService::new(k1());
+        let token = legacy_issuer.issue(48).expect("token");
+
+        let verifier = HmacCsrfService::with_verification_keys(k2(), vec![k1()]);
+        assert!(verifier.verify(&token).is_ok());
+    }
+
+    #[test]
+    fn given_token_signed_with_unknown_key_when_no_fallback_then_invalid_signature() {
+        let issuer = HmacCsrfService::new(k1());
+        let token = issuer.issue(64).expect("token");
+
+        let verifier = HmacCsrfService::new(k2());
+        let err = verifier.verify(&token).unwrap_err();
+        assert_eq!(err, CsrfTokenError::InvalidSignature);
+    }
+}
+
 mod verify_with_max_age_errors {
     use super::*;
 

@@ -15,6 +15,8 @@ const TOKEN_VERSION_V2: u8 = 2; // current: [v2][ts(8)][nonce(8)][mac]
 
 pub struct HmacCsrfService {
     secret: [u8; 32],
+    /// Additional keys accepted during verification. The first key is always `secret`.
+    verification_keys: Vec<[u8; 32]>,
     pub(crate) counter: AtomicU64,
 }
 
@@ -22,6 +24,17 @@ impl HmacCsrfService {
     pub fn new(secret: [u8; 32]) -> Self {
         Self {
             secret,
+            verification_keys: Vec::new(),
+            counter: AtomicU64::new(0),
+        }
+    }
+
+    /// Creates a service that issues tokens with `secret` and verifies against
+    /// `secret` plus any additional `verification_keys`.
+    pub fn with_verification_keys(secret: [u8; 32], verification_keys: Vec<[u8; 32]>) -> Self {
+        Self {
+            secret,
+            verification_keys,
             counter: AtomicU64::new(0),
         }
     }
@@ -59,7 +72,7 @@ impl HmacCsrfService {
         msg[..8].copy_from_slice(&now.to_be_bytes());
         msg[8..].copy_from_slice(&nonce.to_be_bytes());
 
-        let mac_full = self.compute_mac_bytes(&msg)?;
+        let mac_full = self.compute_mac_bytes_with_secret(&self.secret, &msg)?;
         let mac_trunc = &mac_full[..mac_len];
 
         let mut raw = Vec::with_capacity(1 + 8 + 8 + mac_len);
@@ -92,12 +105,11 @@ impl HmacCsrfService {
                 let nonce = u64::from_be_bytes(nonce_bytes);
                 let mac_provided = &raw[9..];
 
-                let mac_full = self.compute_mac_bytes(&nonce.to_be_bytes())?;
-                let mac_expected = &mac_full[..mac_provided.len()];
-                if !ct_eq(mac_expected, mac_provided) {
-                    return Err(CsrfTokenError::InvalidSignature);
+                if self.mac_matches_any(&nonce.to_be_bytes(), mac_provided)? {
+                    Ok(())
+                } else {
+                    Err(CsrfTokenError::InvalidSignature)
                 }
-                Ok(())
             }
             TOKEN_VERSION_V2 => {
                 if raw.len() < 1 + 8 + 8 + 16 {
@@ -112,12 +124,12 @@ impl HmacCsrfService {
                 let mut msg = [0u8; 16];
                 msg[..8].copy_from_slice(&ts);
                 msg[8..].copy_from_slice(&nonce);
-                let mac_full = self.compute_mac_bytes(&msg)?;
-                let mac_expected = &mac_full[..mac_provided.len()];
-                if !ct_eq(mac_expected, mac_provided) {
-                    return Err(CsrfTokenError::InvalidSignature);
+
+                if self.mac_matches_any(&msg, mac_provided)? {
+                    Ok(())
+                } else {
+                    Err(CsrfTokenError::InvalidSignature)
                 }
-                Ok(())
             }
             other => Err(CsrfTokenError::UnsupportedVersion(other)),
         }
@@ -200,12 +212,36 @@ impl HmacCsrfService {
         }
     }
 
-    fn compute_mac_bytes(&self, msg: &[u8]) -> Result<[u8; 32], CsrfTokenError> {
-        let mut mac = HmacSha256::new_from_slice(&self.secret)
-            .map_err(|_| CsrfTokenError::InvalidSecretLength)?;
+    fn compute_mac_bytes_with_secret(
+        &self,
+        secret: &[u8; 32],
+        msg: &[u8],
+    ) -> Result<[u8; 32], CsrfTokenError> {
+        let mut mac =
+            HmacSha256::new_from_slice(secret).map_err(|_| CsrfTokenError::InvalidSecretLength)?;
         mac.update(msg);
         let result = mac.finalize().into_bytes();
         Ok(result.into())
+    }
+
+    fn mac_matches_any(&self, msg: &[u8], mac_provided: &[u8]) -> Result<bool, CsrfTokenError> {
+        // Try primary first
+        {
+            let mac_full = self.compute_mac_bytes_with_secret(&self.secret, msg)?;
+            let mac_expected = &mac_full[..mac_provided.len()];
+            if ct_eq(mac_expected, mac_provided) {
+                return Ok(true);
+            }
+        }
+        // Try additional keys
+        for key in &self.verification_keys {
+            let mac_full = self.compute_mac_bytes_with_secret(key, msg)?;
+            let mac_expected = &mac_full[..mac_provided.len()];
+            if ct_eq(mac_expected, mac_provided) {
+                return Ok(true);
+            }
+        }
+        Ok(false)
     }
 }
 

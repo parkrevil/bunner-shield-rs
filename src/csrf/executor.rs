@@ -17,7 +17,8 @@ pub struct Csrf {
 impl Csrf {
     pub fn new(options: CsrfOptions) -> Self {
         let secret = options.secret_key;
-        let token_service = HmacCsrfService::new(secret);
+        let token_service =
+            HmacCsrfService::with_verification_keys(secret, options.verification_keys.clone());
         let cookie_prefix = format!("{}=", options.cookie_name);
 
         Self {
