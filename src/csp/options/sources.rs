@@ -84,3 +84,7 @@ impl From<CspNonce> for CspSource {
         CspSource::Nonce(nonce.into_inner())
     }
 }
+
+#[cfg(test)]
+#[path = "sources_test.rs"]
+mod sources_test;

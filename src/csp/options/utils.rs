@@ -31,3 +31,7 @@ pub(crate) fn sanitize_token_input(input: String) -> String {
 pub(crate) fn contains_token(value: &str, token: &str) -> bool {
     value.split_whitespace().any(|existing| existing == token)
 }
+
+#[cfg(test)]
+#[path = "utils_test.rs"]
+mod utils_test;

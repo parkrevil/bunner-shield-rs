@@ -117,3 +117,7 @@ impl<'a> StyleSrcBuilder<'a> {
         self
     }
 }
+
+#[cfg(test)]
+#[path = "style_test.rs"]
+mod style_test;

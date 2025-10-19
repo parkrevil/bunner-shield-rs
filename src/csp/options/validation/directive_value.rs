@@ -337,3 +337,7 @@ fn validate_hash(rest: &str, expected_len: usize) -> Result<(), CspOptionsError>
 
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "directive_value_test.rs"]
+mod directive_value_test;

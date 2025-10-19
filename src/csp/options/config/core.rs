@@ -478,3 +478,7 @@ impl CspOptions {
         validation::has_invalid_header_text(value)
     }
 }
+
+#[cfg(test)]
+#[path = "core_test.rs"]
+mod core_test;

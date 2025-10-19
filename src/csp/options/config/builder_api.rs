@@ -241,3 +241,7 @@ impl CspOptions {
         self
     }
 }
+
+#[cfg(test)]
+#[path = "builder_api_test.rs"]
+mod builder_api_test;

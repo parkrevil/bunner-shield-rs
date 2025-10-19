@@ -91,3 +91,7 @@ pub(crate) fn render_tokens(tokens: impl IntoIterator<Item = TrustedTypesToken>)
 
     rendered.join(" ")
 }
+
+#[cfg(test)]
+#[path = "trusted_types_test.rs"]
+mod trusted_types_test;

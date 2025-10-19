@@ -128,3 +128,7 @@ impl<'a> ScriptSrcBuilder<'a> {
         self
     }
 }
+
+#[cfg(test)]
+#[path = "script_test.rs"]
+mod script_test;

@@ -57,3 +57,7 @@ pub enum CspOptionsWarningKind {
         schemes: Vec<String>,
     },
 }
+
+#[cfg(test)]
+#[path = "warnings_test.rs"]
+mod warnings_test;

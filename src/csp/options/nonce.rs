@@ -80,3 +80,7 @@ pub enum CspNonceManagerError {
     #[error("nonce length must be greater than zero")]
     InvalidLength,
 }
+
+#[cfg(test)]
+#[path = "nonce_test.rs"]
+mod nonce_test;

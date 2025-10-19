@@ -36,3 +36,7 @@ pub(crate) fn validate_with_warnings(
 
     Ok(warnings)
 }
+
+#[cfg(test)]
+#[path = "validate_test.rs"]
+mod validate_test;

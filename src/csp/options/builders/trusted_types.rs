@@ -68,3 +68,7 @@ impl<'a> TrustedTypesBuilder<'a> {
         self.options.add_directive_token(directive, &token);
     }
 }
+
+#[cfg(test)]
+#[path = "trusted_types_test.rs"]
+mod trusted_types_builder_test;

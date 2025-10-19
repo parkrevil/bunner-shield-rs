@@ -19,13 +19,3 @@ pub use sandbox::{SandboxToken, SandboxTokenParseError};
 pub use sources::CspSource;
 pub use trusted_types::{TrustedTypesPolicy, TrustedTypesPolicyError, TrustedTypesToken};
 pub use types::{CspDirective, CspHashAlgorithm};
-
-#[cfg(test)]
-pub(crate) use validation::TokenValidationCache;
-
-#[cfg(test)]
-pub(crate) use utils::{contains_token, format_sources, sanitize_token_input};
-
-#[cfg(test)]
-#[path = "../options_test.rs"]
-mod options_test;

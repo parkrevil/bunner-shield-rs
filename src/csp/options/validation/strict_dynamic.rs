@@ -74,3 +74,7 @@ pub(crate) fn validate_strict_dynamic_host_sources(
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "strict_dynamic_test.rs"]
+mod strict_dynamic_test;

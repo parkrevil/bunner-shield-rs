@@ -104,3 +104,7 @@ impl RuntimeNonceConfig {
         self.directives.is_empty()
     }
 }
+
+#[cfg(test)]
+#[path = "runtime_nonce_test.rs"]
+mod runtime_nonce_test;

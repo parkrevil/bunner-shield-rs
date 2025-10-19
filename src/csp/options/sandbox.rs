@@ -107,3 +107,7 @@ impl fmt::Display for SandboxTokenParseError {
 }
 
 impl std::error::Error for SandboxTokenParseError {}
+
+#[cfg(test)]
+#[path = "sandbox_test.rs"]
+mod sandbox_test;

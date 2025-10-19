@@ -172,3 +172,7 @@ fn validate_scheme_source(token: &str) -> Result<(), CspOptionsError> {
 fn validate_host_source(token: &str) -> Result<(), CspOptionsError> {
     validate_host_like_source(token, token)
 }
+
+#[cfg(test)]
+#[path = "source_expression_test.rs"]
+mod source_expression_test;
