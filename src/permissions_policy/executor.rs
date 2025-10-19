@@ -1,7 +1,6 @@
 use super::PermissionsPolicyOptions;
 use crate::constants::header_keys::PERMISSIONS_POLICY;
-use crate::executor::{CachedHeader, ExecutorError, FeatureExecutor};
-use crate::normalized_headers::NormalizedHeaders;
+use crate::executor::CachedHeader;
 use std::borrow::Cow;
 
 pub struct PermissionsPolicy {
@@ -17,19 +16,11 @@ impl PermissionsPolicy {
     }
 }
 
-impl FeatureExecutor for PermissionsPolicy {
-    type Options = PermissionsPolicyOptions;
-
-    fn options(&self) -> &Self::Options {
-        self.cached.options()
-    }
-
-    fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), ExecutorError> {
-        headers.insert(PERMISSIONS_POLICY, self.cached.cloned_header_value());
-
-        Ok(())
-    }
-}
+crate::impl_cached_header_executor!(
+    PermissionsPolicy,
+    PermissionsPolicyOptions,
+    PERMISSIONS_POLICY
+);
 
 #[cfg(test)]
 #[path = "executor_test.rs"]

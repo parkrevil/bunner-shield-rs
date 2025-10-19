@@ -1,7 +1,6 @@
 use super::HstsOptions;
 use crate::constants::header_keys::STRICT_TRANSPORT_SECURITY;
-use crate::executor::{CachedHeader, ExecutorError, FeatureExecutor};
-use crate::normalized_headers::NormalizedHeaders;
+use crate::executor::CachedHeader;
 use std::borrow::Cow;
 
 pub struct Hsts {
@@ -17,19 +16,7 @@ impl Hsts {
     }
 }
 
-impl FeatureExecutor for Hsts {
-    type Options = HstsOptions;
-
-    fn options(&self) -> &Self::Options {
-        self.cached.options()
-    }
-
-    fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), ExecutorError> {
-        headers.insert(STRICT_TRANSPORT_SECURITY, self.cached.cloned_header_value());
-
-        Ok(())
-    }
-}
+crate::impl_cached_header_executor!(Hsts, HstsOptions, STRICT_TRANSPORT_SECURITY);
 
 #[cfg(test)]
 #[path = "executor_test.rs"]

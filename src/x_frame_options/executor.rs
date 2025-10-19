@@ -1,7 +1,6 @@
 use super::XFrameOptionsOptions;
 use crate::constants::header_keys::X_FRAME_OPTIONS;
-use crate::executor::{CachedHeader, ExecutorError, FeatureExecutor};
-use crate::normalized_headers::NormalizedHeaders;
+use crate::executor::CachedHeader;
 use std::borrow::Cow;
 
 pub struct XFrameOptions {
@@ -17,19 +16,7 @@ impl XFrameOptions {
     }
 }
 
-impl FeatureExecutor for XFrameOptions {
-    type Options = XFrameOptionsOptions;
-
-    fn options(&self) -> &Self::Options {
-        self.cached.options()
-    }
-
-    fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), ExecutorError> {
-        headers.insert(X_FRAME_OPTIONS, self.cached.cloned_header_value());
-
-        Ok(())
-    }
-}
+crate::impl_cached_header_executor!(XFrameOptions, XFrameOptionsOptions, X_FRAME_OPTIONS);
 
 #[cfg(test)]
 #[path = "executor_test.rs"]

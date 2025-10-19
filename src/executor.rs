@@ -74,6 +74,32 @@ impl<O> CachedHeader<O> {
     }
 }
 
+/// Implements FeatureExecutor for types that expose a `cached: CachedHeader<Options>` field and
+/// set a single header key to the cached value on execute.
+///
+/// Usage (inside the module defining the executor type):
+/// impl_cached_header_executor!(TypeName, OptionsType, crate::constants::header_keys::SOME_KEY);
+#[macro_export]
+macro_rules! impl_cached_header_executor {
+    ($struct:ty, $options_ty:ty, $header_key:path) => {
+        impl $crate::executor::FeatureExecutor for $struct {
+            type Options = $options_ty;
+
+            fn options(&self) -> &Self::Options {
+                self.cached.options()
+            }
+
+            fn execute(
+                &self,
+                headers: &mut $crate::normalized_headers::NormalizedHeaders,
+            ) -> Result<(), $crate::executor::ExecutorError> {
+                headers.insert($header_key, self.cached.cloned_header_value());
+                Ok(())
+            }
+        }
+    };
+}
+
 #[cfg(test)]
 #[path = "executor_test.rs"]
 mod executor_test;

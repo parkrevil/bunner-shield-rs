@@ -1,7 +1,6 @@
 use super::ReferrerPolicyOptions;
 use crate::constants::header_keys::REFERRER_POLICY;
-use crate::executor::{CachedHeader, ExecutorError, FeatureExecutor};
-use crate::normalized_headers::NormalizedHeaders;
+use crate::executor::CachedHeader;
 use std::borrow::Cow;
 
 pub struct ReferrerPolicy {
@@ -17,19 +16,7 @@ impl ReferrerPolicy {
     }
 }
 
-impl FeatureExecutor for ReferrerPolicy {
-    type Options = ReferrerPolicyOptions;
-
-    fn options(&self) -> &Self::Options {
-        self.cached.options()
-    }
-
-    fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), ExecutorError> {
-        headers.insert(REFERRER_POLICY, self.cached.cloned_header_value());
-
-        Ok(())
-    }
-}
+crate::impl_cached_header_executor!(ReferrerPolicy, ReferrerPolicyOptions, REFERRER_POLICY);
 
 #[cfg(test)]
 #[path = "executor_test.rs"]
