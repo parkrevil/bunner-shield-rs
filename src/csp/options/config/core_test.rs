@@ -104,4 +104,48 @@ mod directive_helpers_and_validation {
             .expect_err("expected invalid directive name");
         assert_eq!(error, CspOptionsError::InvalidDirectiveName);
     }
+
+    mod risky_scheme_warnings {
+        use super::*;
+
+        fn find_risky_warning<'a>(
+            warnings: &'a [CspOptionsWarning],
+            directive: &str,
+        ) -> Option<&'a CspOptionsWarning> {
+            warnings.iter().find(|w| match &w.kind {
+                CspOptionsWarningKind::RiskySchemes { directive: d, .. } => d == directive,
+                _ => false,
+            })
+        }
+
+        #[test]
+        fn given_data_in_script_like_directives_then_emits_critical() {
+            let options = CspOptions::new()
+                .script_src(|s| s.sources([CspSource::scheme("data")]))
+                .object_src([CspSource::scheme("data")]);
+            let warnings = options.validate_with_warnings().expect("ok");
+
+            let script_warn = find_risky_warning(&warnings, "script-src").expect("warn");
+            assert_eq!(script_warn.severity, CspWarningSeverity::Critical);
+
+            let object_warn = find_risky_warning(&warnings, "object-src").expect("warn");
+            assert_eq!(object_warn.severity, CspWarningSeverity::Critical);
+        }
+
+        #[test]
+        fn given_data_in_img_then_emits_warning_not_critical() {
+            let options = CspOptions::new().img_src([CspSource::scheme("data")]);
+            let warnings = options.validate_with_warnings().expect("ok");
+            let img_warn = find_risky_warning(&warnings, "img-src").expect("warn");
+            assert_eq!(img_warn.severity, CspWarningSeverity::Warning);
+        }
+
+        #[test]
+        fn given_blob_in_font_then_emits_info() {
+            let options = CspOptions::new().font_src([CspSource::scheme("blob")]);
+            let warnings = options.validate_with_warnings().expect("ok");
+            let font_warn = find_risky_warning(&warnings, "font-src").expect("warn");
+            assert_eq!(font_warn.severity, CspWarningSeverity::Info);
+        }
+    }
 }

@@ -299,11 +299,62 @@ impl CspOptions {
     }
 
     pub(crate) fn emit_risky_scheme_warnings(&self, warnings: &mut Vec<CspOptionsWarning>) {
-        const RISKY_SCHEMES: [(&str, CspWarningSeverity); 3] = [
-            ("data:", CspWarningSeverity::Critical),
-            ("blob:", CspWarningSeverity::Warning),
-            ("filesystem:", CspWarningSeverity::Critical),
-        ];
+        // Base schemes we consider potentially risky. Final severity can vary per directive.
+        const RISKY_SCHEMES: [&str; 3] = ["data:", "blob:", "filesystem:"];
+
+        fn scheme_severity_for_directive(
+            directive: &str,
+            scheme: &str,
+        ) -> Option<CspWarningSeverity> {
+            // Normalize scheme without trailing colon
+            let s = scheme.trim_end_matches(':');
+
+            match s {
+                // data: URLs are extremely risky for script-like and navigation directives,
+                // but more common (still risky) for media/img/fonts.
+                "data" => {
+                    if matches!(
+                        directive,
+                        "script-src" | "script-src-elem" | "script-src-attr"
+                    )
+                        || matches!(
+                            directive,
+                            "object-src"
+                                | "frame-src"
+                                | "frame-ancestors"
+                                | "navigate-to"
+                                | "base-uri"
+                                | "form-action"
+                        )
+                    {
+                        Some(CspWarningSeverity::Critical)
+                    } else if matches!(
+                        directive,
+                        "img-src" | "media-src" | "font-src" | "manifest-src"
+                    ) {
+                        Some(CspWarningSeverity::Warning)
+                    } else {
+                        // default-src and other source lists: warn by default
+                        Some(CspWarningSeverity::Warning)
+                    }
+                }
+                // blob: is frequently used legitimately but can still widen attack surface.
+                "blob" => {
+                    if matches!(
+                        directive,
+                        "script-src" | "script-src-elem" | "script-src-attr" | "connect-src"
+                    ) {
+                        Some(CspWarningSeverity::Warning)
+                    } else {
+                        // For img/media/font/etc., treat as informational.
+                        Some(CspWarningSeverity::Info)
+                    }
+                }
+                // filesystem: considered highly risky broadly.
+                "filesystem" => Some(CspWarningSeverity::Critical),
+                _ => None,
+            }
+        }
 
         struct SchemeAggregation {
             schemes: HashSet<String>,
@@ -320,8 +371,10 @@ impl CspOptions {
             for token in value.split_whitespace() {
                 let lowered = token.to_ascii_lowercase();
 
-                for &(scheme, severity) in RISKY_SCHEMES.iter() {
-                    if lowered.starts_with(scheme) {
+                for &scheme in RISKY_SCHEMES.iter() {
+                    if lowered.starts_with(scheme)
+                        && let Some(severity) = scheme_severity_for_directive(directive, scheme)
+                    {
                         let entry = aggregated.entry(directive.clone()).or_insert_with(|| {
                             SchemeAggregation {
                                 schemes: std::collections::HashSet::new(),
