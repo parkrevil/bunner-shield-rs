@@ -2,8 +2,9 @@ use crate::csp::options::config::CspOptionsError;
 use crate::csp::options::sandbox::SandboxToken;
 use crate::csp::options::types::CspDirective;
 
+use super::has_invalid_header_text;
 use super::source_expression::validate_source_expression_cached;
-use super::{TokenValidationCache, has_invalid_header_text};
+use super::validate::TokenValidationCache;
 
 pub(crate) fn validate_directive_value(
     name: &str,
