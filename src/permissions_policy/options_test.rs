@@ -43,3 +43,32 @@ mod validate {
         assert_eq!(error, PermissionsPolicyOptionsError::EmptyPolicy);
     }
 }
+
+mod builder_minimal {
+    use super::*;
+    use std::borrow::Cow;
+
+    #[test]
+    fn given_feature_entries_when_build_then_renders_canonical_policy() {
+        let options = PermissionsPolicyOptions::builder()
+            .feature(
+                "Geolocation",
+                [AllowListItem::None, AllowListItem::SelfKeyword],
+            )
+            .feature(
+                "camera",
+                [
+                    AllowListItem::Origin(Cow::Borrowed(" https://a.example ")),
+                    AllowListItem::Origin(Cow::Borrowed("https://a.example")), // duplicate
+                    AllowListItem::Any,
+                ],
+            )
+            .build();
+
+        assert_eq!(
+            options.header_value(),
+            "geolocation=(() 'self'), camera=(https://a.example *)"
+        );
+        assert!(options.validate().is_ok());
+    }
+}
