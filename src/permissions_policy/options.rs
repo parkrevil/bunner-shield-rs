@@ -84,7 +84,7 @@ impl PolicyBuilder {
         for item in allowlist.into_iter() {
             let rendered: Option<String> = match item {
                 AllowListItem::None => Some("()".to_string()),
-                AllowListItem::SelfKeyword => Some("'self'".to_string()),
+                AllowListItem::SelfKeyword => Some("self".to_string()),
                 AllowListItem::Any => Some("*".to_string()),
                 AllowListItem::Origin(s) => {
                     let trimmed = s.trim();

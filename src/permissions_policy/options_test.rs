@@ -67,8 +67,33 @@ mod builder_minimal {
 
         assert_eq!(
             options.header_value(),
-            "geolocation=(() 'self'), camera=(https://a.example *)"
+            "geolocation=(() self), camera=(https://a.example *)"
         );
         assert!(options.validate().is_ok());
+    }
+
+    #[test]
+    fn given_self_only_allowlist_when_build_then_renders_without_quotes() {
+        let options = PermissionsPolicyOptions::builder()
+            .feature("geolocation", [AllowListItem::SelfKeyword])
+            .build();
+
+        assert_eq!(options.header_value(), "geolocation=(self)");
+    }
+
+    #[test]
+    fn given_self_mixed_with_origins_when_build_then_preserves_order_without_quotes() {
+        let options = PermissionsPolicyOptions::builder()
+            .feature(
+                "camera",
+                [
+                    AllowListItem::SelfKeyword,
+                    AllowListItem::Origin(Cow::Borrowed("https://example.com")),
+                    AllowListItem::SelfKeyword,
+                ],
+            )
+            .build();
+
+        assert_eq!(options.header_value(), "camera=(self https://example.com)");
     }
 }
