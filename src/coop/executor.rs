@@ -1,7 +1,6 @@
 use super::options::CoopOptions;
 use crate::constants::header_keys::CROSS_ORIGIN_OPENER_POLICY;
-use crate::executor::{CachedHeader, ExecutorError, FeatureExecutor};
-use crate::normalized_headers::NormalizedHeaders;
+use crate::executor::CachedHeader;
 use std::borrow::Cow;
 
 pub struct Coop {
@@ -17,22 +16,7 @@ impl Coop {
     }
 }
 
-impl FeatureExecutor for Coop {
-    type Options = CoopOptions;
-
-    fn options(&self) -> &Self::Options {
-        self.cached.options()
-    }
-
-    fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), ExecutorError> {
-        headers.insert(
-            CROSS_ORIGIN_OPENER_POLICY,
-            self.cached.cloned_header_value(),
-        );
-
-        Ok(())
-    }
-}
+crate::impl_cached_header_executor!(Coop, CoopOptions, CROSS_ORIGIN_OPENER_POLICY);
 
 #[cfg(test)]
 #[path = "executor_test.rs"]

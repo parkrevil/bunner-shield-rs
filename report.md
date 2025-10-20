@@ -14,7 +14,7 @@
     - 빈 피처명/빈 allowlist 항목에 대한 테스트 케이스 추가 및 성공.
     - 기존 정상 케이스(중복 제거·순서 보존) 회귀 없음.
 
-- [ ] COOP Executor: 매크로 적용으로 중복 제거
+- [x] COOP Executor: 매크로 적용으로 중복 제거
   - 파일: `src/coop/executor.rs`
   - 변경: 수동 FeatureExecutor 구현을 `impl_cached_header_executor!` 매크로로 대체. 동작 동일 유지.
   - 수용 기준:

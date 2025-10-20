@@ -1,5 +1,6 @@
 use super::*;
 use crate::CoopPolicy;
+use crate::executor::FeatureExecutor;
 use crate::tests_common as common;
 
 mod options {
