@@ -53,6 +53,7 @@ mod options_test;
 #[derive(Debug, Default)]
 pub struct PolicyBuilder {
     entries: Vec<PolicyEntry>,
+    error: Option<PolicyBuilderError>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -69,14 +70,26 @@ pub struct PolicyEntry {
     allowlist: Vec<String>, // normalized and owned rendered items
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum PolicyBuilderError {
+    #[error("permissions policy feature name must not be empty")]
+    EmptyFeatureName,
+    #[error("permissions policy allowlist entry for feature `{feature}` must not be empty")]
+    EmptyAllowListEntry { feature: String },
+}
+
 impl PolicyBuilder {
     pub fn feature<'a, I>(mut self, name: impl Into<String>, allowlist: I) -> Self
     where
         I: IntoIterator<Item = AllowListItem<'a>>,
     {
-        let feature = name.into().trim().to_ascii_lowercase();
+        let feature = name.into();
+        let feature = feature.trim().to_ascii_lowercase();
         if feature.is_empty() {
-            return self; // ignore empty feature names
+            if self.error.is_none() {
+                self.error = Some(PolicyBuilderError::EmptyFeatureName);
+            }
+            return self;
         }
 
         let mut seen = std::collections::HashSet::new();
@@ -89,6 +102,11 @@ impl PolicyBuilder {
                 AllowListItem::Origin(s) => {
                     let trimmed = s.trim();
                     if trimmed.is_empty() {
+                        if self.error.is_none() {
+                            self.error = Some(PolicyBuilderError::EmptyAllowListEntry {
+                                feature: feature.clone(),
+                            });
+                        }
                         None
                     } else {
                         Some(trimmed.to_string())
@@ -112,7 +130,10 @@ impl PolicyBuilder {
         self
     }
 
-    pub fn build(self) -> PermissionsPolicyOptions {
+    pub fn build(self) -> Result<PermissionsPolicyOptions, PolicyBuilderError> {
+        if let Some(error) = self.error {
+            return Err(error);
+        }
         // Render entries in insertion order: feature=(items) separated by commas; items by spaces
         let mut parts: Vec<String> = Vec::with_capacity(self.entries.len());
         for entry in self.entries {
@@ -129,6 +150,6 @@ impl PolicyBuilder {
         }
 
         let policy = parts.join(", ");
-        PermissionsPolicyOptions::new(policy)
+        Ok(PermissionsPolicyOptions::new(policy))
     }
 }

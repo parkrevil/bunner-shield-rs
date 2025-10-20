@@ -7,7 +7,7 @@
     - 기존 빌더 스냅샷 테스트 기대값을 self(무따옴표)로 갱신.
     - self 표기 케이스(단독/혼합) 추가 테스트 통과.
 
-- [ ] Permissions-Policy: 빌더/검증 최소 강화
+- [x] Permissions-Policy: 빌더/검증 최소 강화
   - 파일: `src/permissions_policy/options.rs`, `src/permissions_policy/options_test.rs`
   - 변경: 피처명 공백/빈 문자열 거부, 허용리스트 항목에서 빈/공백만 항목 거부, 에러 문구 명확화.
   - 수용 기준:

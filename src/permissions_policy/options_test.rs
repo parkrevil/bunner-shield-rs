@@ -63,7 +63,8 @@ mod builder_minimal {
                     AllowListItem::Any,
                 ],
             )
-            .build();
+            .build()
+            .expect("builder should succeed for valid entries");
 
         assert_eq!(
             options.header_value(),
@@ -76,7 +77,8 @@ mod builder_minimal {
     fn given_self_only_allowlist_when_build_then_renders_without_quotes() {
         let options = PermissionsPolicyOptions::builder()
             .feature("geolocation", [AllowListItem::SelfKeyword])
-            .build();
+            .build()
+            .expect("builder should succeed for valid entries");
 
         assert_eq!(options.header_value(), "geolocation=(self)");
     }
@@ -92,8 +94,32 @@ mod builder_minimal {
                     AllowListItem::SelfKeyword,
                 ],
             )
-            .build();
+            .build()
+            .expect("builder should succeed for valid entries");
 
         assert_eq!(options.header_value(), "camera=(self https://example.com)");
+    }
+
+    #[test]
+    fn given_blank_feature_name_when_build_then_returns_error() {
+        let result = PermissionsPolicyOptions::builder()
+            .feature("   ", [AllowListItem::None])
+            .build();
+
+        assert_eq!(result.unwrap_err(), PolicyBuilderError::EmptyFeatureName);
+    }
+
+    #[test]
+    fn given_blank_origin_allowlist_item_when_build_then_returns_error() {
+        let result = PermissionsPolicyOptions::builder()
+            .feature("camera", [AllowListItem::Origin(Cow::Borrowed("   "))])
+            .build();
+
+        assert_eq!(
+            result.unwrap_err(),
+            PolicyBuilderError::EmptyAllowListEntry {
+                feature: "camera".to_string(),
+            }
+        );
     }
 }
