@@ -18,6 +18,39 @@ mod header_and_merge {
     }
 }
 
+mod stable_serialization {
+    use super::*;
+
+    #[test]
+    fn given_directives_added_in_any_order_when_header_value_then_returns_sorted_output() {
+        let option_a = CspOptions::new()
+            .script_src(|script| script.sources([CspSource::SelfKeyword]))
+            .default_src([CspSource::Wildcard]);
+
+        let option_b = CspOptions::new()
+            .default_src([CspSource::Wildcard])
+            .script_src(|script| script.sources([CspSource::SelfKeyword]));
+
+        let expected = "default-src *; script-src 'self'";
+
+        assert_eq!(option_a.header_value(), expected);
+        assert_eq!(option_b.header_value(), expected);
+    }
+
+    #[test]
+    fn given_tokens_added_in_any_order_when_header_value_then_sorts_tokens() {
+        let header = CspOptions::new()
+            .script_src(|script| script.nonce("bbb").strict_dynamic().nonce("aaa"))
+            .header_value();
+
+        assert!(
+            header.contains("script-src 'nonce-aaa' 'nonce-bbb' 'strict-dynamic'"),
+            "unexpected header value: {}",
+            header
+        );
+    }
+}
+
 mod runtime_nonce_integration {
     use super::*;
 

@@ -122,14 +122,33 @@ impl CspOptions {
     }
 
     pub fn header_value(&self) -> String {
-        self.directives
+        let mut directives: Vec<(String, Vec<String>)> = self
+            .directives
             .iter()
             .map(|(name, value)| {
-                if value.is_empty() {
-                    name.clone()
+                let tokens: Vec<String> = if value.trim().is_empty() {
+                    Vec::new()
                 } else {
-                    format!("{} {}", name, value)
+                    value
+                        .split_whitespace()
+                        .map(|token| token.to_string())
+                        .collect()
+                };
+                (name.clone(), tokens)
+            })
+            .collect();
+
+        directives.sort_by(|(left, _), (right, _)| left.cmp(right));
+
+        directives
+            .into_iter()
+            .map(|(name, mut tokens)| {
+                if tokens.is_empty() {
+                    return name;
                 }
+
+                tokens.sort();
+                format!("{} {}", name, tokens.join(" "))
             })
             .collect::<Vec<_>>()
             .join("; ")

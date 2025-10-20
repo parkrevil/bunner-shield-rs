@@ -249,7 +249,7 @@ mod csp {
 
         assert_eq!(
             result.get("Content-Security-Policy").map(String::as_str),
-            Some("default-src 'self'; base-uri 'none'; frame-ancestors 'none'")
+            Some("base-uri 'none'; default-src 'self'; frame-ancestors 'none'")
         );
     }
 
