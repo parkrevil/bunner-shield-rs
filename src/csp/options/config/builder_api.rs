@@ -5,6 +5,7 @@ use crate::csp::options::{
     sandbox::SandboxToken,
     sources::CspSource,
     types::CspDirective,
+    utils::contains_token,
 };
 
 use super::ReportToMergeStrategy;
@@ -234,26 +235,59 @@ impl CspOptions {
                         }
                     }
                     ReportToMergeStrategy::Union => {
-                        // order-preserving unique union
-                        let mut seen: HashSet<&str> = HashSet::new();
-                        let mut ordered: Vec<String> = Vec::new();
+                        // order-preserving unique union with minimal allocations
+                        let mut merged_tokens: Vec<String> = Vec::new();
+                        let mut total_len = 0usize;
+
                         if let Some((_, existing_value)) = self
                             .directives
                             .iter()
                             .find(|(existing, _)| existing == name)
                         {
-                            for t in existing_value.split_whitespace() {
-                                if !t.is_empty() && seen.insert(t) {
-                                    ordered.push(t.to_string());
+                            let existing_iter = existing_value.split_whitespace();
+                            merged_tokens.reserve(existing_iter.clone().count());
+                            for token in existing_iter {
+                                if token.is_empty() {
+                                    continue;
                                 }
+                                if merged_tokens.iter().any(|existing| existing == token) {
+                                    continue;
+                                }
+                                total_len += token.len();
+                                merged_tokens.push(token.to_string());
                             }
                         }
-                        for t in value.split_whitespace() {
-                            if !t.is_empty() && seen.insert(t) {
-                                ordered.push(t.to_string());
+
+                        let incoming_iter = value.split_whitespace();
+                        merged_tokens.reserve(incoming_iter.clone().count());
+                        for token in incoming_iter {
+                            if token.is_empty() {
+                                continue;
                             }
+                            if merged_tokens.iter().any(|existing| existing == token) {
+                                continue;
+                            }
+                            total_len += token.len();
+                            merged_tokens.push(token.to_string());
                         }
-                        let merged = ordered.join(" ");
+
+                        let merged = if merged_tokens.is_empty() {
+                            String::new()
+                        } else {
+                            // account for spaces between tokens
+                            total_len += merged_tokens.len().saturating_sub(1);
+                            let mut result = String::with_capacity(total_len);
+                            let mut tokens = merged_tokens.iter();
+                            if let Some(first) = tokens.next() {
+                                result.push_str(first);
+                            }
+                            for token in tokens {
+                                result.push(' ');
+                                result.push_str(token);
+                            }
+                            result
+                        };
+
                         let mut updated = false;
                         for (existing, existing_value) in &mut self.directives {
                             if existing == name {
@@ -278,8 +312,48 @@ impl CspOptions {
                 continue;
             }
 
-            for token in trimmed.split_whitespace() {
-                self.add_directive_token(name, token);
+            if let Some((_, existing_value)) = self
+                .directives
+                .iter_mut()
+                .find(|(existing, _)| existing == name)
+            {
+                let mut pending: Vec<&str> = Vec::new();
+                for token in trimmed.split_whitespace() {
+                    if token.is_empty() {
+                        continue;
+                    }
+                    if contains_token(existing_value, token) {
+                        continue;
+                    }
+                    if pending.iter().any(|existing| existing == &token) {
+                        continue;
+                    }
+                    pending.push(token);
+                }
+
+                if pending.is_empty() {
+                    continue;
+                }
+
+                let mut extra_capacity: usize = pending.iter().map(|token| token.len()).sum();
+                let mut needs_space = !existing_value.trim().is_empty();
+                let spaces = if needs_space {
+                    pending.len()
+                } else {
+                    pending.len().saturating_sub(1)
+                };
+                extra_capacity += spaces;
+                existing_value.reserve(extra_capacity);
+
+                for token in pending {
+                    if needs_space {
+                        existing_value.push(' ');
+                    }
+                    existing_value.push_str(token);
+                    needs_space = true;
+                }
+            } else {
+                self.set_directive(name, trimmed);
             }
         }
 
