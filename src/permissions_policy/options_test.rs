@@ -110,6 +110,42 @@ mod builder_minimal {
     }
 
     #[test]
+    fn given_invalid_feature_name_when_build_then_returns_error() {
+        // Explicit invalid samples (non-empty but not matching regex)
+        for name in ["1camera", "-camera", "camera!"].iter() {
+            let result = PermissionsPolicyOptions::builder()
+                .feature(*name, [AllowListItem::None])
+                .build();
+            assert_eq!(result.unwrap_err(), PolicyBuilderError::InvalidFeatureName);
+        }
+
+        // Empty or whitespace-only should still be treated as EmptyFeatureName
+        let err = PermissionsPolicyOptions::builder()
+            .feature("   ", [AllowListItem::None])
+            .build()
+            .unwrap_err();
+        assert_eq!(err, PolicyBuilderError::EmptyFeatureName);
+
+        // Valid samples ensure we don't over-reject
+        for name in [
+            "camera",
+            "geolocation",
+            "microphone",
+            "camera-zoom",
+            "a1",
+            "Camera",  // will normalize to lowercase and pass
+            "camerA",  // mixed case normalizes to valid
+        ]
+        .iter()
+        {
+            let result = PermissionsPolicyOptions::builder()
+                .feature(*name, [AllowListItem::None])
+                .build();
+            assert!(result.is_ok());
+        }
+    }
+
+    #[test]
     fn given_blank_origin_allowlist_item_when_build_then_returns_error() {
         let result = PermissionsPolicyOptions::builder()
             .feature("camera", [AllowListItem::Origin(Cow::Borrowed("   "))])
