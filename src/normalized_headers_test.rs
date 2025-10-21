@@ -115,6 +115,25 @@ mod remove {
 
         assert!(headers.get_all("X-Test").is_none());
     }
+
+    #[test]
+    fn given_mixed_case_name_when_remove_then_removes_entry() {
+        let mut headers = NormalizedHeaders::new(common::headers_with(&[("X-CuStOm", "present")]));
+
+        headers.remove("x-custom");
+
+        assert!(headers.get_all("X-Custom").is_none());
+    }
+
+    #[test]
+    fn given_name_with_internal_whitespace_when_remove_then_removes_entry() {
+        let mut headers =
+            NormalizedHeaders::new(common::headers_with(&[("X Custom Header", "value")]));
+
+        headers.remove("x custom header");
+
+        assert!(headers.get_all("X Custom Header").is_none());
+    }
 }
 
 mod get_all {
