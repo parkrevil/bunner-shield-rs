@@ -2,6 +2,7 @@ use bunner_shield_rs::{Shield, XFrameOptionsOptions, XFrameOptionsPolicy};
 use std::collections::HashMap;
 mod common;
 use common::empty_headers;
+use proptest::prelude::*;
 
 fn with_xfo(value: &str) -> HashMap<String, String> {
     let mut headers = empty_headers();
@@ -70,5 +71,96 @@ mod edge {
         let result = shield.secure(headers).expect("secure");
 
         assert_eq!(result.get("X-Trace").map(String::as_str), Some("abc"));
+    }
+}
+
+mod proptests {
+    use super::*;
+
+    fn header_entries_strategy() -> impl Strategy<Value = Vec<(String, String)>> {
+        let name = prop::string::string_regex("[A-Za-z0-9-]{1,24}").unwrap();
+        let value = prop::string::string_regex("[ -~]{0,64}").unwrap();
+
+        prop::collection::vec((name, value), 0..8).prop_map(|entries| {
+            entries
+                .into_iter()
+                .map(|(mut key, value)| {
+                    if key.eq_ignore_ascii_case("X-Frame-Options") {
+                        key.push_str("-alt");
+                    }
+                    (key, value)
+                })
+                .collect::<Vec<_>>()
+        })
+    }
+
+    fn xfo_case_strategy() -> impl Strategy<Value = String> {
+        prop::collection::vec(prop::bool::ANY, "X-Frame-Options".len()).prop_map(|mask| {
+            "X-Frame-Options"
+                .chars()
+                .zip(mask)
+                .map(|(ch, lower)| match ch {
+                    '-' => '-',
+                    letter if lower => letter.to_ascii_lowercase(),
+                    letter => letter.to_ascii_uppercase(),
+                })
+                .collect()
+        })
+    }
+
+    fn header_value_strategy() -> impl Strategy<Value = String> {
+        prop::string::string_regex("[ -~]{0,96}").unwrap()
+    }
+
+    proptest! {
+        #[test]
+        fn given_any_headers_and_optional_existing_when_secure_with_deny_then_sets_constant_idempotently(
+            baseline in header_entries_strategy(),
+            existing in prop::option::of((xfo_case_strategy(), header_value_strategy())),
+        ) {
+            let mut headers = empty_headers();
+            for (name, value) in &baseline {
+                headers.insert(name.clone(), value.clone());
+            }
+            if let Some((name, value)) = existing { headers.insert(name, value); }
+
+            let shield = Shield::new()
+                .x_frame_options(XFrameOptionsOptions::new())
+                .expect("feature");
+            let once = shield.secure(headers).expect("secure");
+            let twice = shield.secure(once.clone()).expect("secure");
+
+            let mut expected = baseline.into_iter().collect::<HashMap<_, _>>();
+            expected.insert("X-Frame-Options".to_string(), "DENY".to_string());
+
+            prop_assert_eq!(once, expected.clone());
+            prop_assert_eq!(twice, expected);
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn given_any_headers_and_optional_existing_when_secure_with_sameorigin_then_sets_constant_idempotently(
+            baseline in header_entries_strategy(),
+            existing in prop::option::of((xfo_case_strategy(), header_value_strategy())),
+        ) {
+            let mut headers = empty_headers();
+            for (name, value) in &baseline {
+                headers.insert(name.clone(), value.clone());
+            }
+            if let Some((name, value)) = existing { headers.insert(name, value); }
+
+            let shield = Shield::new()
+                .x_frame_options(XFrameOptionsOptions::new().policy(XFrameOptionsPolicy::SameOrigin))
+                .expect("feature");
+            let once = shield.secure(headers).expect("secure");
+            let twice = shield.secure(once.clone()).expect("secure");
+
+            let mut expected = baseline.into_iter().collect::<HashMap<_, _>>();
+            expected.insert("X-Frame-Options".to_string(), "SAMEORIGIN".to_string());
+
+            prop_assert_eq!(once, expected.clone());
+            prop_assert_eq!(twice, expected);
+        }
     }
 }
