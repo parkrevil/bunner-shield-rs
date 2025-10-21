@@ -112,12 +112,22 @@ mod proptests {
         prop::string::string_regex("[ -~]{0,96}").unwrap()
     }
 
+    fn dedup_case_insensitive(entries: Vec<(String, String)>) -> Vec<(String, String)> {
+        use std::collections::HashMap as StdHashMap;
+        let mut map: StdHashMap<String, (String, String)> = StdHashMap::new();
+        for (name, value) in entries {
+            map.insert(name.to_ascii_lowercase(), (name, value));
+        }
+        map.into_values().collect()
+    }
+
     proptest! {
         #[test]
         fn given_any_headers_and_optional_existing_when_secure_with_deny_then_sets_constant_idempotently(
             baseline in header_entries_strategy(),
             existing in prop::option::of((xfo_case_strategy(), header_value_strategy())),
         ) {
+            let baseline = dedup_case_insensitive(baseline);
             let mut headers = empty_headers();
             for (name, value) in &baseline {
                 headers.insert(name.clone(), value.clone());
@@ -129,8 +139,8 @@ mod proptests {
                 .expect("feature");
             let once = shield.secure(headers).expect("secure");
             let twice = shield.secure(once.clone()).expect("secure");
-
-            let mut expected = baseline.into_iter().collect::<HashMap<_, _>>();
+            // Build expected from the deduplicated baseline
+            let mut expected: HashMap<String, String> = baseline.into_iter().collect();
             expected.insert("X-Frame-Options".to_string(), "DENY".to_string());
 
             prop_assert_eq!(once, expected.clone());
@@ -144,6 +154,7 @@ mod proptests {
             baseline in header_entries_strategy(),
             existing in prop::option::of((xfo_case_strategy(), header_value_strategy())),
         ) {
+            let baseline = dedup_case_insensitive(baseline);
             let mut headers = empty_headers();
             for (name, value) in &baseline {
                 headers.insert(name.clone(), value.clone());
@@ -155,8 +166,8 @@ mod proptests {
                 .expect("feature");
             let once = shield.secure(headers).expect("secure");
             let twice = shield.secure(once.clone()).expect("secure");
-
-            let mut expected = baseline.into_iter().collect::<HashMap<_, _>>();
+            // Build expected from the deduplicated baseline
+            let mut expected: HashMap<String, String> = baseline.into_iter().collect();
             expected.insert("X-Frame-Options".to_string(), "SAMEORIGIN".to_string());
 
             prop_assert_eq!(once, expected.clone());
@@ -176,6 +187,7 @@ mod proptests {
             dup_cases in two_distinct_xfo_cases_strategy(),
             values in (header_value_strategy(), header_value_strategy()),
         ) {
+            let baseline = dedup_case_insensitive(baseline);
             let mut headers = empty_headers();
             for (name, value) in &baseline {
                 headers.insert(name.clone(), value.clone());
@@ -205,6 +217,7 @@ mod proptests {
             dup_cases in two_distinct_xfo_cases_strategy(),
             values in (header_value_strategy(), header_value_strategy()),
         ) {
+            let baseline = dedup_case_insensitive(baseline);
             let mut headers = empty_headers();
             for (name, value) in &baseline {
                 headers.insert(name.clone(), value.clone());
