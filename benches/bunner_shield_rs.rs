@@ -5,10 +5,10 @@ use std::time::Duration;
 use bunner_shield_rs::{
     ClearSiteDataOptions, CoepOptions, CoepPolicy, CoopOptions, CoopPolicy, CorpOptions,
     CorpPolicy, CspDirective, CspHashAlgorithm, CspNonceManager, CspOptions, CspSource,
-    CsrfOptions, HstsOptions, OriginAgentClusterOptions, PermissionsPolicyOptions,
-    ReferrerPolicyOptions, ReferrerPolicyValue, SameSiteOptions, SameSitePolicy, SandboxToken,
-    Shield, TrustedTypesPolicy, XFrameOptionsOptions, XFrameOptionsPolicy,
-    XdnsPrefetchControlOptions, XdnsPrefetchControlPolicy,
+    CsrfOptions, HstsOptions, NormalizedHeaders, OriginAgentClusterOptions,
+    PermissionsPolicyOptions, ReferrerPolicyOptions, ReferrerPolicyValue, SameSiteOptions,
+    SameSitePolicy, SandboxToken, Shield, TrustedTypesPolicy, XFrameOptionsOptions,
+    XFrameOptionsPolicy, XdnsPrefetchControlOptions, XdnsPrefetchControlPolicy,
 };
 use criterion::{BatchSize, Criterion, black_box, criterion_group, criterion_main};
 
@@ -27,6 +27,38 @@ fn bench_secure_all_features(c: &mut Criterion) {
             |headers| {
                 let secured = shield.secure(headers).expect("secure");
                 black_box(secured)
+            },
+            BatchSize::SmallInput,
+        );
+    });
+
+    group.finish();
+}
+
+fn bench_normalized_headers_large_inputs(c: &mut Criterion) {
+    let mut group = c.benchmark_group("normalized_headers_large_inputs");
+    group
+        .sample_size(30)
+        .warm_up_time(Duration::from_secs(2))
+        .measurement_time(Duration::from_secs(8));
+
+    group.bench_function("construct_from_large_map", |b| {
+        b.iter_batched(
+            large_header_map,
+            |input| {
+                let normalized = NormalizedHeaders::new(input);
+                black_box(normalized)
+            },
+            BatchSize::SmallInput,
+        );
+    });
+
+    group.bench_function("append_large_set_cookie_blob", |b| {
+        b.iter_batched(
+            || NormalizedHeaders::new(HashMap::new()),
+            |mut headers| {
+                headers.insert("set-cookie", large_set_cookie_blob().clone());
+                black_box(headers)
             },
             BatchSize::SmallInput,
         );
@@ -296,9 +328,52 @@ fn heavy_request_headers() -> HashMap<String, String> {
         .clone()
 }
 
+fn large_header_map() -> HashMap<String, String> {
+    static LARGE_HEADERS: OnceLock<HashMap<String, String>> = OnceLock::new();
+
+    LARGE_HEADERS
+        .get_or_init(|| {
+            let mut headers = HashMap::with_capacity(2_400);
+            headers.insert("x-large-payload".to_string(), large_payload_value().clone());
+            headers.insert("set-cookie".to_string(), large_set_cookie_blob().clone());
+
+            for index in 0..2_048 {
+                headers.insert(
+                    format!("x-bulk-header-{index:04}"),
+                    format!("value-{index:08}"),
+                );
+            }
+
+            headers
+        })
+        .clone()
+}
+
+fn large_payload_value() -> &'static String {
+    static LARGE_VALUE: OnceLock<String> = OnceLock::new();
+
+    LARGE_VALUE.get_or_init(|| "X".repeat(250_000))
+}
+
+fn large_set_cookie_blob() -> &'static String {
+    static COOKIE_BLOB: OnceLock<String> = OnceLock::new();
+
+    COOKIE_BLOB.get_or_init(|| {
+        let mut blob = String::with_capacity(2_048 * 96);
+        for index in 0..2_048 {
+            blob.push_str("Set-Cookie: large-token-");
+            blob.push_str(&index.to_string());
+            blob.push_str("=payload-");
+            blob.push_str(&index.to_string());
+            blob.push_str("; Path=/; Secure; HttpOnly\n");
+        }
+        blob
+    })
+}
+
 criterion_group!(
     name = shield_benches;
     config = Criterion::default();
-    targets = bench_secure_all_features
+    targets = bench_secure_all_features, bench_normalized_headers_large_inputs
 );
 criterion_main!(shield_benches);
