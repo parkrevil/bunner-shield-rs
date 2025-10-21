@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 0e8976b85efc7313115bafae2553d5faa49cbc2f05c98afb824a51aabccce33e # shrinks to baseline = [], token_name = "X-CSRF-TOKEN", token_value = "", set_cookie_name = "SET-COOKIE", set_cookie_value = ""

@@ -182,3 +182,118 @@ mod failure {
         ));
     }
 }
+
+mod proptests {
+    use super::*;
+    use proptest::prelude::*;
+
+    fn header_entries_strategy() -> impl Strategy<Value = Vec<(String, String)>> {
+        let name = prop::string::string_regex("[A-Za-z0-9-]{1,24}").unwrap();
+        let value = prop::string::string_regex("[ -~]{0,64}").unwrap();
+
+        prop::collection::vec((name, value), 0..8).prop_map(|entries| {
+            entries
+                .into_iter()
+                .map(|(mut key, value)| {
+                    if key.eq_ignore_ascii_case("Set-Cookie") {
+                        key.push_str("-alt");
+                    }
+                    (key, value)
+                })
+                .collect::<Vec<_>>()
+        })
+    }
+
+    fn set_cookie_case_strategy() -> impl Strategy<Value = String> {
+        prop::collection::vec(prop::bool::ANY, "Set-Cookie".len()).prop_map(|mask| {
+            "Set-Cookie"
+                .chars()
+                .zip(mask)
+                .map(|(ch, lower)| match ch {
+                    '-' => '-',
+                    letter if lower => letter.to_ascii_lowercase(),
+                    letter => letter.to_ascii_uppercase(),
+                })
+                .collect()
+        })
+    }
+
+    fn cookie_value_strategy() -> impl Strategy<Value = String> {
+        // Single cookie per line, avoid newlines here; executor splits by newlines already.
+        prop::string::string_regex("[A-Za-z0-9_=; ,.\t:/-]{1,128}").unwrap()
+    }
+
+    // Remove duplicate header names case-insensitively for baseline expectations.
+    fn dedup_case_insensitive(entries: Vec<(String, String)>) -> Vec<(String, String)> {
+        use std::collections::HashMap as StdHashMap;
+        let mut map: StdHashMap<String, (String, String)> = StdHashMap::new();
+        for (name, value) in entries {
+            map.insert(name.to_ascii_lowercase(), (name, value));
+        }
+        map.into_values().collect()
+    }
+
+    proptest! {
+        #[test]
+        fn given_any_headers_and_optional_existing_cookie_when_secure_then_idempotent_and_non_destructive(
+            baseline in header_entries_strategy(),
+            cookie_name in set_cookie_case_strategy(),
+            cookie_value in cookie_value_strategy(),
+        ) {
+            let baseline = dedup_case_insensitive(baseline);
+            let mut headers = empty_headers();
+            for (name, value) in &baseline { headers.insert(name.clone(), value.clone()); }
+            headers.insert(cookie_name.clone(), cookie_value.clone());
+
+            let shield = Shield::new().same_site(SameSiteOptions::new()).expect("feature");
+            let once = shield.secure(headers).expect("secure");
+            let twice = shield.secure(once.clone()).expect("secure");
+
+            // Build expected: baseline plus exactly one canonical Set-Cookie with upgraded flags.
+            let mut expected: HashMap<String, String> = baseline.into_iter().collect();
+            let result_cookie = once.get("Set-Cookie").cloned().unwrap_or_default();
+            // Ensure policy attributes are present and not duplicated across runs.
+            prop_assert!(result_cookie.contains("SameSite="));
+            prop_assert!(result_cookie.contains("Secure"));
+            prop_assert!(result_cookie.contains("HttpOnly"));
+            expected.insert("Set-Cookie".to_string(), result_cookie);
+
+            prop_assert_eq!(once, expected.clone());
+            prop_assert_eq!(twice, expected);
+        }
+    }
+
+    fn two_distinct_set_cookie_cases_strategy() -> impl Strategy<Value = (String, String)> {
+        (set_cookie_case_strategy(), set_cookie_case_strategy())
+            .prop_filter("distinct case variants", |(a, b)| a != b)
+    }
+
+    proptest! {
+        #[test]
+        fn given_duplicate_case_variants_when_secure_then_collapses_and_canonicalizes_set_cookie(
+            baseline in header_entries_strategy(),
+            dup_cases in two_distinct_set_cookie_cases_strategy(),
+            values in (cookie_value_strategy(), cookie_value_strategy()),
+        ) {
+            let baseline = dedup_case_insensitive(baseline);
+            let mut headers = empty_headers();
+            for (name, value) in &baseline { headers.insert(name.clone(), value.clone()); }
+            headers.insert(dup_cases.0.clone(), values.0.clone());
+            headers.insert(dup_cases.1.clone(), values.1.clone());
+
+            let shield = Shield::new().same_site(SameSiteOptions::new()).expect("feature");
+            let once = shield.secure(headers).expect("secure");
+            let twice = shield.secure(once.clone()).expect("secure");
+
+            // Expect a single canonical Set-Cookie header with upgraded flags
+            let mut expected: HashMap<String, String> = baseline.into_iter().collect();
+            let cookie = once.get("Set-Cookie").cloned().unwrap_or_default();
+            prop_assert!(cookie.contains("SameSite="));
+            prop_assert!(cookie.contains("Secure"));
+            expected.insert("Set-Cookie".to_string(), cookie);
+
+            prop_assert_eq!(once, expected.clone());
+            prop_assert_eq!(twice, expected);
+        }
+    }
+}

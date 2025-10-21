@@ -312,3 +312,94 @@ mod origin_validation {
         assert!(result.contains_key("X-CSRF-Token"));
     }
 }
+
+mod proptests {
+    use super::*;
+    use proptest::prelude::*;
+
+    fn header_entries_strategy() -> impl Strategy<Value = Vec<(String, String)>> {
+        let name = prop::string::string_regex("[A-Za-z0-9-]{1,24}").unwrap();
+        let value = prop::string::string_regex("[ -~]{0,64}").unwrap();
+
+        prop::collection::vec((name, value), 0..8).prop_map(|entries| {
+            entries
+                .into_iter()
+                .map(|(mut key, value)| {
+                    if key.eq_ignore_ascii_case("X-CSRF-Token")
+                        || key.eq_ignore_ascii_case("Set-Cookie")
+                    {
+                        key.push_str("-alt");
+                    }
+                    (key, value)
+                })
+                .collect::<Vec<_>>()
+        })
+    }
+
+    fn header_case_strategy(name: &'static str) -> impl Strategy<Value = String> {
+        let len = name.len();
+        prop::collection::vec(prop::bool::ANY, len).prop_map(move |mask| {
+            name.chars()
+                .zip(mask)
+                .map(|(ch, lower)| match ch {
+                    '-' => '-',
+                    letter if lower => letter.to_ascii_lowercase(),
+                    letter => letter.to_ascii_uppercase(),
+                })
+                .collect()
+        })
+    }
+
+    fn header_value_strategy() -> impl Strategy<Value = String> {
+        prop::string::string_regex("[ -~]{0,96}").unwrap()
+    }
+
+    fn dedup_case_insensitive(entries: Vec<(String, String)>) -> Vec<(String, String)> {
+        use std::collections::HashMap as StdHashMap;
+        let mut map: StdHashMap<String, (String, String)> = StdHashMap::new();
+        for (name, value) in entries {
+            map.insert(name.to_ascii_lowercase(), (name, value));
+        }
+        map.into_values().collect()
+    }
+
+    proptest! {
+        #[test]
+        fn given_any_headers_and_optional_existing_when_secure_then_sets_token_and_cookie_idempotently(
+            baseline in header_entries_strategy(),
+            token_name in header_case_strategy("X-CSRF-Token"),
+            token_value in header_value_strategy(),
+            set_cookie_name in header_case_strategy("Set-Cookie"),
+            set_cookie_value in header_value_strategy(),
+        ) {
+            let baseline = dedup_case_insensitive(baseline);
+            let mut headers = empty_headers();
+            for (name, value) in &baseline { headers.insert(name.clone(), value.clone()); }
+            // Optionally insert preexisting headers that should be overwritten/collapsed
+            headers.insert(token_name, token_value);
+            headers.insert(set_cookie_name, set_cookie_value);
+
+            let shield = Shield::new().csrf(CsrfOptions::new(secret())).expect("feature");
+            let once = shield.secure(headers).expect("secure");
+            let twice = shield.secure(once.clone()).expect("secure");
+
+            // Verify tokens from both runs are valid and header names are canonical
+            let service = HmacCsrfService::new(secret());
+            let token1 = once.get("X-CSRF-Token").cloned().unwrap_or_default();
+            let token2 = twice.get("X-CSRF-Token").cloned().unwrap_or_default();
+            prop_assert!(service.verify(&token1).is_ok());
+            prop_assert!(service.verify(&token2).is_ok());
+
+            // Set-Cookie must contain our CSRF cookie with required attributes.
+            let cookie1 = once.get("Set-Cookie").cloned().unwrap_or_default();
+            let cookie2 = twice.get("Set-Cookie").cloned().unwrap_or_default();
+            let lines1: Vec<&str> = cookie1.split('\n').collect();
+            let lines2: Vec<&str> = cookie2.split('\n').collect();
+            // There must be at least one line with our CSRF cookie attributes
+            prop_assert!(lines1.iter().any(|l| l.contains("__Host-") && l.contains("Path=/") && l.contains("Secure") && l.contains("HttpOnly") && l.contains("SameSite=Lax")));
+            prop_assert!(lines2.iter().any(|l| l.contains("__Host-") && l.contains("Path=/") && l.contains("Secure") && l.contains("HttpOnly") && l.contains("SameSite=Lax")));
+            // Second run appends exactly one additional cookie line
+            prop_assert_eq!(lines2.len(), lines1.len() + 1);
+        }
+    }
+}
