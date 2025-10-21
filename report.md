@@ -15,15 +15,6 @@
 	- 작업: `Cargo.toml`에 `rust-version = "<MSRV>"` 명시(현재 CI/개발 환경 기준). Semver 호환 범위에서 유지.
 	- 수용 기준: cargo metadata/빌드 정상 동작.
 
-- CI 품질 게이트 강화
-	- 작업:
-		- MSRV + stable (선택적 beta) 매트릭스 빌드, OS 매트릭스(linux/macos/windows)에서 `make format`, `make lint`, `make test` 실행.
-		- 코드 커버리지 임계값 설정(llvm-cov 90% 라인 기준, 예시) 및 보고서 산출(선택).
-		- public API 가드: `cargo public-api`로 공개 API 변경이 있는 PR에 경고/실패 설정.
-		- 보안 스캔: `cargo deny`(advisories, bans, licenses), `cargo audit` 추가.
-		- Miri(선택): `cargo miri test` 스텝 추가.
-	- 수용 기준: CI 파이프라인 녹색, 실패 조건 작동 검증.
-
 - 퍼징(fuzzing) 추가
 	- 작업: `cargo-fuzz`로 파서/정규화 경로 fuzz 타겟 추가.
 		- 타겟: `csp`, `permissions_policy`, `same_site`, `clear_site_data`, `referrer_policy` 각 `Options::from_str`/정규화 유틸.
@@ -39,10 +30,6 @@
 	- 작업: 중요 공개 타입(옵션, 실행자)이 `Send + Sync`를 만족하는지 compile-time 어서션 테스트 추가.
 	- 수용 기준: 빌드 PASS, 어서션 실패 없음.
 
-- 사전 커밋 훅(선택)
-	- 작업: 포맷/린트/테스트 일부를 pre-commit 훅으로 실행하는 스크립트 추가(선택).
-	- 수용 기준: 로컬 개발 사이클 개선, 실패 시 커밋 차단 동작 확인.
-
 - HTTP/2·HTTP/3 헤더 호환성 검증
 	- 작업: 모든 헤더 키/값이 HTTP/2·HTTP/3 명세(소문자, 금지 문자 없음, pseudo-header 충돌 없음)를 만족하는지 컴파일/런타임 검증 추가.
 	- 수용 기준: 신규 테스트 PASS, HTTP/2·HTTP/3 클라이언트 통합 테스트(선택).
@@ -56,25 +43,10 @@
 		- 각 예제: Shield 파이프라인 적용, 런타임 nonce 주입, 에러 핸들링 시연.
 	- 수용 기준: 모든 예제 빌드/실행 가능, README에 프레임워크별 사용법 링크.
 
-- Rate Limiting/DoS 방어 고려사항(문서화 또는 경고)
-	- 작업: CSRF 토큰 발급·검증, CSP nonce 생성 등 상태 관리 경로에서 과도한 메모리/CPU 소비 방지 가이드.
-		- 예: 토큰 저장소 크기 제한, nonce 생성 빈도 제한 권장 주석/문서.
-	- 수용 기준: 코드 주석 또는 README 섹션 추가, 성능 벤치에서 극단 케이스 측정.
-
-- 통합 테스트: 실제 HTTP 스택 검증
-	- 작업: `tests/integration_http.rs` 추가, 실제 HTTP 서버(hyper/axum 등) 위에 Shield 적용 후 클라이언트 요청·응답 헤더 검증.
-		- 케이스: CSP nonce 교체, CSRF double-submit, HSTS 지속성, SameSite 쿠키 설정 등.
-	- 수용 기준: 통합 테스트 PASS, CI에서 자동 실행.
-
 - 보안 정책 프리셋(코드 제공, 문서 아님)
 	- 작업: `src/presets.rs` 모듈 추가, 일반 사용 사례별(strict/balanced/permissive) Shield 구성 프리셋 제공.
 		- 각 프리셋: CSP/HSTS/Permissions-Policy/Referrer-Policy/SameSite 등 조합, 빌더 체이닝으로 구성.
 	- 수용 기준: 프리셋 API 빌드 PASS, 테스트에서 프리셋 적용 시 예상 헤더 출력 검증.
-
-- CORS 헤더 통합(선택, 별도 feature flag)
-	- 작업: `Access-Control-*` 헤더 관리 기능 추가(선택, feature="cors").
-		- 옵션: 허용 origin/method/header, credentials, preflight 캐싱.
-	- 수용 기준: feature flag 활성화 시 빌드 PASS, CORS 프리플라이트 통합 테스트 PASS.
 
 ## CSP
 - 위험 스킴 경고 강화 로직 세분화
