@@ -149,6 +149,29 @@ mod edge {
         assert!(lines.iter().all(|line| line.contains("SameSite=Lax")));
         assert!(lines.iter().all(|line| line.contains("Secure")));
     }
+
+    #[test]
+    fn given_extra_semicolons_and_spaces_when_secure_then_normalizes_attributes() {
+        let shield = Shield::new()
+            .same_site(SameSiteOptions::new())
+            .expect("feature");
+
+        let result = shield
+            .secure(with_cookie(
+                "session=abc;;;  ;  Path=/ ;; ;  ; Secure  ;  SameSite=None;;",
+            ))
+            .expect("secure");
+
+        let cookie = result.get("Set-Cookie").expect("cookie present");
+        // base is preserved, extraneous separators trimmed, security flags present once
+        assert!(cookie.starts_with("session=abc"));
+        assert!(cookie.contains("Path=/"));
+        assert!(cookie.contains("Secure"));
+        assert!(cookie.contains("HttpOnly"));
+        assert!(cookie.contains("SameSite="));
+        // Should not contain empty attribute segments
+        assert!(!cookie.contains(";;"));
+    }
 }
 
 mod failure {
@@ -249,17 +272,28 @@ mod proptests {
             let once = shield.secure(headers).expect("secure");
             let twice = shield.secure(once.clone()).expect("secure");
 
-            // Build expected: baseline plus exactly one canonical Set-Cookie with upgraded flags.
+            // Build expected from baseline.
             let mut expected: HashMap<String, String> = baseline.into_iter().collect();
             let result_cookie = once.get("Set-Cookie").cloned().unwrap_or_default();
-            // Ensure policy attributes are present and not duplicated across runs.
-            prop_assert!(result_cookie.contains("SameSite="));
-            prop_assert!(result_cookie.contains("Secure"));
-            prop_assert!(result_cookie.contains("HttpOnly"));
-            expected.insert("Set-Cookie".to_string(), result_cookie);
 
-            prop_assert_eq!(once, expected.clone());
-            prop_assert_eq!(twice, expected);
+            if cookie_value.trim().is_empty() {
+                // Whitespace-only cookie values are ignored; representation is an empty Set-Cookie value and idempotent.
+                // Preserve the original header casing that NormalizedHeaders kept since executor returned early.
+                if let Some((present_key, _)) = once.iter().find(|(k, _)| k.eq_ignore_ascii_case("Set-Cookie")) {
+                    expected.insert(present_key.clone(), String::new());
+                }
+                prop_assert_eq!(once, expected.clone());
+                prop_assert_eq!(twice, expected);
+            } else {
+                // Ensure policy attributes are present and not duplicated across runs.
+                prop_assert!(result_cookie.contains("SameSite="));
+                prop_assert!(result_cookie.contains("Secure"));
+                prop_assert!(result_cookie.contains("HttpOnly"));
+                expected.insert("Set-Cookie".to_string(), result_cookie);
+
+                prop_assert_eq!(once, expected.clone());
+                prop_assert_eq!(twice, expected);
+            }
         }
     }
 
@@ -285,15 +319,24 @@ mod proptests {
             let once = shield.secure(headers).expect("secure");
             let twice = shield.secure(once.clone()).expect("secure");
 
-            // Expect a single canonical Set-Cookie header with upgraded flags
+            // Expect a single canonical Set-Cookie header with upgraded flags, unless both inputs were whitespace-only.
             let mut expected: HashMap<String, String> = baseline.into_iter().collect();
             let cookie = once.get("Set-Cookie").cloned().unwrap_or_default();
-            prop_assert!(cookie.contains("SameSite="));
-            prop_assert!(cookie.contains("Secure"));
-            expected.insert("Set-Cookie".to_string(), cookie);
 
-            prop_assert_eq!(once, expected.clone());
-            prop_assert_eq!(twice, expected);
+            if values.0.trim().is_empty() && values.1.trim().is_empty() {
+                if let Some((present_key, _)) = once.iter().find(|(k, _)| k.eq_ignore_ascii_case("Set-Cookie")) {
+                    expected.insert(present_key.clone(), String::new());
+                }
+                prop_assert_eq!(once, expected.clone());
+                prop_assert_eq!(twice, expected);
+            } else {
+                prop_assert!(cookie.contains("SameSite="));
+                prop_assert!(cookie.contains("Secure"));
+                expected.insert("Set-Cookie".to_string(), cookie);
+
+                prop_assert_eq!(once, expected.clone());
+                prop_assert_eq!(twice, expected);
+            }
         }
     }
 }

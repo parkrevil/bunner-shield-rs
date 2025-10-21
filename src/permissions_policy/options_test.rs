@@ -133,8 +133,8 @@ mod builder_minimal {
             "microphone",
             "camera-zoom",
             "a1",
-            "Camera",  // will normalize to lowercase and pass
-            "camerA",  // mixed case normalizes to valid
+            "Camera", // will normalize to lowercase and pass
+            "camerA", // mixed case normalizes to valid
         ]
         .iter()
         {
@@ -156,6 +156,44 @@ mod builder_minimal {
             PolicyBuilderError::EmptyAllowListEntry {
                 feature: "camera".to_string(),
             }
+        );
+    }
+
+    #[test]
+    fn given_allowlist_with_duplicates_when_build_then_dedup_preserves_first_order() {
+        let options = PermissionsPolicyOptions::builder()
+            .feature(
+                "geolocation",
+                [
+                    AllowListItem::Origin(Cow::Borrowed("https://a.example")),
+                    AllowListItem::Origin(Cow::Borrowed("https://b.example")),
+                    AllowListItem::Origin(Cow::Borrowed("https://a.example")), // duplicate
+                    AllowListItem::Origin(Cow::Borrowed("https://b.example")), // duplicate
+                    AllowListItem::SelfKeyword,
+                    AllowListItem::SelfKeyword, // duplicate
+                ],
+            )
+            .build()
+            .expect("builder should succeed");
+
+        assert_eq!(
+            options.header_value(),
+            "geolocation=(https://a.example https://b.example self)"
+        );
+    }
+
+    #[test]
+    fn given_multiple_features_when_build_then_preserves_feature_insertion_order() {
+        let options = PermissionsPolicyOptions::builder()
+            .feature("camera", [AllowListItem::None])
+            .feature("geolocation", [AllowListItem::SelfKeyword])
+            .feature("microphone", [AllowListItem::Any])
+            .build()
+            .expect("builder should succeed");
+
+        assert_eq!(
+            options.header_value(),
+            "camera=(()), geolocation=(self), microphone=(*)"
         );
     }
 }
