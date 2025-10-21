@@ -163,4 +163,67 @@ mod proptests {
             prop_assert_eq!(twice, expected);
         }
     }
+
+    fn two_distinct_xfo_cases_strategy() -> impl Strategy<Value = (String, String)> {
+        (xfo_case_strategy(), xfo_case_strategy())
+            .prop_filter("distinct case variants", |(a, b)| a != b)
+    }
+
+    proptest! {
+        #[test]
+        fn given_duplicate_case_variants_when_secure_with_deny_then_collapses_and_canonicalizes(
+            baseline in header_entries_strategy(),
+            dup_cases in two_distinct_xfo_cases_strategy(),
+            values in (header_value_strategy(), header_value_strategy()),
+        ) {
+            let mut headers = empty_headers();
+            for (name, value) in &baseline {
+                headers.insert(name.clone(), value.clone());
+            }
+            // Insert two differently-cased XFO entries to simulate duplicates
+            headers.insert(dup_cases.0.clone(), values.0.clone());
+            headers.insert(dup_cases.1.clone(), values.1.clone());
+
+            let shield = Shield::new()
+                .x_frame_options(XFrameOptionsOptions::new())
+                .expect("feature");
+            let once = shield.secure(headers).expect("secure");
+            let twice = shield.secure(once.clone()).expect("secure");
+
+            let mut expected = baseline.into_iter().collect::<HashMap<_, _>>();
+            expected.insert("X-Frame-Options".to_string(), "DENY".to_string());
+
+            prop_assert_eq!(once, expected.clone());
+            prop_assert_eq!(twice, expected);
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn given_duplicate_case_variants_when_secure_with_sameorigin_then_collapses_and_canonicalizes(
+            baseline in header_entries_strategy(),
+            dup_cases in two_distinct_xfo_cases_strategy(),
+            values in (header_value_strategy(), header_value_strategy()),
+        ) {
+            let mut headers = empty_headers();
+            for (name, value) in &baseline {
+                headers.insert(name.clone(), value.clone());
+            }
+            // Insert two differently-cased XFO entries to simulate duplicates
+            headers.insert(dup_cases.0.clone(), values.0.clone());
+            headers.insert(dup_cases.1.clone(), values.1.clone());
+
+            let shield = Shield::new()
+                .x_frame_options(XFrameOptionsOptions::new().policy(XFrameOptionsPolicy::SameOrigin))
+                .expect("feature");
+            let once = shield.secure(headers).expect("secure");
+            let twice = shield.secure(once.clone()).expect("secure");
+
+            let mut expected = baseline.into_iter().collect::<HashMap<_, _>>();
+            expected.insert("X-Frame-Options".to_string(), "SAMEORIGIN".to_string());
+
+            prop_assert_eq!(once, expected.clone());
+            prop_assert_eq!(twice, expected);
+        }
+    }
 }
