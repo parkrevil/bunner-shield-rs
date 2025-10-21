@@ -7,10 +7,6 @@
 	- 작업: 각 모듈 `*_error.rs` 또는 `options.rs`의 `Error` 파생 thiserror 메시지를 소문자 시작·마침표 없음 규칙으로 정리.
 	- 수용 기준: 전 테스트 통과, clippy -D warnings 통과, 에러 스냅샷 존재 시 갱신.
 
-- 테스트 실행 시간 단축(선택적)
-	- 작업: proptest 전략 상한/샘플 수를 테스트 모듈별 feature flag로 조절. 기본 run에서는 낮은 케이스 수 사용.
-	- 수용 기준: 542/542 유지, 실행 시간 유의미 감소(개발자 로컬 기준).
-
 - unsafe 금지 선언 추가
 	- 작업: `src/lib.rs` 상단에 `#![forbid(unsafe_code)]` 선언 추가. 워크스페이스 전반에 unsafe 사용이 없음을 보장.
 	- 수용 기준: Build/Lint/Tests 모두 PASS.
