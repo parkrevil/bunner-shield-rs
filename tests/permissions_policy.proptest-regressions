@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc d2c4e1a5385fbcbcf2e83519505bd77841e7785a4edffe99b5ffe9fec8d3f004 # shrinks to baseline = [("Q", ""), ("q", "")], specs = [FeatureSpec { name: "A", allow: [] }], dup_cases = ("PERMISSIONS-POLICY", "PERMISSIONS-POLIcY"), values = ("", "")

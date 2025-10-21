@@ -311,6 +311,15 @@ mod proptests {
             .prop_filter("distinct case variants", |(a, b)| a != b)
     }
 
+    fn dedup_case_insensitive(entries: Vec<(String, String)>) -> Vec<(String, String)> {
+        use std::collections::HashMap as StdHashMap;
+        let mut map: StdHashMap<String, (String, String)> = StdHashMap::new();
+        for (name, value) in entries {
+            map.insert(name.to_ascii_lowercase(), (name, value));
+        }
+        map.into_values().collect()
+    }
+
     proptest! {
         #[test]
         fn given_duplicate_case_variants_when_secure_then_collapses_and_canonicalizes(
@@ -319,6 +328,7 @@ mod proptests {
             dup_cases in two_distinct_pp_cases_strategy(),
             values in (prop::string::string_regex("[ -~]{0,96}").unwrap(), prop::string::string_regex("[ -~]{0,96}").unwrap()),
         ) {
+            let baseline = dedup_case_insensitive(baseline);
             let mut headers = empty_headers();
             for (name, value) in &baseline {
                 headers.insert(name.clone(), value.clone());

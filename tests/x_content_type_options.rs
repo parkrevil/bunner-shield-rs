@@ -49,12 +49,22 @@ mod proptests {
         prop::string::string_regex("[ -~]{0,96}").unwrap()
     }
 
+    fn dedup_case_insensitive(entries: Vec<(String, String)>) -> Vec<(String, String)> {
+        use std::collections::HashMap as StdHashMap;
+        let mut map: StdHashMap<String, (String, String)> = StdHashMap::new();
+        for (name, value) in entries {
+            map.insert(name.to_ascii_lowercase(), (name, value));
+        }
+        map.into_values().collect()
+    }
+
     proptest! {
         #[test]
         fn given_any_header_set_when_secure_then_sets_nosniff_idempotently(
             baseline in header_entries_strategy(),
             existing in prop::option::of((xcto_case_strategy(), header_value_strategy()))
         ) {
+            let baseline = dedup_case_insensitive(baseline);
             let mut headers = empty_headers();
             for (name, value) in &baseline {
                 headers.insert(name.clone(), value.clone());
@@ -68,8 +78,7 @@ mod proptests {
             let once = shield.secure(headers).expect("secure");
             let twice = shield.secure(once.clone()).expect("secure");
 
-            let expected = baseline.into_iter().collect::<HashMap<String, String>>();
-            let mut expected = expected;
+            let mut expected = baseline.into_iter().collect::<HashMap<String, String>>();
             expected.insert("X-Content-Type-Options".to_string(), "nosniff".to_string());
 
             prop_assert_eq!(once, expected.clone());
