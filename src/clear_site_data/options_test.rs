@@ -118,4 +118,17 @@ mod validate {
         let error = result.expect_err("expected validation failure");
         assert_eq!(error, ClearSiteDataOptionsError::NoSectionsSelected);
     }
+
+    #[test]
+    fn given_no_selection_when_validate_then_error_message_is_unified() {
+        let options = ClearSiteDataOptions::new();
+
+        let error = options.validate().expect_err("expected validation failure");
+
+        // unified style: lowercase start, no trailing period
+        assert_eq!(
+            error.to_string(),
+            "clear-site-data requires at least one section"
+        );
+    }
 }
