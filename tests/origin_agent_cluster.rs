@@ -126,12 +126,22 @@ mod proptests {
         prop::string::string_regex("[ -~]{0,96}").unwrap()
     }
 
+    fn dedup_case_insensitive(entries: Vec<(String, String)>) -> Vec<(String, String)> {
+        use std::collections::HashMap as StdHashMap;
+        let mut map: StdHashMap<String, (String, String)> = StdHashMap::new();
+        for (name, value) in entries {
+            map.insert(name.to_ascii_lowercase(), (name, value));
+        }
+        map.into_values().collect()
+    }
+
     proptest! {
         #[test]
         fn given_any_headers_and_optional_existing_when_secure_with_enable_then_sets_marker_idempotently(
             baseline in header_entries_strategy(),
             existing in prop::option::of((header_case_strategy(), header_value_strategy())),
         ) {
+            let baseline = dedup_case_insensitive(baseline);
             let mut headers = empty_headers();
             for (name, value) in &baseline { headers.insert(name.clone(), value.clone()); }
             if let Some((name, value)) = existing { headers.insert(name, value); }
@@ -142,7 +152,7 @@ mod proptests {
             let once = shield.secure(headers).expect("secure");
             let twice = shield.secure(once.clone()).expect("secure");
 
-            let mut expected = baseline.into_iter().collect::<HashMap<_, _>>();
+            let mut expected: HashMap<String, String> = baseline.into_iter().collect();
             expected.insert("Origin-Agent-Cluster".to_string(), "?1".to_string());
 
             prop_assert_eq!(once, expected.clone());
@@ -156,6 +166,7 @@ mod proptests {
             baseline in header_entries_strategy(),
             existing in prop::option::of((header_case_strategy(), header_value_strategy())),
         ) {
+            let baseline = dedup_case_insensitive(baseline);
             let mut headers = empty_headers();
             for (name, value) in &baseline { headers.insert(name.clone(), value.clone()); }
             if let Some((name, value)) = existing { headers.insert(name, value); }
@@ -166,7 +177,7 @@ mod proptests {
             let once = shield.secure(headers).expect("secure");
             let twice = shield.secure(once.clone()).expect("secure");
 
-            let mut expected = baseline.into_iter().collect::<HashMap<_, _>>();
+            let mut expected: HashMap<String, String> = baseline.into_iter().collect();
             expected.insert("Origin-Agent-Cluster".to_string(), "?0".to_string());
 
             prop_assert_eq!(once, expected.clone());
