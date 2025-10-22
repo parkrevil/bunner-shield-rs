@@ -156,3 +156,54 @@ mod validate {
         assert!(result.is_ok());
     }
 }
+
+mod proptests {
+    use super::*;
+    use proptest::prelude::*;
+
+    // Randomly change the case of alphabetic characters in a token
+    fn randomize_case(input: &str, toggles: &[bool]) -> String {
+        input
+            .chars()
+            .enumerate()
+            .map(|(i, c)| {
+                if c.is_ascii_alphabetic() {
+                    if toggles.get(i).copied().unwrap_or(false) {
+                        c.to_ascii_uppercase()
+                    } else {
+                        c.to_ascii_lowercase()
+                    }
+                } else {
+                    c
+                }
+            })
+            .collect()
+    }
+
+    proptest! {
+        #[test]
+        fn given_random_padding_and_casing_when_parse_then_returns_expected_policy(
+            // choose a base token
+            which in 0u8..3u8,
+            // random toggles for case changes, over-allocate length for safety
+            toggles in proptest::collection::vec(any::<bool>(), 0..64),
+            // left/right padding with whitespace chars
+            left_pad in proptest::collection::vec(prop_oneof![Just(' '), Just('\t'), Just('\n'), Just('\r')], 0..4),
+            right_pad in proptest::collection::vec(prop_oneof![Just(' '), Just('\t'), Just('\n'), Just('\r')], 0..4),
+        ) {
+            let (base, expected) = match which {
+                0 => ("same-origin", CoopPolicy::SameOrigin),
+                1 => ("same-origin-allow-popups", CoopPolicy::SameOriginAllowPopups),
+                _ => ("unsafe-none", CoopPolicy::UnsafeNone),
+            };
+
+            let randomized = randomize_case(base, &toggles);
+            let left: String = left_pad.into_iter().collect();
+            let right: String = right_pad.into_iter().collect();
+            let input = format!("{left}{randomized}{right}");
+
+            let parsed: CoopPolicy = input.parse().expect("parse should succeed");
+            prop_assert_eq!(parsed, expected);
+        }
+    }
+}

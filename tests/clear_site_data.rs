@@ -257,6 +257,7 @@ mod proptests {
             // choose non-empty subset of the 4 sections
             mask in 1u8..=15u8,
         ) {
+            let baseline = dedup_case_insensitive(baseline);
             let mut headers = empty_headers();
             for (name, value) in &baseline {
                 headers.insert(name.clone(), value.clone());
@@ -290,6 +291,7 @@ mod proptests {
             values in (header_value_strategy(), header_value_strategy()),
             mask in 1u8..=15u8,
         ) {
+            let baseline = dedup_case_insensitive(baseline);
             let mut headers = empty_headers();
             for (name, value) in &baseline {
                 headers.insert(name.clone(), value.clone());
@@ -310,5 +312,14 @@ mod proptests {
             prop_assert_eq!(once, expected.clone());
             prop_assert_eq!(twice, expected);
         }
+    }
+
+    fn dedup_case_insensitive(entries: Vec<(String, String)>) -> Vec<(String, String)> {
+        use std::collections::HashMap as StdHashMap;
+        let mut map: StdHashMap<String, (String, String)> = StdHashMap::new();
+        for (name, value) in entries {
+            map.insert(name.to_ascii_lowercase(), (name, value));
+        }
+        map.into_values().collect()
     }
 }
