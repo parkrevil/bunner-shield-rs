@@ -1,5 +1,3 @@
-#![forbid(unsafe_code)]
-
 extern crate self as bunner_shield_rs;
 
 mod clear_site_data;
