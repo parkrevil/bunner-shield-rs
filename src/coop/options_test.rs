@@ -69,6 +69,22 @@ mod from_str {
             CoopOptionsError::InvalidPolicy("invalid".to_string())
         );
     }
+
+    #[test]
+    fn given_tab_and_newline_padding_when_parse_then_trims_and_parses_policy() {
+        let policy: CoopPolicy = "\t\nsame-origin\r\n".parse().expect("parse should succeed");
+
+        assert_eq!(policy, CoopPolicy::SameOrigin);
+    }
+
+    #[test]
+    fn given_tabs_and_spaces_with_allow_popups_when_parse_then_parses_case_insensitively() {
+        let policy: CoopPolicy = " \t SaMe-OrIgIn-AlLoW-PoPuPs \n"
+            .parse()
+            .expect("parse should succeed");
+
+        assert_eq!(policy, CoopPolicy::SameOriginAllowPopups);
+    }
 }
 
 mod new {
