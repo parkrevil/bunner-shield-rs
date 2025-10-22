@@ -1,4 +1,6 @@
-use bunner_shield_rs::{Shield, XdnsPrefetchControlOptions, XdnsPrefetchControlPolicy};
+use bunner_shield_rs::{
+    NormalizedHeaders, Shield, XdnsPrefetchControlOptions, XdnsPrefetchControlPolicy,
+};
 use std::collections::HashMap;
 mod common;
 use common::empty_headers;
@@ -122,16 +124,17 @@ mod proptests {
         ) {
             let mut headers = empty_headers();
             for (name, value) in &baseline { headers.insert(name.clone(), value.clone()); }
-            if let Some((name, value)) = existing { headers.insert(name, value); }
+            if let Some((name, value)) = existing.clone() { headers.insert(name, value); }
+
+            let mut expected_headers = NormalizedHeaders::new(headers.clone());
+            expected_headers.insert_owned("X-DNS-Prefetch-Control", "off".to_string());
+            let expected = expected_headers.into_result();
 
             let shield = Shield::new()
                 .x_dns_prefetch_control(XdnsPrefetchControlOptions::new())
                 .expect("feature");
             let once = shield.secure(headers).expect("secure");
             let twice = shield.secure(once.clone()).expect("secure");
-
-            let mut expected = baseline.into_iter().collect::<HashMap<_, _>>();
-            expected.insert("X-DNS-Prefetch-Control".to_string(), "off".to_string());
 
             prop_assert_eq!(once, expected.clone());
             prop_assert_eq!(twice, expected);
@@ -146,16 +149,17 @@ mod proptests {
         ) {
             let mut headers = empty_headers();
             for (name, value) in &baseline { headers.insert(name.clone(), value.clone()); }
-            if let Some((name, value)) = existing { headers.insert(name, value); }
+            if let Some((name, value)) = existing.clone() { headers.insert(name, value); }
+
+            let mut expected_headers = NormalizedHeaders::new(headers.clone());
+            expected_headers.insert_owned("X-DNS-Prefetch-Control", "on".to_string());
+            let expected = expected_headers.into_result();
 
             let shield = Shield::new()
                 .x_dns_prefetch_control(XdnsPrefetchControlOptions::new().policy(XdnsPrefetchControlPolicy::On))
                 .expect("feature");
             let once = shield.secure(headers).expect("secure");
             let twice = shield.secure(once.clone()).expect("secure");
-
-            let mut expected = baseline.into_iter().collect::<HashMap<_, _>>();
-            expected.insert("X-DNS-Prefetch-Control".to_string(), "on".to_string());
 
             prop_assert_eq!(once, expected.clone());
             prop_assert_eq!(twice, expected);
