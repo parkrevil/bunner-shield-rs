@@ -2,6 +2,7 @@
 name = "bunner_shield_rs"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.85"
 license = "MIT"
 description = "A lightweight HTTP security core library for Rust"
 repository = "https://github.com/parkrevil/bunner-shield-rs"

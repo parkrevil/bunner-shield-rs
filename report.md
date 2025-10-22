@@ -7,11 +7,11 @@
 	- 작업: 각 모듈 `*_error.rs` 또는 `options.rs`의 `Error` 파생 thiserror 메시지를 소문자 시작·마침표 없음 규칙으로 정리.
 	- 수용 기준: 전 테스트 통과, clippy -D warnings 통과, 에러 스냅샷 존재 시 갱신.
 
-- unsafe 금지 선언 추가
+- [x] unsafe 금지 선언 추가
 	- 작업: `src/lib.rs` 상단에 `#![forbid(unsafe_code)]` 선언 추가. 워크스페이스 전반에 unsafe 사용이 없음을 보장.
 	- 수용 기준: Build/Lint/Tests 모두 PASS.
 
-- Rust 버전 고정 선언
+- [x] Rust 버전 고정 선언
 	- 작업: `Cargo.toml`에 `rust-version = "<MSRV>"` 명시(현재 CI/개발 환경 기준). Semver 호환 범위에서 유지.
 	- 수용 기준: cargo metadata/빌드 정상 동작.
 
