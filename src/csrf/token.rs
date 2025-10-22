@@ -317,10 +317,7 @@ impl CsrfReplayStore for InMemoryReplayStore {
         }
         let mut key = [0u8; 16];
         key.copy_from_slice(&id[..16]);
-        let mut guard = self
-            .seen
-            .lock()
-            .expect("csrf replay store lock poisoned");
+        let mut guard = self.seen.lock().expect("csrf replay store lock poisoned");
         guard.insert(key)
     }
 }
