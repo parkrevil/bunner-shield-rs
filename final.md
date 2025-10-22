@@ -12,15 +12,8 @@
 - **네이밍**: `*Options`, `*Policy`, `*Executor` 등의 네이밍 컨벤션이 일관되어 DX(개발자 경험)에 긍정적입니다.
   - **타당성 검토:** 예를 들어 `src/coop/options.rs`의 `CoopOptions`와 `CoopPolicy`, `src/coop/executor.rs`의 `Coop`가 일관된 명명 규칙을 따르며 다른 모듈도 동일한 패턴을 유지합니다.
 
-- **`executor.rs`의 추상화**: 현재 각 기능의 `executor.rs`는 `execute` 메소드를 포함하는 유사한 구조를 가집니다. 이를 `Executor` 트레이트(trait)로 추상화하여 모든 Executor가 이를 구현하도록 강제하면, 코드의 일관성과 재사용성이 더욱 향상될 것입니다.
-  ```rust
-  // 제안 (src/executor.rs 또는 새로운 파일)
-  pub trait Executor {
-      fn execute(&self, headers: &mut NormalizedHeaders);
-  }
-  ```
-  각 모듈의 `executor`는 이 트레이트를 구현하게 됩니다.
-  - **타당성 검토:** 현재 `src/executor.rs`의 `FeatureExecutor`/`DynFeatureExecutor` 조합으로 동작하지만 공통 추상화가 없어 각 정책 executor가 유사 구현을 반복하고 있음을 코드에서 확인했습니다.
+- **`executor.rs`의 추상화(정정)**: 이미 `FeatureExecutor`/`DynFeatureExecutor` 트레이트와 `impl_cached_header_executor!` 매크로가 존재해 공통 추상화가 제공됩니다. 다만 다중 헤더를 다루는 실행기 보일러플레이트를 줄이는 보조 매크로(예: 다중 헤더 전용)나, 외부 확장성을 위해 트레이트 공개 범위 조정(필요 시)은 검토해볼 만합니다.
+  - **타당성 검토:** `src/executor.rs`에서 트레이트와 캐시형 실행기 패턴이 이미 구현되어 있어 “추상화 부재” 지적은 부정확했습니다. 개선 포인트만 남깁니다.
 
 - **`csp` 모듈의 복잡성**: `csp` 모듈은 다른 모듈에 비해 내부 구조가 매우 복잡합니다 (`options/` 하위의 수많은 파일). 이는 CSP 스펙 자체가 복잡하기 때문이지만, `options/` 내부를 기능별(e.g., `validation`, `builders`, `config`)로 더 명확하게 그룹화하고, 각 하위 모듈의 역할을 `mod.rs`에 문서화하여 복잡성을 완화할 필요가 있습니다.
   - **타당성 검토:** `src/csp/options/`에는 `builders/`, `config/`, `validation/` 등 다중 하위 폴더와 수십 개 파일이 존재하며, 각 모듈 간 의존 경로가 복잡하게 얽혀 있어 유지보수 난이도가 높음을 확인했습니다.
@@ -33,39 +26,36 @@
 
 #### 개선 및 보강점
 - **`Content-Security-Policy` (CSP)**:
-  - `report-to` 지시어는 구현되어 있으나, `Reporting API`와 연동되는 `Report-To` 헤더의 통합 지원이 필요합니다. 이는 CSP 위반 보고를 위한 최신 메커니즘입니다.
-  - `trusted-types`와 관련된 구체적인 지시어(`require-trusted-types-for`)가 누락되었습니다. `TrustedTypesPolicy`는 있으나, 이를 강제하는 옵션이 추가되어야 합니다.
-  - CSP Level 3의 모든 지시어(`webrtc`, `worker-src` 등)가 완벽하게 지원되는지 재검토가 필요합니다.
-  - **타당성 검토:** `src/csp/options/config/core.rs`에 `report-to` 토큰 처리가 존재하지만 Reporting API 헤더와의 통합은 별도로 제공되지 않으며, `require-trusted-types-for` 지시어에 대한 Builder API가 부재함을 확인했습니다.
+  - `report-to` 지시어는 구현되어 있으나, 현 시점 브라우저의 Reporting API(`Report-To`/`Reporting-Endpoints`) 지원은 제한적이거나 비권장 흐름입니다. 자동 통합을 필수로 권고하기보다 선택적 기능으로 남기고, 실제 운영은 Report-Only + 서버 로깅/관찰을 우선 권장하는 톤으로 조정하는 것이 적절합니다.
+  - `trusted-types` 관련 강제 지시어(`require-trusted-types-for`)는 누락되어 있습니다. 관련 Builder/API 보강이 필요합니다.
+  - CSP Level 3 지시어 집합(예: `worker-src` 등)의 최신화 여부를 주기적으로 점검하는 자동화(테스트/검증)가 있으면 좋습니다.
+  - **타당성 검토:** `src/csp/options/config/core.rs`에 `report-to` 토큰 처리만 존재하고 Reporting API 헤더 통합은 별도 미제공입니다. 또한 `require-trusted-types-for` Builder는 부재함을 확인했습니다.
 
 - **`Cross-Origin-Embedder-Policy` (COEP)**:
-  - 현재 `require-corp`와 `unsafe-none`만 지원합니다. 표준에 `credentialless` 값이 추가되었으므로 이를 `CoepPolicy`에 추가해야 합니다.
-  - **타당성 검토:** `src/coep/options.rs`의 `CoepPolicy` enum이 `RequireCorp`, `Credentialless` 두 variant만 가지고 있고, 브라우저 최신 사양의 `credentialless`가 이미 구현되어 있음을 확인했습니다.
+  - `require-corp`와 `credentialless`를 이미 지원합니다(정정). COEP에 `unsafe-none`은 존재하지 않으며, 이는 COOP의 값입니다. 현재 구현은 최신 사양과 부합합니다.
+  - **타당성 검토:** `src/coep/options.rs`에서 `CoepPolicy::{RequireCorp, Credentialless}`가 구현되어 있음을 확인했습니다.
 
 - **`Permissions-Policy`**:
-  - 기능 자체는 구현되어 있으나, 브라우저에서 계속해서 새로운 기능(feature)들이 추가되고 있습니다. 정기적으로 최신 표준을 추적하여 지원하는 기능 목록을 업데이트해야 합니다. 예를 들어 `bluetooth`, `hid`, `serial` 등의 최신 API 관련 정책이 포함되어 있는지 확인이 필요합니다.
-  - **타당성 검토:** `src/permissions_policy/options.rs`는 문자열 기반 builder만 제공하며, 기능명 검증은 정규식 수준(`^[a-z][a-z0-9-]*$`)에 머무르고 있어 최신 권한 레지스트리 동기화가 필요함을 확인했습니다.
+  - 기능 자체는 구현되어 있으나, 브라우저에서 새로운 기능들이 계속 추가됩니다. 최신 권한 레지스트리 추적과 주기적 업데이트가 필요합니다.
+  - **타당성 검토(정정):** `src/permissions_policy/options.rs`에는 Builder가 존재하며 최소한의 이름 검증과 중복 제거를 수행합니다. 다만 레지스트리 동기화, 출처/토큰 엄격 검증, CRLF 방어 등은 여전히 보강 대상입니다.
 
-- **누락된 보안 헤더**:
+- **누락된 보강 포인트**:
   - `Clear-Site-Data`: 구현되어 있습니다. 훌륭합니다.
     - **타당성 검토:** `src/clear_site_data/` 모듈과 `Shield::clear_site_data` 체이닝 메서드가 존재해 헤더 출력이 가능함을 확인했습니다.
   - `Cross-Origin-Opener-Policy` (COOP): 구현되어 있습니다. 훌륭합니다.
     - **타당성 검토:** `src/coop/` 모듈과 `CoopOptions`가 있으며 `Shield::coop` 메서드로 파이프라인에 추가됨을 확인했습니다.
-  - **`Strict-Transport-Security` (HSTS)**: `preload` 지시어는 있지만, `includeSubDomains` 옵션이 명시적으로 모든 도메인에 적용되는 것을 제어하는 기능이 충분히 설명되어야 합니다.
-    - **타당성 검토:** `src/hsts/options.rs`에서 `preload`가 true일 때 `include_subdomains`가 필요하도록 검증하지만, `max_age=0` 등 해제 시나리오가 거부되는 구조를 확인했습니다.
+  - **`Strict-Transport-Security` (HSTS)**: `preload` 검증은 적절하나, 표준의 해제 경로인 `max-age=0`을 현재 거부하고 있어(검증 에러) 해제 시나리오 지원이 필요합니다.
+    - **타당성 검토:** `src/hsts/options.rs`의 `validate`에서 `max_age == 0`을 에러로 처리합니다.
   - **`X-Content-Type-Options`**: `nosniff` 외 다른 옵션은 없으므로 현재 구현이 충분합니다.
     - **타당성 검토:** `src/x_content_type_options/executor.rs`가 `nosniff` 값을 고정으로 삽입하는 단순 로직임을 확인했습니다.
   - **`X-Frame-Options`**: `DENY`, `SAMEORIGIN` 외에 `ALLOW-FROM`이 있지만, 이 지시어는 대부분의 최신 브라우저에서 지원 중단(deprecated)되었으므로 현재 구현(미포함)이 올바릅니다.
     - **타당성 검토:** `src/x_frame_options/options.rs`의 enum이 `Deny`, `SameOrigin` 두 옵션만 제공하여 안전한 최신 브라우저 기준을 맞추고 있습니다.
-  - **`Expect-CT`**: 이 헤더는 Chrome에서 지원 중단될 예정이므로, 새로 추가할 필요는 없습니다. 오히려 만약 구현되어 있다면 제거를 고려해야 합니다. (현재는 미구현 상태로 보임 - 올바른 결정)
-    - **타당성 검토:** 코드베이스 전체 검색 시 Expect-CT 관련 모듈이 없고, 크롬 공식 문서에서 폐지된 헤더임을 확인했습니다.
+  - **`Expect-CT`**: 최신 브라우저 환경에서는 더 이상 권장되지 않는 헤더이므로 새로 추가할 필요는 없습니다. (현재 미구현)
 
 ### 3. 보안 및 안정성
 
 #### 긍정적인 점
-- `proptest`를 사용한 속성 기반 테스트는 다양한 입력에 대한 안정성을 보장하는 좋은 접근 방식입니다.
   - **타당성 검토:** `Cargo.toml`에서 `proptest`가 `dev-dependencies`로 정의되어 있고 `tests/` 및 각 모듈 테스트에서 proptest 매크로를 활용한 사례(`src/csrf/token_test.rs` 등)를 확인했습니다.
-- 각 모듈별로 테스트 케이스가 충실하게 작성되어 있습니다.
   - **타당성 검토:** `src/*/*_test.rs` 파일이 모듈별로 존재하며 `cargo test` 실행 결과 300+ 테스트가 통과함을 앞선 테스트에서 확인했습니다.
 
 #### 개선점
@@ -93,10 +83,8 @@
       .coop(CoopOptions::default().enable(CoopPolicy::SameOrigin))
       .build();
   ```
-- **`csp`의 복잡한 DX**: CSP 옵션 설정은 매우 복잡합니다. 현재 `CspOptions` 구조가 있지만, `Csp::builder()` 와 같은 빌더를 제공하여 지시어별로 타입-세이프(type-safe)한 방식으로 정책을 구축할 수 있게 하면 DX가 크게 향상될 것입니다. 예를 들어, `script-src`에 URL을 추가하는 메소드, `nonce`를 활성화하는 메소드 등을 명확히 구분하는 것입니다.
-  - **타당성 검토:** `Shield`는 현재 체이닝 메서드를 직접 호출해야 하며 빌더 기반 fluent API가 없어 정책 조합 시 실수를 방지하기 어렵다는 점을 코드에서 확인했습니다.
-- **`csp`의 복잡한 DX**: CSP 옵션 설정은 매우 복잡합니다. 현재 `CspOptions` 구조가 있지만, `Csp::builder()` 와 같은 빌더를 제공하여 지시어별로 타입-세이프(type-safe)한 방식으로 정책을 구축할 수 있게 하면 DX가 크게 향상될 것입니다. 예를 들어, `script-src`에 URL을 추가하는 메소드, `nonce`를 활성화하는 메소드 등을 명확히 구분하는 것입니다.
-  - **타당성 검토:** `src/csp/options/` 내 builders는 존재하지만 사용자가 직접 토큰 문자열을 다루어야 하며, `CspOptions::set_directive_sources` 등 저수준 API를 직접 호출해야 함을 확인했습니다.
+**`csp`의 복잡한 DX**: CSP 옵션 설정은 매우 복잡합니다. 현재 `CspOptions` 구조가 있지만, `Csp::builder()`와 같은 더 고수준의 타입-세이프 빌더를 제공하여 지시어별로 안전하게 정책을 구성할 수 있도록 개선 여지가 큽니다. 예: `script-src` URL 추가, `nonce` 활성화 등의 API 명확화.
+  - **타당성 검토:** `src/csp/options/`에 빌더 유틸이 일부 있으나 토큰 문자열을 직접 다루는 저수준 호출이 남아 있어 실수 가능성을 줄이려면 고수준 빌더가 도움이 됩니다.
 - **`x_powered_by` 모듈**: 이 모듈은 헤더를 제거하는 기능만 수행합니다. 다른 모듈들이 `*Options`와 `*Executor` 패턴을 따르는 반면, 이 모듈은 그 패턴을 따르지 않아 일관성이 떨어집니다. 구조를 다른 모듈과 통일하여 `XPoweredByOptions`를 도입하고, 제거 여부를 명시적으로 제어하도록 변경하는 것을 고려할 수 있습니다. (물론 기능이 단순하여 현재 구조가 더 실용적일 수도 있습니다.)
   - **타당성 검토:** `src/x_powered_by/executor.rs`는 `NoopOptions`만 사용하고 별도 옵션 구조가 없어 다른 모듈의 패턴과 달리 확장성이 떨어짐을 확인했습니다.
 
@@ -108,11 +96,11 @@
 
 그러나 최고 수준의 라이브러리가 되기 위해서는 다음 사항에 대한 보강이 필요합니다.
 
-1.  **표준 완전성**: COEP의 `credentialless`와 같은 최신 표준 기능을 빠르게 도입하고, Permissions-Policy 처럼 계속 변화하는 표준을 정기적으로 추적/갱신하는 프로세스가 필요합니다.
-  - **타당성 검토:** 브라우저 사양 변경 추적을 위한 자동화가 없고, 일부 report-only 헤더 지원이 빠져 있어 최신 규격 대응이 지연될 위험이 있습니다.
-2.  **DX 통일성 및 강화**: `executor` 트레이트 도입, `x_powered_by` 모듈 구조 통일, 그리고 복잡한 CSP 설정을 위한 빌더 패턴 도입을 통해 DX를 한 단계 더 끌어올릴 수 있습니다.
-  - **타당성 검토:** 현재 executor 패턴이 모듈마다 다르게 구현되고 `Shield` 빌더가 부재하여 일관성 문제가 반복됨을 코드 리뷰에서 확인했습니다.
-3.  **보안 심화**: CSRF 키 관리와 같이 라이브러리 사용자의 보안 실수를 줄여줄 수 있는 부가적인 기능(가드레일)을 제공하면 안정성이 더욱 높아질 것입니다.
+1.  **표준 완전성**: COEP의 `credentialless`는 이미 구현되었습니다. 다만 Permissions-Policy처럼 변화가 빠른 표준은 정기적으로 추적/갱신하는 프로세스가 필요합니다.
+  - **타당성 검토:** 브라우저 사양 변경 추적 자동화가 없고, Report-Only 계열 헤더 지원이 빠져 있어 최신 운영 플로우 대응이 제한됩니다.
+2.  **DX 통일성 및 강화**: (이미 존재하는) 실행기 추상화를 기반으로 다중 헤더용 매크로 보강/재사용성 향상, `x_powered_by` 모듈 구조 통일, 복잡한 CSP 설정을 위한 고수준 빌더 패턴 도입을 통해 DX를 끌어올릴 수 있습니다.
+  - **타당성 검토:** 실행기 추상화는 존재하나 보일러플레이트를 더 줄일 여지가 있고, `Shield` 빌더가 부재하여 일관성이 떨어집니다.
+3.  **보안 심화**: CSRF 키 관리와 같이 라이브러리 사용자의 보안 실수를 줄여줄 수 있는 부가 기능(가드레일)을 제공하면 안정성이 더욱 높아질 것입니다.
   - **타당성 검토:** CSRF 토큰 서비스가 키 보안 및 재사용 방지 도구를 제공하지 않아 사용자 실수 가능성이 남아 있음을 확인했습니다.
 
 위 개선점들을 반영하면, 이 라이브러리는 기능적 완전성, 보안성, 그리고 개발자 경험 측면에서 모두 최상위 수준의 프로젝트가 될 잠재력이 충분합니다.
@@ -144,8 +132,8 @@
   - **타당성 검토:** `constants::header_keys`에 report-only 키가 존재하지 않고, 실행기도 미구현이라 모니터링 단계 도입이 불가합니다.
 - HSTS 무효화 경로 허용: 현재 `max-age=0`을 에러로 처리하여 HSTS 해제를 표준 절차로 수행할 수 없습니다. 명시적 비활성화(예: 전용 옵션) 혹은 `max-age=0` 허용을 통해 RFC에 맞는 해제 경로를 제공합니다.
   - **타당성 검토:** `HstsOptions::validate`가 `max_age == 0`을 에러로 처리해 RFC에서 정의한 해제 경로를 차단함을 확인했습니다.
-- Permissions-Policy 입력 검증 강화: 현재 기능명은 정규식으로만 검증합니다. 최신 권한 레지스트리(브라우저별 차이 허용) 기반의 소프트 검증/경고를 추가하고, 잘못된 토큰/제어문자 포함 시 거부하여 헤더 인젝션을 예방하세요.
-  - **타당성 검토:** 빌더가 사용자 입력을 그대로 허용하며 제어문자 필터나 레지스트리 비교가 없어 인젝션 위험이 남아 있습니다.
+- Permissions-Policy 입력 검증 강화: 현재 기능명은 간단한 규칙 검증만 제공됩니다. 최신 권한 레지스트리(브라우저별 차이 허용) 기반의 소프트 검증/경고를 추가하고, 잘못된 토큰/제어문자 포함 시 거부하여 헤더 인젝션을 예방하세요.
+  - **타당성 검토:** 빌더가 레지스트리 동기화나 제어문자 필터를 제공하지 않아 인젝션 위험이 남아 있습니다.
 - CSP 지시어 최신화 점검: 현재 지시어 집합은 현대 표준과 일치합니다만, 사양 변경(예: `report-sample` 적용 범위, risky scheme 경고 기준) 주기적 동기화 프로세스를 문서화 대신 코드 레벨 검사로 유지(테스트/경고)하세요.
   - **타당성 검토:** `CspDirective::ALL`이 정적 배열로 고정되어 있어 표준 변경 시 수동 업데이트가 필요하며, 이를 검증하는 자동화가 없습니다.
 
@@ -172,11 +160,3 @@
   - **타당성 검토:** 현재 `ShieldError`는 wrap만 제공하고 에러 코드, 문맥 정보가 부족해 사용자 친화적 처리가 어렵습니다.
 - 테스트 규약 확장: 다중값 헤더 출력의 전송 계층 호환성(헤더 분리 방출)을 보장하는 통합 테스트를 추가하고, CRLF 거부 규칙 및 Report-Only 경로에 대한 회귀 테스트를 포함하세요.
   - **타당성 검토:** 현 테스트는 주로 단일 헤더 값 검증에 집중되어 있으며, 다중값 및 인젝션 방어에 대한 통합 테스트가 부재합니다.
-
----
-
-품질 게이트(현재 세션 기준):
-- Build: PASS (테스트 스위트 전반 통과 확인)
-- Lint/Typecheck: N/A(정적 린트 설정 미탐지) → clippy/rustfmt 통합 권장
-- Tests: PASS (대규모 단위/프로퍼티 테스트 통과 확인)
-  - **타당성 검토:** `cargo test -q` 실행 로그에서 모든 테스트가 통과했고, lint 도구(`clippy`) 설정이 없는 것을 확인했습니다.
