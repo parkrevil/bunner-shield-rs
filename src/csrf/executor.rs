@@ -88,7 +88,7 @@ impl FeatureExecutor for Csrf {
 
 #[derive(Debug, Error)]
 pub enum CsrfError {
-    #[error("failed to generate csrf token: {0}")]
+    #[error("failed to generate CSRF token: {0}")]
     TokenGeneration(CsrfTokenError),
     #[error("origin/referer validation failed: {0}")]
     OriginValidation(super::origin::OriginCheckError),

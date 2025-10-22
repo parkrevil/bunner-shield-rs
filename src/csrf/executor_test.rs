@@ -25,7 +25,11 @@ mod validate_options {
 
         assert_eq!(
             error.to_string(),
-            CsrfOptionsError::InvalidCookiePrefix.to_string()
+            CsrfOptionsError::InvalidCookiePrefix {
+                provided: "csrf-token".to_string(),
+                required_prefix: "__Host-",
+            }
+            .to_string()
         );
     }
 

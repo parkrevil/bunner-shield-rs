@@ -260,7 +260,7 @@ fn ct_eq(a: &[u8], b: &[u8]) -> bool {
 pub enum CsrfTokenError {
     #[error("invalid secret length for HMAC")]
     InvalidSecretLength,
-    #[error("token length {0} exceeds allowable range")]
+    #[error("invalid token length {0}")]
     InvalidTokenLength(usize),
     #[error("invalid base64url encoding for token")]
     InvalidEncoding,
@@ -317,7 +317,10 @@ impl CsrfReplayStore for InMemoryReplayStore {
         }
         let mut key = [0u8; 16];
         key.copy_from_slice(&id[..16]);
-        let mut guard = self.seen.lock().expect("poisoned");
+        let mut guard = self
+            .seen
+            .lock()
+            .expect("csrf replay store lock poisoned");
         guard.insert(key)
     }
 }

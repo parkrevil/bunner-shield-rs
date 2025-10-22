@@ -83,7 +83,7 @@ impl FeatureOptions for CoopOptions {
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum CoopOptionsError {
     #[error(
-        "cross-origin-opener-policy must be one of: same-origin, same-origin-allow-popups, unsafe-none (got {0})"
+        "cross-origin-opener-policy must be one of: same-origin, same-origin-allow-popups, unsafe-none (got `{0}`)"
     )]
     InvalidPolicy(String),
 }

@@ -81,7 +81,7 @@ impl FeatureOptions for CorpOptions {
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum CorpOptionsError {
     #[error(
-        "cross-origin-resource-policy must be one of: same-origin, same-site, cross-origin (got {0})"
+        "cross-origin-resource-policy must be one of: same-origin, same-site, cross-origin (got `{0}`)"
     )]
     InvalidPolicy(String),
 }

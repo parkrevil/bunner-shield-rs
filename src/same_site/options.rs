@@ -84,7 +84,7 @@ impl FeatureOptions for SameSiteOptions {
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum SameSiteOptionsError {
-    #[error("SameSite=None requires Secure cookies")]
+    #[error("`SameSite=None` requires `Secure` cookies")]
     SameSiteNoneRequiresSecure,
 }
 

@@ -49,7 +49,13 @@ mod validate {
             .validate()
             .expect_err("expected invalid cookie prefix error");
 
-        assert_eq!(error, CsrfOptionsError::InvalidCookiePrefix);
+        assert_eq!(
+            error,
+            CsrfOptionsError::InvalidCookiePrefix {
+                provided: "csrf-token".to_string(),
+                required_prefix: "__Host-",
+            }
+        );
     }
 
     #[test]

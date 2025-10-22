@@ -150,7 +150,10 @@ mod failure {
             Shield::new().csrf(CsrfOptions::new(secret()).cookie_name("csrf")),
         );
 
-        assert!(matches!(error, CsrfOptionsError::InvalidCookiePrefix));
+        assert!(matches!(
+            error,
+            CsrfOptionsError::InvalidCookiePrefix { .. }
+        ));
     }
 
     #[test]

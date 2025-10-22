@@ -58,7 +58,10 @@ impl FeatureOptions for CsrfOptions {
 
     fn validate(&self) -> Result<(), Self::Error> {
         if !self.cookie_name.starts_with(COOKIE_PREFIX_SECURE) {
-            return Err(CsrfOptionsError::InvalidCookiePrefix);
+            return Err(CsrfOptionsError::InvalidCookiePrefix {
+                provided: self.cookie_name.clone(),
+                required_prefix: COOKIE_PREFIX_SECURE,
+            });
         }
 
         if self.token_length < MIN_TOKEN_LENGTH || self.token_length > MAX_TOKEN_LENGTH {
@@ -75,9 +78,12 @@ impl FeatureOptions for CsrfOptions {
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum CsrfOptionsError {
-    #[error("csrf cookie must start with secure prefix")]
-    InvalidCookiePrefix,
-    #[error("csrf token length {requested} is outside of allowed range {minimum}..={maximum}")]
+    #[error("CSRF cookie name `{provided}` must start with `{required_prefix}`")]
+    InvalidCookiePrefix {
+        provided: String,
+        required_prefix: &'static str,
+    },
+    #[error("CSRF token length {requested} is outside of allowed range {minimum}..={maximum}")]
     InvalidTokenLength {
         requested: usize,
         minimum: usize,

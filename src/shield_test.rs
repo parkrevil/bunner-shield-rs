@@ -332,7 +332,7 @@ mod hsts {
             Err(ShieldError::ExecutorValidationFailed(error)) => {
                 assert_eq!(
                     error.to_string(),
-                    HstsOptionsError::InvalidMaxAge.to_string()
+                    HstsOptionsError::InvalidMaxAge(0).to_string()
                 );
             }
             _ => panic!("expected validation failure"),
@@ -374,7 +374,11 @@ mod csrf {
             Err(ShieldError::ExecutorValidationFailed(error)) => {
                 assert_eq!(
                     error.to_string(),
-                    CsrfOptionsError::InvalidCookiePrefix.to_string()
+                    CsrfOptionsError::InvalidCookiePrefix {
+                        provided: "csrf".to_string(),
+                        required_prefix: "__Host-",
+                    }
+                    .to_string()
                 );
             }
             _ => panic!("expected validation failure"),

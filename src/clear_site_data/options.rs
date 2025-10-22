@@ -3,7 +3,7 @@ use crate::constants::header_values::{
     CLEAR_SITE_DATA_STORAGE,
 };
 use crate::executor::FeatureOptions;
-use std::fmt;
+use thiserror::Error;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct ClearSiteDataOptions {
@@ -62,22 +62,11 @@ impl ClearSiteDataOptions {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum ClearSiteDataOptionsError {
+    #[error("clear-site-data requires at least one section")]
     NoSectionsSelected,
 }
-
-impl fmt::Display for ClearSiteDataOptionsError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ClearSiteDataOptionsError::NoSectionsSelected => {
-                f.write_str("clear-site-data requires at least one section")
-            }
-        }
-    }
-}
-
-impl std::error::Error for ClearSiteDataOptionsError {}
 
 impl FeatureOptions for ClearSiteDataOptions {
     type Error = ClearSiteDataOptionsError;

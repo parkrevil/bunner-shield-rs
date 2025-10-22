@@ -74,8 +74,8 @@ pub struct PolicyEntry {
 pub enum PolicyBuilderError {
     #[error("permissions policy feature name must not be empty")]
     EmptyFeatureName,
-    #[error("permissions policy feature name must match ^[a-z][a-z0-9-]*$")]
-    InvalidFeatureName,
+    #[error("permissions policy feature name `{0}` must match ^[a-z][a-z0-9-]*$")]
+    InvalidFeatureName(String),
     #[error("permissions policy allowlist entry for feature `{feature}` must not be empty")]
     EmptyAllowListEntry { feature: String },
 }
@@ -97,7 +97,7 @@ impl PolicyBuilder {
         // Enforce ^[a-z][a-z0-9-]*$ on the normalized (trimmed + lowercased) name
         if !is_valid_feature_name(&feature) {
             if self.error.is_none() {
-                self.error = Some(PolicyBuilderError::InvalidFeatureName);
+                self.error = Some(PolicyBuilderError::InvalidFeatureName(feature.clone()));
             }
             return self;
         }

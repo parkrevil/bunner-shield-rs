@@ -73,7 +73,7 @@ mod validate {
             .validate()
             .expect_err("expected invalid max age error");
 
-        assert_eq!(error, HstsOptionsError::InvalidMaxAge);
+        assert_eq!(error, HstsOptionsError::InvalidMaxAge(0));
     }
 
     #[test]
@@ -98,7 +98,7 @@ mod validate {
             .validate()
             .expect_err("expected preload long max age error");
 
-        assert_eq!(error, HstsOptionsError::PreloadRequiresLongMaxAge);
+        assert_eq!(error, HstsOptionsError::PreloadRequiresLongMaxAge(10));
     }
 
     #[test]

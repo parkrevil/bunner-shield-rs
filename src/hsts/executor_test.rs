@@ -25,7 +25,7 @@ mod validate_options {
 
         assert_eq!(
             error.to_string(),
-            HstsOptionsError::InvalidMaxAge.to_string()
+            HstsOptionsError::InvalidMaxAge(0).to_string()
         );
     }
 }

@@ -77,7 +77,7 @@ impl FeatureOptions for CoepOptions {
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum CoepOptionsError {
-    #[error("cross-origin-embedder-policy must be one of: require-corp, credentialless (got {0})")]
+    #[error("cross-origin-embedder-policy must be one of: require-corp, credentialless (got `{0}`)")]
     InvalidPolicy(String),
 }
 

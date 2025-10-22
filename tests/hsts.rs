@@ -128,7 +128,7 @@ mod failure {
     fn given_zero_max_age_when_add_feature_then_returns_invalid_max_age_error() {
         let error = expect_validation_error(Shield::new().hsts(HstsOptions::new().max_age(0)));
 
-        assert!(matches!(error, HstsOptionsError::InvalidMaxAge));
+        assert!(matches!(error, HstsOptionsError::InvalidMaxAge(_)));
     }
 
     #[test]
@@ -150,7 +150,10 @@ mod failure {
 
         let error = expect_validation_error(Shield::new().hsts(options));
 
-        assert!(matches!(error, HstsOptionsError::PreloadRequiresLongMaxAge));
+        assert!(matches!(
+            error,
+            HstsOptionsError::PreloadRequiresLongMaxAge(_)
+        ));
     }
 }
 
@@ -324,7 +327,7 @@ mod proptests {
                     Err(other) => panic!("expected validation failure, got different error: {other}"),
                 };
                 let err = err.downcast::<HstsOptionsError>().map(|b| *b).unwrap();
-                prop_assert!(matches!(err, HstsOptionsError::InvalidMaxAge));
+                prop_assert!(matches!(err, HstsOptionsError::InvalidMaxAge(_)));
                 return Ok(());
             }
 
@@ -346,7 +349,7 @@ mod proptests {
                     Err(other) => panic!("expected validation failure, got different error: {other}"),
                 };
                 let err = err.downcast::<HstsOptionsError>().map(|b| *b).unwrap();
-                prop_assert!(matches!(err, HstsOptionsError::PreloadRequiresLongMaxAge));
+                prop_assert!(matches!(err, HstsOptionsError::PreloadRequiresLongMaxAge(_)));
                 return Ok(());
             }
 

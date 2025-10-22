@@ -98,11 +98,11 @@ pub(crate) fn validate_origin(
 pub enum OriginCheckError {
     #[error("no allowed origins provided")]
     NoAllowedOrigins,
-    #[error("missing Origin header")]
+    #[error("missing `Origin` header")]
     MissingOrigin,
-    #[error("missing Referer header")]
+    #[error("missing `Referer` header")]
     MissingReferer,
-    #[error("invalid {0} header value")]
+    #[error("invalid `{0}` header value")]
     InvalidHeader(&'static str),
     #[error("request is cross-origin")]
     CrossOrigin,

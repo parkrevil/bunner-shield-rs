@@ -116,7 +116,10 @@ mod builder_minimal {
             let result = PermissionsPolicyOptions::builder()
                 .feature(*name, [AllowListItem::None])
                 .build();
-            assert_eq!(result.unwrap_err(), PolicyBuilderError::InvalidFeatureName);
+            assert!(matches!(
+                result.unwrap_err(),
+                PolicyBuilderError::InvalidFeatureName(_)
+            ));
         }
 
         // Empty or whitespace-only should still be treated as EmptyFeatureName
