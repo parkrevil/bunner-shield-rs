@@ -3,6 +3,7 @@ use crate::constants::header_keys::CONTENT_SECURITY_POLICY;
 use crate::executor::{CachedHeader, ExecutorError, FeatureExecutor};
 use crate::normalized_headers::NormalizedHeaders;
 use std::borrow::Cow;
+use thiserror::Error;
 
 pub struct Csp {
     state: CspExecutorState,
@@ -51,10 +52,9 @@ impl FeatureExecutor for Csp {
                 Ok(())
             }
             CspExecutorState::Runtime(runtime) => {
-                let config = runtime
-                    .options
-                    .runtime_nonce_config()
-                    .expect("runtime nonce configuration missing for dynamic CSP executor");
+                let Some(config) = runtime.options.runtime_nonce_config() else {
+                    return Err(Box::new(CspError::MissingRuntimeNonceConfig) as ExecutorError);
+                };
                 let nonce_value = config.issue_runtime_value();
                 let header_value = runtime.options.render_with_runtime_nonce(&nonce_value);
                 headers.insert(CONTENT_SECURITY_POLICY, Cow::Owned(header_value));
@@ -62,6 +62,12 @@ impl FeatureExecutor for Csp {
             }
         }
     }
+}
+
+#[derive(Debug, Error)]
+pub enum CspError {
+    #[error("runtime nonce configuration missing for dynamic CSP executor")]
+    MissingRuntimeNonceConfig,
 }
 
 #[cfg(test)]

@@ -1,7 +1,7 @@
 use crate::constants::cookie::COOKIE_PREFIX_SECURE;
 use crate::executor::FeatureOptions;
-use zeroize::{Zeroize, ZeroizeOnDrop};
 use thiserror::Error;
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 const DEFAULT_COOKIE_NAME: &str = "__Host-csrf-token";
 const DEFAULT_TOKEN_LENGTH: usize = 64;
