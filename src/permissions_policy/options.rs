@@ -94,7 +94,6 @@ impl PolicyBuilder {
             return self;
         }
 
-        // Enforce ^[a-z][a-z0-9-]*$ on the normalized (trimmed + lowercased) name
         if !is_valid_feature_name(&feature) {
             if self.error.is_none() {
                 self.error = Some(PolicyBuilderError::InvalidFeatureName(feature.clone()));
@@ -124,12 +123,11 @@ impl PolicyBuilder {
                 }
             };
 
-            if let Some(token) = rendered {
-                // preserve first-seen order: only push if not seen yet
-                if !seen.contains(&token) {
-                    seen.insert(token.clone());
-                    list.push(token);
-                }
+            if let Some(token) = rendered
+                && !seen.contains(&token)
+            {
+                seen.insert(token.clone());
+                list.push(token);
             }
         }
 
@@ -144,7 +142,7 @@ impl PolicyBuilder {
         if let Some(error) = self.error {
             return Err(error);
         }
-        // Render entries in insertion order: feature=(items) separated by commas; items by spaces
+
         let mut parts: Vec<String> = Vec::with_capacity(self.entries.len());
         for entry in self.entries {
             let mut items: Vec<String> = Vec::with_capacity(entry.allowlist.len());

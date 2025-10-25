@@ -1,7 +1,6 @@
 use super::XdnsPrefetchControlOptions;
 use crate::constants::header_keys::X_DNS_PREFETCH_CONTROL;
-use crate::executor::{CachedHeader, ExecutorError, FeatureExecutor};
-use crate::normalized_headers::NormalizedHeaders;
+use crate::executor::CachedHeader;
 use std::borrow::Cow;
 
 pub struct XdnsPrefetchControl {
@@ -17,19 +16,11 @@ impl XdnsPrefetchControl {
     }
 }
 
-impl FeatureExecutor for XdnsPrefetchControl {
-    type Options = XdnsPrefetchControlOptions;
-
-    fn options(&self) -> &Self::Options {
-        self.cached.options()
-    }
-
-    fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), ExecutorError> {
-        headers.insert(X_DNS_PREFETCH_CONTROL, self.cached.cloned_header_value());
-
-        Ok(())
-    }
-}
+crate::impl_cached_header_executor!(
+    XdnsPrefetchControl,
+    XdnsPrefetchControlOptions,
+    X_DNS_PREFETCH_CONTROL
+);
 
 #[cfg(test)]
 #[path = "executor_test.rs"]

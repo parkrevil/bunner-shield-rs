@@ -1,7 +1,6 @@
 use super::OriginAgentClusterOptions;
 use crate::constants::header_keys::ORIGIN_AGENT_CLUSTER;
-use crate::executor::{CachedHeader, ExecutorError, FeatureExecutor};
-use crate::normalized_headers::NormalizedHeaders;
+use crate::executor::CachedHeader;
 use std::borrow::Cow;
 
 pub struct OriginAgentCluster {
@@ -17,19 +16,11 @@ impl OriginAgentCluster {
     }
 }
 
-impl FeatureExecutor for OriginAgentCluster {
-    type Options = OriginAgentClusterOptions;
-
-    fn options(&self) -> &Self::Options {
-        self.cached.options()
-    }
-
-    fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), ExecutorError> {
-        headers.insert(ORIGIN_AGENT_CLUSTER, self.cached.cloned_header_value());
-
-        Ok(())
-    }
-}
+crate::impl_cached_header_executor!(
+    OriginAgentCluster,
+    OriginAgentClusterOptions,
+    ORIGIN_AGENT_CLUSTER
+);
 
 #[cfg(test)]
 #[path = "executor_test.rs"]

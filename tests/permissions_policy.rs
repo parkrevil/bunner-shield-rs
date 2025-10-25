@@ -127,6 +127,41 @@ mod edge {
     }
 }
 
+mod sanitization {
+    use super::*;
+
+    #[test]
+    fn given_incoming_policy_with_control_characters_when_secure_then_sanitizes_value() {
+        let shield = Shield::new();
+        let mut headers = empty_headers();
+        headers.insert(
+            "Permissions-Policy".to_string(),
+            "camera=()\r\ngeolocation=()".to_string(),
+        );
+
+        let result = shield.secure(headers).expect("secure");
+
+        assert_eq!(
+            result.get("Permissions-Policy").map(String::as_str),
+            Some("camera=() geolocation=()"),
+        );
+    }
+
+    #[test]
+    fn given_feature_policy_with_control_characters_when_secure_then_emits_sanitized_header() {
+        let shield = Shield::new()
+            .permissions_policy(PermissionsPolicyOptions::new("camera=()\r\ngeolocation=()"))
+            .expect("feature");
+
+        let result = shield.secure(empty_headers()).expect("secure");
+
+        assert_eq!(
+            result.get("Permissions-Policy").map(String::as_str),
+            Some("camera=() geolocation=()"),
+        );
+    }
+}
+
 mod failure {
     use super::*;
 
@@ -168,6 +203,15 @@ mod failure {
 mod proptests {
     use super::*;
 
+    fn random_whitespace() -> impl Strategy<Value = String> {
+        prop::collection::vec(prop::bool::ANY, 0..3).prop_map(|flags| {
+            flags
+                .into_iter()
+                .map(|is_space| if is_space { ' ' } else { '\t' })
+                .collect()
+        })
+    }
+
     // Generate arbitrary non-target headers, avoiding the Permissions-Policy key.
     fn header_entries_strategy() -> impl Strategy<Value = Vec<(String, String)>> {
         let name = prop::string::string_regex("[A-Za-z0-9-]{1,24}").unwrap();
@@ -187,23 +231,22 @@ mod proptests {
     }
 
     fn pp_case_strategy() -> impl Strategy<Value = String> {
-        prop::collection::vec(prop::bool::ANY, "Permissions-Policy".len()).prop_map(|mask| {
-            "Permissions-Policy"
+        const HEADER_NAME: &str = "Permissions-Policy";
+        prop::collection::vec(prop::bool::ANY, HEADER_NAME.len()).prop_map(|mask| {
+            HEADER_NAME
                 .chars()
                 .zip(mask)
-                .map(|(ch, lower)| match ch {
-                    '-' => '-',
-                    letter if lower => letter.to_ascii_lowercase(),
-                    letter => letter.to_ascii_uppercase(),
+                .map(|(ch, lower)| {
+                    if ch == '-' {
+                        '-'
+                    } else if lower {
+                        ch.to_ascii_lowercase()
+                    } else {
+                        ch.to_ascii_uppercase()
+                    }
                 })
                 .collect()
         })
-    }
-
-    fn random_whitespace() -> impl Strategy<Value = String> {
-        // up to 3 spaces/tabs around
-        prop::collection::vec(prop_oneof![Just(" "), Just("\t")], 0..3)
-            .prop_map(|parts| parts.concat())
     }
 
     #[derive(Clone, Debug)]

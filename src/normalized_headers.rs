@@ -53,16 +53,26 @@ impl NormalizedHeaders {
     }
 
     pub fn insert(&mut self, name: impl Into<String>, value: impl Into<Cow<'static, str>>) {
-        let original = name.into();
+        let raw_name = name.into();
+        let Some(original) = sanitize_header_name(&raw_name) else {
+            return;
+        };
+
         let normalized = original.to_ascii_lowercase();
         let multi_value = is_multi_value(&normalized);
 
-        let value = value.into();
-        let values = if multi_value {
+        let value: Cow<'static, str> = value.into();
+        let mut values: Vec<Cow<'static, str>> = if multi_value {
             split_multi_values(value.into_owned())
         } else {
             vec![value]
         };
+
+        for segment in &mut values {
+            if let Some(clean) = sanitize_header_value(segment.as_ref()) {
+                *segment = Cow::Owned(clean);
+            }
+        }
 
         let entry = self
             .entries
@@ -100,6 +110,76 @@ impl NormalizedHeaders {
             .map(|entry| (entry.original, entry.joined.into_owned()))
             .collect()
     }
+
+    pub(crate) fn sanitize_for_http(&mut self) {
+        let mut renames: Vec<(String, Option<String>)> = Vec::new();
+
+        for (normalized_name, entry) in self.entries.iter_mut() {
+            if entry.values.is_empty() {
+                if let Some(clean) = sanitize_header_name(&entry.original) {
+                    if clean != entry.original {
+                        entry.original = clean;
+                        renames.push((normalized_name.clone(), Some(entry.original.clone())));
+                    }
+                } else {
+                    renames.push((normalized_name.clone(), None));
+                }
+                continue;
+            }
+
+            let mut mutated = false;
+            let mut sanitized_values: Vec<Cow<'static, str>> =
+                Vec::with_capacity(entry.values.len());
+
+            for value in entry.values.iter() {
+                if let Some(sanitized) = sanitize_header_value(value.as_ref()) {
+                    sanitized_values.push(Cow::Owned(sanitized));
+                    mutated = true;
+                } else {
+                    sanitized_values.push(value.clone());
+                }
+            }
+
+            if mutated {
+                entry.values = sanitized_values;
+                entry.update_joined();
+            }
+
+            if let Some(clean) = sanitize_header_name(&entry.original) {
+                if clean != entry.original {
+                    entry.original = clean;
+                    renames.push((normalized_name.clone(), Some(entry.original.clone())));
+                }
+            } else {
+                renames.push((normalized_name.clone(), None));
+            }
+        }
+
+        for (old_key, target_name) in renames {
+            match target_name {
+                Some(new_original) => {
+                    let new_key = new_original.to_ascii_lowercase();
+                    if new_key == old_key {
+                        if let Some(entry) = self.entries.get_mut(&old_key) {
+                            entry.multi_value = is_multi_value(&new_key);
+                            entry.update_joined();
+                        }
+                        continue;
+                    }
+
+                    if let Some(mut entry) = self.entries.remove(&old_key) {
+                        entry.original = new_original.clone();
+                        entry.multi_value = is_multi_value(&new_key);
+                        entry.update_joined();
+                        self.entries.insert(new_key, entry);
+                    }
+                }
+                None => {
+                    self.entries.remove(&old_key);
+                }
+            }
+        }
+    }
 }
 
 fn is_multi_value(name: &str) -> bool {
@@ -118,6 +198,83 @@ fn split_multi_values(raw: String) -> Vec<Cow<'static, str>> {
             }
         })
         .collect()
+}
+
+fn sanitize_header_value(value: &str) -> Option<String> {
+    let mut sanitized = String::with_capacity(value.len());
+    let mut changed = false;
+    let mut last_was_space = false;
+
+    for ch in value.chars() {
+        if ch.is_control() {
+            if !last_was_space {
+                sanitized.push(' ');
+                last_was_space = true;
+            }
+            changed = true;
+            continue;
+        }
+
+        if ch.is_whitespace() && ch != ' ' {
+            if !last_was_space {
+                sanitized.push(' ');
+                last_was_space = true;
+            }
+            if ch != ' ' {
+                changed = true;
+            }
+            continue;
+        }
+
+        sanitized.push(ch);
+        last_was_space = ch == ' ';
+    }
+
+    if changed { Some(sanitized) } else { None }
+}
+
+fn sanitize_header_name(name: &str) -> Option<String> {
+    let mut sanitized = String::with_capacity(name.len());
+    let mut changed = false;
+
+    for ch in name.chars() {
+        if is_token_char(ch) {
+            sanitized.push(ch);
+        } else {
+            changed = true;
+        }
+    }
+
+    if sanitized.is_empty() {
+        return None;
+    }
+
+    if changed {
+        Some(sanitized)
+    } else {
+        Some(name.to_string())
+    }
+}
+
+fn is_token_char(ch: char) -> bool {
+    ch.is_ascii_alphanumeric()
+        || matches!(
+            ch,
+            '!' | '#'
+                | '$'
+                | '%'
+                | '&'
+                | '\''
+                | '*'
+                | '+'
+                | '-'
+                | '.'
+                | '^'
+                | '_'
+                | '`'
+                | '|'
+                | '~'
+        )
 }
 
 #[cfg(test)]

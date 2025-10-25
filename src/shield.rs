@@ -3,7 +3,7 @@ use crate::coep::{Coep, CoepOptions};
 use crate::constants::executor_order::{
     CLEAR_SITE_DATA, CONTENT_SECURITY_POLICY, CROSS_ORIGIN_EMBEDDER_POLICY,
     CROSS_ORIGIN_OPENER_POLICY, CROSS_ORIGIN_RESOURCE_POLICY, CSRF_TOKEN, ORIGIN_AGENT_CLUSTER,
-    PERMISSIONS_POLICY, REFERRER_POLICY, SAME_SITE, STRICT_TRANSPORT_SECURITY,
+    PERMISSIONS_POLICY, REFERRER_POLICY, SAFE_HEADERS, SAME_SITE, STRICT_TRANSPORT_SECURITY,
     X_CONTENT_TYPE_OPTIONS, X_DNS_PREFETCH_CONTROL, X_FRAME_OPTIONS, X_POWERED_BY,
 };
 use crate::coop::{Coop, CoopOptions};
@@ -16,6 +16,7 @@ use crate::normalized_headers::NormalizedHeaders;
 use crate::origin_agent_cluster::{OriginAgentCluster, OriginAgentClusterOptions};
 use crate::permissions_policy::{PermissionsPolicy, PermissionsPolicyOptions};
 use crate::referrer_policy::{ReferrerPolicy as ReferrerPolicyExecutor, ReferrerPolicyOptions};
+use crate::safe_headers::SafeHeaders;
 use crate::same_site::{SameSite, SameSiteOptions};
 use crate::x_content_type_options::XContentTypeOptions;
 use crate::x_dns_prefetch_control::{XdnsPrefetchControl, XdnsPrefetchControlOptions};
@@ -29,9 +30,19 @@ struct PipelineEntry {
     executor: Executor,
 }
 
-#[derive(Default)]
 pub struct Shield {
     pipeline: Vec<PipelineEntry>,
+}
+
+impl Default for Shield {
+    fn default() -> Self {
+        let pipeline = vec![PipelineEntry {
+            order: SAFE_HEADERS,
+            executor: Box::new(SafeHeaders::new()),
+        }];
+
+        Self { pipeline }
+    }
 }
 
 impl Shield {

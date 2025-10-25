@@ -55,6 +55,7 @@ pub mod cookie {
 }
 
 pub mod executor_order {
+    pub const SAFE_HEADERS: u8 = 0;
     pub const CONTENT_SECURITY_POLICY: u8 = 1;
     pub const X_POWERED_BY: u8 = 2;
     pub const STRICT_TRANSPORT_SECURITY: u8 = 3;

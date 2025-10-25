@@ -13,6 +13,7 @@ mod normalized_headers;
 mod origin_agent_cluster;
 mod permissions_policy;
 mod referrer_policy;
+mod safe_headers;
 mod same_site;
 mod shield;
 mod x_content_type_options;

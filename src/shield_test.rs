@@ -13,6 +13,25 @@ mod new {
 
         assert_eq!(result, headers);
     }
+
+    #[test]
+    fn given_headers_with_control_characters_when_secure_then_returns_sanitized_headers() {
+        let shield = Shield::new();
+        let headers = common::headers_with(&[("X-App", "one\r\ntwo"), ("X-Test", "ok\u{0007}")]);
+
+        let result = shield.secure(headers).expect("secure");
+
+        assert_eq!(
+            result.get("X-App").map(String::as_str),
+            Some("one two"),
+            "should collapse injected newlines into spaces",
+        );
+        assert_eq!(
+            result.get("X-Test").map(String::as_str),
+            Some("ok "),
+            "control characters should degrade to spaces",
+        );
+    }
 }
 
 mod x_powered_by {

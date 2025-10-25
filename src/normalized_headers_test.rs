@@ -42,12 +42,49 @@ mod new {
             "Token=\"Value\"; Path=/; Secure; HttpOnly",
         )]));
 
-        let values = headers.get_all("x-feature_!@#$%^&*()").expect("values");
+        let values = headers
+            .get_all("x-feature_!#$%^&*")
+            .expect("values after sanitizing header name");
 
         assert_eq!(
             values,
             &[Cow::Borrowed("Token=\"Value\"; Path=/; Secure; HttpOnly")]
         );
+
+        let result = headers.into_result();
+        assert_eq!(
+            result.get("X-Feature_!#$%^&*").expect("sanitized header"),
+            "Token=\"Value\"; Path=/; Secure; HttpOnly"
+        );
+    }
+
+    #[test]
+    fn given_control_characters_when_new_then_sanitizes_value() {
+        let headers = NormalizedHeaders::new(common::headers_with(&[(
+            "Permissions-Policy",
+            "camera=()\r\ngeolocation=()",
+        )]));
+
+        let values = headers.get_all("permissions-policy").expect("values");
+
+        assert_eq!(values, &[Cow::Borrowed("camera=() geolocation=()")]);
+    }
+
+    #[test]
+    fn given_header_name_with_control_characters_when_new_then_sanitizes_name() {
+        let headers =
+            NormalizedHeaders::new(common::headers_with(&[("X-Test\r\nSet-Cookie", "value")]));
+
+        let values = headers.get_all("x-testset-cookie").expect("values");
+
+        assert_eq!(values, &[Cow::Borrowed("value")]);
+    }
+
+    #[test]
+    fn given_unrecoverable_header_name_when_new_then_drops_entry() {
+        let result = NormalizedHeaders::new(common::headers_with(&[("\r\n", "value")]));
+
+        assert!(result.into_result().is_empty());
     }
 }
 
@@ -87,6 +124,35 @@ mod insert {
 
         let values = headers.get_all("set-cookie").expect("values");
         assert_eq!(values, &[Cow::Borrowed(value)]);
+    }
+
+    #[test]
+    fn given_control_characters_when_insert_then_sanitizes_value() {
+        let mut headers = NormalizedHeaders::new(common::headers_with(&[]));
+
+        headers.insert("X-Test", "one\r\ntwo\u{0008}three");
+
+        let values = headers.get_all("x-test").expect("values");
+        assert_eq!(values, &[Cow::Borrowed("one two three")]);
+    }
+
+    #[test]
+    fn given_header_name_with_control_characters_when_insert_then_sanitizes_name() {
+        let mut headers = NormalizedHeaders::new(common::headers_with(&[]));
+
+        headers.insert("X-Bad\r\nHeader", "value");
+
+        let values = headers.get_all("x-badheader").expect("values");
+        assert_eq!(values, &[Cow::Borrowed("value")]);
+    }
+
+    #[test]
+    fn given_unrecoverable_header_name_when_insert_then_ignores_entry() {
+        let mut headers = NormalizedHeaders::new(common::headers_with(&[]));
+
+        headers.insert("\r\n", "value");
+
+        assert!(headers.into_result().is_empty());
     }
 }
 

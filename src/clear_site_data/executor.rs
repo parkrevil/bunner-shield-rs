@@ -1,7 +1,8 @@
 use super::ClearSiteDataOptions;
 use crate::constants::header_keys::CLEAR_SITE_DATA;
-use crate::executor::{CachedHeader, ExecutorError, FeatureExecutor};
-use crate::normalized_headers::NormalizedHeaders;
+use crate::executor::CachedHeader;
+#[cfg(test)]
+use crate::executor::FeatureExecutor;
 use std::borrow::Cow;
 
 pub struct ClearSiteData {
@@ -17,19 +18,7 @@ impl ClearSiteData {
     }
 }
 
-impl FeatureExecutor for ClearSiteData {
-    type Options = ClearSiteDataOptions;
-
-    fn options(&self) -> &Self::Options {
-        self.cached.options()
-    }
-
-    fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), ExecutorError> {
-        headers.insert(CLEAR_SITE_DATA, self.cached.cloned_header_value());
-
-        Ok(())
-    }
-}
+crate::impl_cached_header_executor!(ClearSiteData, ClearSiteDataOptions, CLEAR_SITE_DATA);
 
 #[cfg(test)]
 #[path = "executor_test.rs"]
