@@ -17,12 +17,6 @@
 
 - 런타임 nonce 경로 안정화
   - runtime_nonce_config 사용부의 expect 제거, 명시적 에러 반환으로 패닉 가능성 제거
- 
-
-## HSTS (Strict-Transport-Security)
-
-- 해제 경로 허용
-  - RFC에 맞게 max-age=0 허용 또는 전용 비활성 옵션 제공(검증 로직 수정)
 
 ## Permissions-Policy
 
