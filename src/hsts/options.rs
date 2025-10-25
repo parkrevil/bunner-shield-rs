@@ -59,10 +59,6 @@ impl FeatureOptions for HstsOptions {
     type Error = HstsOptionsError;
 
     fn validate(&self) -> Result<(), Self::Error> {
-        if self.max_age == 0 {
-            return Err(HstsOptionsError::InvalidMaxAge(self.max_age));
-        }
-
         if self.preload && !self.include_subdomains {
             return Err(HstsOptionsError::PreloadRequiresIncludeSubdomains);
         }
@@ -77,8 +73,6 @@ impl FeatureOptions for HstsOptions {
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum HstsOptionsError {
-    #[error("max-age must be greater than zero (got {0})")]
-    InvalidMaxAge(u64),
     #[error("preload requires includeSubDomains to be enabled")]
     PreloadRequiresIncludeSubdomains,
     #[error("preload requires max-age of at least 31536000 seconds (got {0})")]

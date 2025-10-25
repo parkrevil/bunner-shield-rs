@@ -25,6 +25,20 @@ mod success {
     }
 
     #[test]
+    fn given_zero_max_age_when_secure_then_sets_disable_policy() {
+        let shield = Shield::new()
+            .hsts(HstsOptions::new().max_age(0))
+            .expect("feature");
+
+        let result = shield.secure(empty_headers()).expect("secure");
+
+        assert_eq!(
+            result.get("Strict-Transport-Security").map(String::as_str),
+            Some("max-age=0")
+        );
+    }
+
+    #[test]
     fn given_include_subdomains_when_secure_then_sets_flagged_header() {
         let shield = Shield::new()
             .hsts(HstsOptions::new().include_subdomains())
@@ -122,13 +136,6 @@ mod failure {
         err.downcast::<HstsOptionsError>()
             .map(|boxed| *boxed)
             .unwrap_or_else(|err| panic!("unexpected error type: {err}"))
-    }
-
-    #[test]
-    fn given_zero_max_age_when_add_feature_then_returns_invalid_max_age_error() {
-        let error = expect_validation_error(Shield::new().hsts(HstsOptions::new().max_age(0)));
-
-        assert!(matches!(error, HstsOptionsError::InvalidMaxAge(_)));
     }
 
     #[test]
@@ -318,18 +325,6 @@ mod proptests {
             if preload { options = options.preload(); }
 
             let result = Shield::new().hsts(options);
-
-            if max_age == 0 {
-                // expect validation failure
-                let err = match result {
-                    Err(ShieldError::ExecutorValidationFailed(err)) => err,
-                    Ok(_) => panic!("expected validation failure, but feature was accepted"),
-                    Err(other) => panic!("expected validation failure, got different error: {other}"),
-                };
-                let err = err.downcast::<HstsOptionsError>().map(|b| *b).unwrap();
-                prop_assert!(matches!(err, HstsOptionsError::InvalidMaxAge(_)));
-                return Ok(());
-            }
 
             if preload && !include_subdomains {
                 let err = match result {

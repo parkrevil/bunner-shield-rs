@@ -309,7 +309,7 @@ mod corp {
 
 mod hsts {
     use super::*;
-    use crate::hsts::{HstsOptions, HstsOptionsError};
+    use crate::hsts::HstsOptions;
 
     #[test]
     fn given_default_hsts_options_when_feature_applied_then_sets_hsts_header() {
@@ -325,18 +325,18 @@ mod hsts {
     }
 
     #[test]
-    fn given_invalid_hsts_options_when_feature_added_then_returns_validation_error() {
-        let result = Shield::new().hsts(HstsOptions::new().max_age(0));
+    fn given_zero_max_age_hsts_options_when_feature_applied_then_sets_disable_header() {
+        let shield = Shield::new()
+            .hsts(HstsOptions::new().max_age(0))
+            .expect("feature");
+        let headers = common::headers_with(&[]);
 
-        match result {
-            Err(ShieldError::ExecutorValidationFailed(error)) => {
-                assert_eq!(
-                    error.to_string(),
-                    HstsOptionsError::InvalidMaxAge(0).to_string()
-                );
-            }
-            _ => panic!("expected validation failure"),
-        }
+        let result = shield.secure(headers).expect("secure");
+
+        assert_eq!(
+            result.get("Strict-Transport-Security").map(String::as_str),
+            Some("max-age=0")
+        );
     }
 }
 

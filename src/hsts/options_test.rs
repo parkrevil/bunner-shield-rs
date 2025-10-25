@@ -66,14 +66,12 @@ mod validate {
     use super::*;
 
     #[test]
-    fn given_zero_max_age_when_validate_then_returns_invalid_max_age_error() {
+    fn given_zero_max_age_when_validate_then_returns_ok() {
         let options = HstsOptions::new().max_age(0);
 
-        let error = options
-            .validate()
-            .expect_err("expected invalid max age error");
+        let result = options.validate();
 
-        assert_eq!(error, HstsOptionsError::InvalidMaxAge(0));
+        assert!(result.is_ok());
     }
 
     #[test]

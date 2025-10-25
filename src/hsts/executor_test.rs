@@ -1,6 +1,5 @@
 use super::*;
 use crate::executor::FeatureExecutor;
-use crate::hsts::HstsOptionsError;
 use crate::tests_common as common;
 
 mod validate_options {
@@ -16,17 +15,12 @@ mod validate_options {
     }
 
     #[test]
-    fn given_zero_max_age_when_validate_options_then_returns_invalid_max_age_error() {
+    fn given_zero_max_age_when_validate_options_then_returns_ok() {
         let executor = Hsts::new(HstsOptions::new().max_age(0));
 
-        let error = executor
-            .validate_options()
-            .expect_err("expected invalid max-age error");
+        let result = executor.validate_options();
 
-        assert_eq!(
-            error.to_string(),
-            HstsOptionsError::InvalidMaxAge(0).to_string()
-        );
+        assert!(result.is_ok());
     }
 }
 
