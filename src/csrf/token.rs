@@ -7,6 +7,7 @@ use std::collections::HashSet;
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 use thiserror::Error;
+use zeroize::Zeroize;
 
 type HmacSha256 = Hmac<Sha256>;
 
@@ -242,6 +243,16 @@ impl HmacCsrfService {
             }
         }
         Ok(false)
+    }
+}
+
+impl Drop for HmacCsrfService {
+    fn drop(&mut self) {
+        self.secret.zeroize();
+        for key in &mut self.verification_keys {
+            key.zeroize();
+        }
+        // Note: AtomicU64 contains no secrets; no action required.
     }
 }
 

@@ -17,6 +17,7 @@ thiserror = "2"
 hmac = "0.12"
 sha2 = "0.10"
 url = "2"
+zeroize = { version = "1", features = ["zeroize_derive"] }
 rand = "0.8"
 base64 = "0.22"
 
