@@ -8,26 +8,13 @@
   - 반환 타입을 다중값을 안전히 표현(예: HashMap<String, Vec<String>> 또는 전용 타입)하도록 교체하여 개행 결합 제거
 - 다중값 처리 정책 명시화
   - (필수 범위 최소화) 우선 Set-Cookie 등 안전상 필요한 헤더만 다중값 허용으로 고정
-- CRLF(헤더 인젝션) 전역 방어
-  - 옵션/빌더/실행기/정규화 경로 전반에서 CR/LF 포함 시 거부하는 공통 유틸 적용
 - Set-Cookie 파이프라인 경계 강화
   - 입력에 개행/접두("Set-Cookie:") 혼입 시 명시 거부, 정규화 경로만 다중값 관리
-
-## CSP (Content-Security-Policy)
-
-- 런타임 nonce 경로 안정화
-  - runtime_nonce_config 사용부의 expect 제거, 명시적 에러 반환으로 패닉 가능성 제거
 
 ## Permissions-Policy
 
 - 입력 검증 강화
   - 기능명·토큰 유효성 강화(제어문자/공백/인젝션 거부)
-- CRLF 방어 일원화
-  - 정책 문자열 조립 전 공통 검증 유틸 사용
-
-## CSRF
-- 키 보호
-  - 비밀 키 메모리 zeroize 적용
 
 ## 테스트/자동화
 
