@@ -2,15 +2,17 @@ use crate::clear_site_data::{ClearSiteData, ClearSiteDataOptions};
 use crate::coep::{Coep, CoepOptions};
 use crate::constants::executor_order::{
     CLEAR_SITE_DATA, CONTENT_SECURITY_POLICY, CROSS_ORIGIN_EMBEDDER_POLICY,
-    CROSS_ORIGIN_OPENER_POLICY, CROSS_ORIGIN_RESOURCE_POLICY, CSRF_TOKEN, ORIGIN_AGENT_CLUSTER,
-    PERMISSIONS_POLICY, REFERRER_POLICY, SAFE_HEADERS, SAME_SITE, STRICT_TRANSPORT_SECURITY,
-    X_CONTENT_TYPE_OPTIONS, X_DNS_PREFETCH_CONTROL, X_FRAME_OPTIONS, X_POWERED_BY,
+    CROSS_ORIGIN_OPENER_POLICY, CROSS_ORIGIN_RESOURCE_POLICY, CSRF_TOKEN, FETCH_METADATA,
+    ORIGIN_AGENT_CLUSTER, PERMISSIONS_POLICY, REFERRER_POLICY, SAFE_HEADERS, SAME_SITE,
+    STRICT_TRANSPORT_SECURITY, X_CONTENT_TYPE_OPTIONS, X_DNS_PREFETCH_CONTROL, X_FRAME_OPTIONS,
+    X_POWERED_BY,
 };
 use crate::coop::{Coop, CoopOptions};
 use crate::corp::{Corp, CorpOptions};
 use crate::csp::{Csp, CspOptions};
 use crate::csrf::{Csrf, CsrfOptions};
 use crate::executor::{Executor, ExecutorError};
+use crate::fetch_metadata::{FetchMetadata, FetchMetadataOptions};
 use crate::hsts::{Hsts, HstsOptions};
 use crate::normalized_headers::NormalizedHeaders;
 use crate::origin_agent_cluster::{OriginAgentCluster, OriginAgentClusterOptions};
@@ -68,6 +70,11 @@ impl Shield {
 
     pub fn csp(mut self, options: CspOptions) -> Result<Self, ShieldError> {
         self.add_feature(CONTENT_SECURITY_POLICY, Box::new(Csp::new(options)))
+            .map(|_| self)
+    }
+
+    pub fn fetch_metadata(mut self, options: FetchMetadataOptions) -> Result<Self, ShieldError> {
+        self.add_feature(FETCH_METADATA, Box::new(FetchMetadata::new(options)))
             .map(|_| self)
     }
 

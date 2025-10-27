@@ -8,6 +8,7 @@ mod corp;
 pub mod csp;
 pub mod csrf;
 mod executor;
+mod fetch_metadata;
 pub mod hsts;
 mod normalized_headers;
 mod origin_agent_cluster;
@@ -32,6 +33,10 @@ pub use crate::csp::{
     TrustedTypesPolicyError, TrustedTypesToken,
 };
 pub use crate::csrf::{CsrfOptions, CsrfOptionsError, CsrfTokenError, HmacCsrfService};
+pub use crate::fetch_metadata::{
+    FetchDestination, FetchMetadata, FetchMetadataError, FetchMetadataOptions,
+    FetchMetadataOptionsError, FetchMetadataParseError, FetchMetadataRule, FetchMode, FetchSite,
+};
 pub use crate::hsts::{HstsOptions, HstsOptionsError};
 pub use crate::normalized_headers::NormalizedHeaders;
 pub use crate::origin_agent_cluster::{OriginAgentCluster, OriginAgentClusterOptions};

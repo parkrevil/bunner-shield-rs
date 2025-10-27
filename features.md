@@ -4,13 +4,9 @@
 
 ## 필수 (우선 도입)
 
-### 1) CSP Report-Only 지원
+### CSP Report-Only 지원
 - 헤더: `Content-Security-Policy-Report-Only`
 - 목적: 운영 전 탐지·튜닝. 서비스 중단 없이 정책 위반 관찰.
-
-### 2) Fetch Metadata 기반 차단 정책
-- 입력 헤더: `Sec-Fetch-Site`, `Sec-Fetch-Mode`, `Sec-Fetch-Dest` 등.
-- 목적: 교차 출처/드라이브-바이 요청 1차 차단(서버사이드).
 
 ## 선택 (환경/요구에 따라)
 

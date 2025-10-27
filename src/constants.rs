@@ -14,6 +14,10 @@ pub mod header_keys {
     pub const CROSS_ORIGIN_OPENER_POLICY: &str = "Cross-Origin-Opener-Policy";
     pub const CROSS_ORIGIN_RESOURCE_POLICY: &str = "Cross-Origin-Resource-Policy";
     pub const ORIGIN_AGENT_CLUSTER: &str = "Origin-Agent-Cluster";
+    pub const SEC_FETCH_DEST: &str = "Sec-Fetch-Dest";
+    pub const SEC_FETCH_MODE: &str = "Sec-Fetch-Mode";
+    pub const SEC_FETCH_SITE: &str = "Sec-Fetch-Site";
+    pub const SEC_FETCH_USER: &str = "Sec-Fetch-User";
 }
 
 pub mod header_values {
@@ -56,19 +60,20 @@ pub mod cookie {
 
 pub mod executor_order {
     pub const SAFE_HEADERS: u8 = 0;
-    pub const CONTENT_SECURITY_POLICY: u8 = 1;
-    pub const X_POWERED_BY: u8 = 2;
-    pub const STRICT_TRANSPORT_SECURITY: u8 = 3;
-    pub const X_CONTENT_TYPE_OPTIONS: u8 = 4;
-    pub const CSRF_TOKEN: u8 = 5;
-    pub const SAME_SITE: u8 = 6;
-    pub const CROSS_ORIGIN_EMBEDDER_POLICY: u8 = 7;
-    pub const CROSS_ORIGIN_OPENER_POLICY: u8 = 8;
-    pub const CROSS_ORIGIN_RESOURCE_POLICY: u8 = 9;
-    pub const X_FRAME_OPTIONS: u8 = 10;
-    pub const REFERRER_POLICY: u8 = 11;
-    pub const ORIGIN_AGENT_CLUSTER: u8 = 12;
-    pub const PERMISSIONS_POLICY: u8 = 13;
-    pub const X_DNS_PREFETCH_CONTROL: u8 = 14;
-    pub const CLEAR_SITE_DATA: u8 = 15;
+    pub const FETCH_METADATA: u8 = 1;
+    pub const CONTENT_SECURITY_POLICY: u8 = 2;
+    pub const X_POWERED_BY: u8 = 3;
+    pub const STRICT_TRANSPORT_SECURITY: u8 = 4;
+    pub const X_CONTENT_TYPE_OPTIONS: u8 = 5;
+    pub const CSRF_TOKEN: u8 = 6;
+    pub const SAME_SITE: u8 = 7;
+    pub const CROSS_ORIGIN_EMBEDDER_POLICY: u8 = 8;
+    pub const CROSS_ORIGIN_OPENER_POLICY: u8 = 9;
+    pub const CROSS_ORIGIN_RESOURCE_POLICY: u8 = 10;
+    pub const X_FRAME_OPTIONS: u8 = 11;
+    pub const REFERRER_POLICY: u8 = 12;
+    pub const ORIGIN_AGENT_CLUSTER: u8 = 13;
+    pub const PERMISSIONS_POLICY: u8 = 14;
+    pub const X_DNS_PREFETCH_CONTROL: u8 = 15;
+    pub const CLEAR_SITE_DATA: u8 = 16;
 }
