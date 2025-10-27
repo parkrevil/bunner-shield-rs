@@ -1,4 +1,7 @@
-use super::{CachedHeader, DynFeatureExecutor, ExecutorError, FeatureExecutor, FeatureOptions};
+use super::{
+    CachedHeader, DynFeatureExecutor, DynamicHeaderCache, ExecutorError, FeatureExecutor,
+    FeatureOptions, PolicyMode,
+};
 use crate::normalized_headers::NormalizedHeaders;
 use crate::tests_common as common;
 use std::borrow::Cow;
@@ -129,5 +132,69 @@ mod new {
 
         assert!(header.options().valid);
         assert_eq!(header.cloned_header_value(), Cow::Borrowed("value"));
+    }
+}
+
+mod dynamic_header {
+    use super::*;
+
+    #[derive(Clone)]
+    struct DynamicOptions {
+        mode: PolicyMode,
+    }
+
+    impl FeatureOptions for DynamicOptions {
+        type Error = std::convert::Infallible;
+
+        fn validate(&self) -> Result<(), Self::Error> {
+            Ok(())
+        }
+    }
+
+    struct DynamicExecutor {
+        cached: DynamicHeaderCache<DynamicOptions>,
+    }
+
+    fn header_key_for(options: &DynamicOptions) -> &'static str {
+        match options.mode {
+            PolicyMode::Enforce => "x-dynamic-enforce",
+            PolicyMode::ReportOnly => "x-dynamic-report",
+        }
+    }
+
+    crate::impl_dynamic_header_executor!(DynamicExecutor, DynamicOptions, header_key_for);
+
+    #[test]
+    fn given_dynamic_header_cache_when_new_then_preserves_options_and_value() {
+        let cache = DynamicHeaderCache::new(
+            DynamicOptions {
+                mode: PolicyMode::Enforce,
+            },
+            Cow::Borrowed("value"),
+        );
+
+        assert!(matches!(cache.options().mode, PolicyMode::Enforce));
+        assert_eq!(cache.cloned_header_value(), Cow::Borrowed("value"));
+    }
+
+    #[test]
+    fn given_report_only_mode_when_execute_then_uses_report_header_key() {
+        let executor = DynamicExecutor {
+            cached: DynamicHeaderCache::new(
+                DynamicOptions {
+                    mode: PolicyMode::ReportOnly,
+                },
+                Cow::Borrowed("configured"),
+            ),
+        };
+        let mut headers = common::normalized_headers_from(&[]);
+
+        FeatureExecutor::execute(&executor, &mut headers).expect("execute");
+
+        let normalized = headers.into_result();
+        assert_eq!(
+            normalized.get("x-dynamic-report").map(String::as_str),
+            Some("configured"),
+        );
     }
 }

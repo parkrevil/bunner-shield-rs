@@ -5,6 +5,13 @@ use std::error::Error as StdError;
 pub type Executor = Box<dyn DynFeatureExecutor + 'static>;
 pub type ExecutorError = Box<dyn StdError + Send + Sync>;
 
+#[cfg_attr(not(test), allow(dead_code))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PolicyMode {
+    Enforce,
+    ReportOnly,
+}
+
 pub(crate) trait FeatureExecutor {
     type Options: FeatureOptions;
 
@@ -74,6 +81,30 @@ impl<O> CachedHeader<O> {
     }
 }
 
+#[cfg_attr(not(test), allow(dead_code))]
+pub(crate) struct DynamicHeaderCache<O> {
+    options: O,
+    header_value: Cow<'static, str>,
+}
+
+#[cfg_attr(not(test), allow(dead_code))]
+impl<O> DynamicHeaderCache<O> {
+    pub(crate) fn new(options: O, header_value: Cow<'static, str>) -> Self {
+        Self {
+            options,
+            header_value,
+        }
+    }
+
+    pub(crate) fn options(&self) -> &O {
+        &self.options
+    }
+
+    pub(crate) fn cloned_header_value(&self) -> Cow<'static, str> {
+        self.header_value.clone()
+    }
+}
+
 /// Implements FeatureExecutor for types that expose a `cached: CachedHeader<Options>` field and
 /// set a single header key to the cached value on execute.
 ///
@@ -94,6 +125,28 @@ macro_rules! impl_cached_header_executor {
                 headers: &mut $crate::normalized_headers::NormalizedHeaders,
             ) -> Result<(), $crate::executor::ExecutorError> {
                 headers.insert($header_key, self.cached.cloned_header_value());
+                Ok(())
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! impl_dynamic_header_executor {
+    ($struct:ty, $options_ty:ty, $header_key_fn:path) => {
+        impl $crate::executor::FeatureExecutor for $struct {
+            type Options = $options_ty;
+
+            fn options(&self) -> &Self::Options {
+                self.cached.options()
+            }
+
+            fn execute(
+                &self,
+                headers: &mut $crate::normalized_headers::NormalizedHeaders,
+            ) -> Result<(), $crate::executor::ExecutorError> {
+                let header_key = $header_key_fn(self.cached.options());
+                headers.insert(header_key, self.cached.cloned_header_value());
                 Ok(())
             }
         }
