@@ -3,11 +3,11 @@
 ## 필수 (우선 도입)
 
 ### 공통 기반: Report-Only 모드 인프라
-- [ ] `executor.rs`에 `PolicyMode { Enforce, ReportOnly }` 정의
-- [ ] 옵션과 헤더 값을 보관하는 `DynamicHeaderCache`(또는 기존 `CachedHeader` 확장) 작성
-- [ ] 동적 키를 지원하는 `impl_dynamic_header_executor!` 매크로 추가
-- [ ] `executor_test.rs`에 동적 캐시 단위 테스트 작성
-- [ ] Report-Only가 필요한 실행기에서 새 매크로를 사용할 수 있도록 공통 헬퍼 공개
+- [x] `executor.rs`에 `PolicyMode { Enforce, ReportOnly }` 정의
+- [x] 옵션과 헤더 값을 보관하는 `DynamicHeaderCache`(또는 기존 `CachedHeader` 확장) 작성
+- [x] 동적 키를 지원하는 `impl_dynamic_header_executor!` 매크로 추가
+- [x] `executor_test.rs`에 동적 캐시 단위 테스트 작성
+- [x] Report-Only가 필요한 실행기에서 새 매크로를 사용할 수 있도록 공통 헬퍼 공개
 
 ### CSP Report-Only 지원
 - [ ] `CspOptions`에 `mode: PolicyMode` 필드 추가 (기본값 `Enforce`)
