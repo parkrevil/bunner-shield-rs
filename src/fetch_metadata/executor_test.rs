@@ -64,18 +64,22 @@ mod execute {
         fn given_same_site_request_when_execute_then_allows() {
             let mut headers = headers(&[("Sec-Fetch-Site", "same-site")]);
 
-            assert!(executor_with(FetchMetadataOptions::new())
-                .execute(&mut headers)
-                .is_ok());
+            assert!(
+                executor_with(FetchMetadataOptions::new())
+                    .execute(&mut headers)
+                    .is_ok()
+            );
         }
 
         #[test]
         fn given_missing_headers_and_legacy_allowed_when_execute_then_allows() {
             let mut headers = headers(&[]);
 
-            assert!(executor_with(FetchMetadataOptions::new())
-                .execute(&mut headers)
-                .is_ok());
+            assert!(
+                executor_with(FetchMetadataOptions::new())
+                    .execute(&mut headers)
+                    .is_ok()
+            );
         }
 
         #[test]
@@ -87,9 +91,11 @@ mod execute {
                 ("Sec-Fetch-User", "?1"),
             ]);
 
-            assert!(executor_with(FetchMetadataOptions::new())
-                .execute(&mut headers)
-                .is_ok());
+            assert!(
+                executor_with(FetchMetadataOptions::new())
+                    .execute(&mut headers)
+                    .is_ok()
+            );
         }
 
         #[test]
@@ -118,7 +124,10 @@ mod execute {
                 .execute(&mut headers)
                 .expect_err("expected legacy rejection error");
 
-            assert_eq!(error.to_string(), FetchMetadataError::MissingHeaders.to_string());
+            assert_eq!(
+                error.to_string(),
+                FetchMetadataError::MissingHeaders.to_string()
+            );
         }
 
         #[test]
@@ -162,7 +171,11 @@ mod execute {
                 .execute(&mut headers)
                 .expect_err("expected missing destination error");
 
-            assert!(error.to_string().contains("required fetch metadata header `Sec-Fetch-Dest` missing"));
+            assert!(
+                error
+                    .to_string()
+                    .contains("required fetch metadata header `Sec-Fetch-Dest` missing")
+            );
         }
 
         #[test]

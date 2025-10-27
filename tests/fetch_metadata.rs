@@ -149,12 +149,16 @@ mod failure {
     }
 
     #[test]
-    fn given_navigation_enabled_without_destinations_when_add_feature_then_returns_validation_error() {
+    fn given_navigation_enabled_without_destinations_when_add_feature_then_returns_validation_error()
+     {
         let error = expect_validation_error(
             Shield::new().fetch_metadata(FetchMetadataOptions::new().navigation_destinations([])),
         );
 
-        assert_eq!(error, FetchMetadataOptionsError::EmptyNavigationDestinations);
+        assert_eq!(
+            error,
+            FetchMetadataOptionsError::EmptyNavigationDestinations
+        );
     }
 
     #[test]

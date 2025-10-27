@@ -42,7 +42,11 @@ mod navigation_destinations {
 
         assert_eq!(
             options.navigation_destinations,
-            vec![FetchDestination::Document, FetchDestination::NestedDocument, FetchDestination::Empty]
+            vec![
+                FetchDestination::Document,
+                FetchDestination::NestedDocument,
+                FetchDestination::Empty
+            ]
         );
     }
 }
@@ -71,10 +75,7 @@ mod cross_site_allowances {
         let options = FetchMetadataOptions::new()
             .allow_cross_site_rules([cors.clone(), navigate_document.clone()]);
 
-        assert_eq!(
-            options.cross_site_allowances,
-            vec![cors, navigate_document]
-        );
+        assert_eq!(options.cross_site_allowances, vec![cors, navigate_document]);
     }
 
     #[test]
@@ -87,14 +88,8 @@ mod cross_site_allowances {
             Some(&FetchMode::Navigate),
             Some(&FetchDestination::Document)
         ));
-        assert!(!rule.matches(
-            Some(&FetchMode::Navigate),
-            Some(&FetchDestination::Empty)
-        ));
-        assert!(!rule.matches(
-            Some(&FetchMode::Cors),
-            Some(&FetchDestination::Document)
-        ));
+        assert!(!rule.matches(Some(&FetchMode::Navigate), Some(&FetchDestination::Empty)));
+        assert!(!rule.matches(Some(&FetchMode::Cors), Some(&FetchDestination::Document)));
     }
 }
 
