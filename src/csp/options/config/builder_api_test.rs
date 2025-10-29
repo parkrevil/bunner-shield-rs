@@ -1,4 +1,5 @@
 use super::*;
+use crate::executor::PolicyMode;
 
 mod default_src {
     use super::*;
@@ -38,5 +39,29 @@ mod flags_and_misc_directives {
             .block_all_mixed_content()
             .header_value();
         assert!(header.contains("upgrade-insecure-requests"));
+    }
+}
+
+mod report_only {
+    use super::*;
+
+    #[test]
+    fn given_report_only_when_invoked_then_sets_mode() {
+        let options = CspOptions::new().report_only();
+
+        assert_eq!(options.mode(), PolicyMode::ReportOnly);
+    }
+
+    #[test]
+    fn given_report_only_when_chained_then_preserves_other_configuration() {
+        let options = CspOptions::new()
+            .report_only()
+            .default_src([CspSource::SelfKeyword]);
+
+        assert_eq!(options.mode(), PolicyMode::ReportOnly);
+        assert_eq!(
+            options.directives,
+            vec![("default-src".to_string(), "'self'".to_string())]
+        );
     }
 }

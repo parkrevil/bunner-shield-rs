@@ -10,6 +10,7 @@ use crate::csp::options::{
 
 use super::ReportToMergeStrategy;
 use super::core::CspOptions;
+use crate::executor::PolicyMode;
 
 impl CspOptions {
     pub fn default_src<I, S>(mut self, sources: I) -> Self
@@ -163,6 +164,11 @@ impl CspOptions {
 
     pub fn block_all_mixed_content(mut self) -> Self {
         self.set_flag_directive(CspDirective::BlockAllMixedContent);
+        self
+    }
+
+    pub fn report_only(mut self) -> Self {
+        self.mode = PolicyMode::ReportOnly;
         self
     }
 
