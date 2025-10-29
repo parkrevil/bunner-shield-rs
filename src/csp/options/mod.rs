@@ -20,3 +20,7 @@ pub use sandbox::{SandboxToken, SandboxTokenParseError};
 pub use sources::CspSource;
 pub use trusted_types::{TrustedTypesPolicy, TrustedTypesPolicyError, TrustedTypesToken};
 pub use types::{CspDirective, CspHashAlgorithm};
+
+#[cfg(test)]
+#[path = "options_test.rs"]
+mod options_test;
