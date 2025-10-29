@@ -100,4 +100,52 @@ mod execute {
         assert!(second_value.contains("'strict-dynamic'"));
         assert_ne!(first_value, second_value, "nonce should differ per request");
     }
+
+    #[test]
+    fn given_report_only_when_execute_then_sets_report_only_header() {
+        let executor = Csp::new(
+            CspOptions::new()
+                .report_only()
+                .default_src([CspSource::SelfKeyword]),
+        );
+        let mut headers = common::normalized_headers_from(&[]);
+
+        executor
+            .execute(&mut headers)
+            .expect("execute should succeed");
+
+        let result = headers.into_result();
+        assert!(
+            result.contains_key("Content-Security-Policy-Report-Only"),
+            "expected report-only header"
+        );
+        assert!(!result.contains_key("Content-Security-Policy"));
+        let value = result
+            .get("Content-Security-Policy-Report-Only")
+            .expect("expected report-only header");
+        assert!(value.contains("default-src 'self'"));
+    }
+
+    #[test]
+    fn given_report_only_runtime_nonce_configuration_when_execute_then_uses_report_only_header() {
+        let options = CspOptions::new()
+            .report_only()
+            .runtime_nonce_manager(CspNonceManager::with_size(16).expect("nonce size"))
+            .default_src([CspSource::SelfKeyword])
+            .script_src(|script| script.runtime_nonce().strict_dynamic());
+        let executor = Csp::new(options);
+        let mut headers = common::normalized_headers_from(&[]);
+
+        executor
+            .execute(&mut headers)
+            .expect("execute should succeed");
+
+        let result = headers.into_result();
+        let value = result
+            .get("Content-Security-Policy-Report-Only")
+            .expect("expected report-only header");
+        assert!(value.contains("'nonce-"), "nonce should be present");
+        assert!(value.contains("'strict-dynamic'"));
+        assert!(!result.contains_key("Content-Security-Policy"));
+    }
 }
