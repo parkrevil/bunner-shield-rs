@@ -8,7 +8,7 @@ use crate::csp::options::{
     utils::{contains_token, format_sources, sanitize_token_input},
     validation,
 };
-use crate::executor::FeatureOptions;
+use crate::executor::{FeatureOptions, PolicyMode};
 
 use super::errors::CspOptionsError;
 use super::warnings::{CspOptionsWarning, CspOptionsWarningKind, CspWarningSeverity};
@@ -24,16 +24,32 @@ pub enum ReportToMergeStrategy {
     Union,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct CspOptions {
     pub(crate) directives: Vec<(String, String)>,
     pub(crate) runtime_nonce: Option<RuntimeNonceConfig>,
     pub(crate) report_to_merge_strategy: ReportToMergeStrategy,
+    pub(crate) mode: PolicyMode,
+}
+
+impl Default for CspOptions {
+    fn default() -> Self {
+        Self {
+            directives: Vec::new(),
+            runtime_nonce: None,
+            report_to_merge_strategy: ReportToMergeStrategy::default(),
+            mode: PolicyMode::Enforce,
+        }
+    }
 }
 
 impl CspOptions {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn mode(&self) -> PolicyMode {
+        self.mode
     }
 
     pub fn runtime_nonce_manager(mut self, manager: CspNonceManager) -> Self {
