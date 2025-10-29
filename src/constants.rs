@@ -1,5 +1,6 @@
 pub mod header_keys {
     pub const CONTENT_SECURITY_POLICY: &str = "Content-Security-Policy";
+    pub const CONTENT_SECURITY_POLICY_REPORT_ONLY: &str = "Content-Security-Policy-Report-Only";
     pub const X_POWERED_BY: &str = "X-Powered-By";
     pub const STRICT_TRANSPORT_SECURITY: &str = "Strict-Transport-Security";
     pub const X_CONTENT_TYPE_OPTIONS: &str = "X-Content-Type-Options";

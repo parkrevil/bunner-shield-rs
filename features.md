@@ -10,9 +10,9 @@
 - [x] Report-Only가 필요한 실행기에서 새 매크로를 사용할 수 있도록 공통 헬퍼 공개
 
 ### CSP Report-Only 지원
-- [ ] `CspOptions`에 `mode: PolicyMode` 필드 추가 (기본값 `Enforce`)
-- [ ] `.report_only()` 빌더 메서드 구현 및 체이닝 테스트 작성
-- [ ] `Csp::new`에서 모드에 따라 헤더 키 선택하도록 수정
+- [x] `CspOptions`에 `mode: PolicyMode` 필드 추가 (기본값 `Enforce`)
+- [x] `.report_only()` 빌더 메서드 구현 및 체이닝 테스트 작성
+- [x] `Csp::new`에서 모드에 따라 헤더 키 선택하도록 수정
 - [ ] `src/csp/executor_test.rs`에 Report-Only 실행 테스트 추가
 - [ ] `src/csp/options_test.rs`에 모드 전환 테스트 추가
 - [ ] `tests/csp.rs` 통합 테스트에 Report-Only 시나리오 추가
