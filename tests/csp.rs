@@ -220,6 +220,24 @@ mod success {
     }
 
     #[test]
+    fn given_report_only_mode_when_secure_then_sets_report_only_header() {
+        let options = CspOptions::new()
+            .report_only()
+            .default_src([CspSource::SelfKeyword]);
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let result = shield.secure(empty_headers()).expect("secure");
+
+        assert!(!result.contains_key("Content-Security-Policy"));
+        assert_eq!(
+            result
+                .get("Content-Security-Policy-Report-Only")
+                .map(String::as_str),
+            Some("default-src 'self'")
+        );
+    }
+
+    #[test]
     fn given_runtime_nonce_when_secure_multiple_times_then_produces_unique_nonce_tokens() {
         let options = CspOptions::new()
             .runtime_nonce_manager(CspNonceManager::with_size(24).expect("nonce size"))
@@ -253,6 +271,26 @@ mod success {
             first_header, second_header,
             "runtime nonce must differ per request"
         );
+    }
+
+    #[test]
+    fn given_report_only_runtime_nonce_when_secure_then_sets_report_only_header() {
+        let options = CspOptions::new()
+            .report_only()
+            .runtime_nonce_manager(CspNonceManager::with_size(20).expect("nonce size"))
+            .default_src([CspSource::SelfKeyword])
+            .script_src(|script| script.runtime_nonce().strict_dynamic());
+        let shield = Shield::new().csp(options).expect("feature");
+
+        let result = shield.secure(empty_headers()).expect("secure");
+
+        assert!(!result.contains_key("Content-Security-Policy"));
+        let header = result
+            .get("Content-Security-Policy-Report-Only")
+            .cloned()
+            .expect("report-only header");
+        assert!(header.contains("'nonce-"));
+        assert!(header.contains("'strict-dynamic'"));
     }
 
     #[test]
