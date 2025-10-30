@@ -13,6 +13,15 @@ fn with_coep(value: &str) -> HashMap<String, String> {
     headers
 }
 
+fn with_coep_report_only(value: &str) -> HashMap<String, String> {
+    let mut headers = empty_headers();
+    headers.insert(
+        "Cross-Origin-Embedder-Policy-Report-Only".to_string(),
+        value.to_string(),
+    );
+    headers
+}
+
 mod success {
     use super::*;
 
@@ -61,6 +70,23 @@ mod success {
             Some("require-corp")
         );
     }
+
+    #[test]
+    fn given_report_only_options_when_secure_then_sets_report_only_header() {
+        let shield = Shield::new()
+            .coep(CoepOptions::new().report_only())
+            .expect("feature");
+
+        let result = shield.secure(empty_headers()).expect("secure");
+
+        assert_eq!(
+            result
+                .get("Cross-Origin-Embedder-Policy-Report-Only")
+                .map(String::as_str),
+            Some("require-corp")
+        );
+        assert!(!result.contains_key("Cross-Origin-Embedder-Policy"));
+    }
 }
 
 mod edge {
@@ -75,6 +101,24 @@ mod edge {
         assert_eq!(
             result
                 .get("Cross-Origin-Embedder-Policy")
+                .map(String::as_str),
+            Some("require-corp")
+        );
+    }
+
+    #[test]
+    fn given_existing_report_only_header_when_secure_then_overwrites_report_only_value() {
+        let shield = Shield::new()
+            .coep(CoepOptions::new().report_only())
+            .expect("feature");
+
+        let result = shield
+            .secure(with_coep_report_only("unsafe-value"))
+            .expect("secure");
+
+        assert_eq!(
+            result
+                .get("Cross-Origin-Embedder-Policy-Report-Only")
                 .map(String::as_str),
             Some("require-corp")
         );
@@ -202,25 +246,37 @@ mod proptests {
             existing in prop::option::of((header_case_strategy(), header_value_strategy())),
             // choose policy variant
             use_credentialless in any::<bool>(),
+            use_report_only in any::<bool>(),
         ) {
             let baseline = dedup_case_insensitive(baseline);
             let mut headers = empty_headers();
             for (name, value) in &baseline { headers.insert(name.clone(), value.clone()); }
             if let Some((name, value)) = existing { headers.insert(name, value); }
 
-            let options = if use_credentialless {
+            let mut options = if use_credentialless {
                 CoepOptions::new().policy(CoepPolicy::Credentialless)
             } else {
                 CoepOptions::new().policy(CoepPolicy::RequireCorp)
             };
+            if use_report_only {
+                options = options.report_only();
+            }
             let expected_value = if use_credentialless { "credentialless" } else { "require-corp" };
+            let expected_key = if use_report_only {
+                "Cross-Origin-Embedder-Policy-Report-Only"
+            } else {
+                "Cross-Origin-Embedder-Policy"
+            };
 
             let shield = Shield::new().coep(options).expect("feature");
             let once = shield.secure(headers).expect("secure");
             let twice = shield.secure(once.clone()).expect("secure");
 
             let mut expected: HashMap<String, String> = baseline.into_iter().collect();
-            expected.insert("Cross-Origin-Embedder-Policy".to_string(), expected_value.to_string());
+            if use_report_only {
+                expected.retain(|key, _| !key.eq_ignore_ascii_case("Cross-Origin-Embedder-Policy"));
+            }
+            expected.insert(expected_key.to_string(), expected_value.to_string());
 
             prop_assert_eq!(once, expected.clone());
             prop_assert_eq!(twice, expected);
@@ -239,6 +295,7 @@ mod proptests {
             dup_cases in two_distinct_header_cases_strategy(),
             values in (header_value_strategy(), header_value_strategy()),
             use_credentialless in any::<bool>(),
+            use_report_only in any::<bool>(),
         ) {
             let baseline = dedup_case_insensitive(baseline);
             let mut headers = empty_headers();
@@ -247,19 +304,30 @@ mod proptests {
             headers.insert(dup_cases.0.clone(), values.0.clone());
             headers.insert(dup_cases.1.clone(), values.1.clone());
 
-            let options = if use_credentialless {
+            let mut options = if use_credentialless {
                 CoepOptions::new().policy(CoepPolicy::Credentialless)
             } else {
                 CoepOptions::new().policy(CoepPolicy::RequireCorp)
             };
+            if use_report_only {
+                options = options.report_only();
+            }
             let expected_value = if use_credentialless { "credentialless" } else { "require-corp" };
+            let expected_key = if use_report_only {
+                "Cross-Origin-Embedder-Policy-Report-Only"
+            } else {
+                "Cross-Origin-Embedder-Policy"
+            };
 
             let shield = Shield::new().coep(options).expect("feature");
             let once = shield.secure(headers).expect("secure");
             let twice = shield.secure(once.clone()).expect("secure");
 
             let mut expected: HashMap<String, String> = baseline.into_iter().collect();
-            expected.insert("Cross-Origin-Embedder-Policy".to_string(), expected_value.to_string());
+            if use_report_only {
+                expected.retain(|key, _| !key.eq_ignore_ascii_case("Cross-Origin-Embedder-Policy"));
+            }
+            expected.insert(expected_key.to_string(), expected_value.to_string());
 
             prop_assert_eq!(once, expected.clone());
             prop_assert_eq!(twice, expected);

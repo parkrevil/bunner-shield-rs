@@ -1,0 +1,8 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc a6b5348a2e47a146fe4cb2907f1373664f29df2cc8bf4ab1714bafd2a3a20f0d # shrinks to baseline = [], existing = Some(("CROSS-ORIGIN-EMBEDDER-POLICY", "")), use_credentialless = false, use_report_only = true
+cc 81662d3aa34f63d8de213af11104eb42695aab1b5dccd3e3b3dec1930a48e647 # shrinks to baseline = [], dup_cases = ("CROSS-ORIGIN-EMBEDDER-POLICY", "CROSS-ORIGIN-EMBEDDER-POLICy"), values = ("", ""), use_credentialless = false, use_report_only = true

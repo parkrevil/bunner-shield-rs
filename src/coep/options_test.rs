@@ -1,5 +1,6 @@
 use super::*;
 use crate::constants::header_values::{COEP_CREDENTIALLESS, COEP_REQUIRE_CORP};
+use crate::executor::PolicyMode;
 
 mod as_str {
     use super::*;
@@ -66,6 +67,7 @@ mod new {
         let options = CoepOptions::new();
 
         assert_eq!(options.policy, CoepPolicy::RequireCorp);
+        assert_eq!(options.mode(), PolicyMode::Enforce);
     }
 }
 
@@ -105,6 +107,27 @@ mod policy {
         let options = CoepOptions::from_policy_str("require-corp").expect("parse should succeed");
 
         assert_eq!(options.policy, CoepPolicy::RequireCorp);
+        assert_eq!(options.mode(), PolicyMode::Enforce);
+    }
+}
+
+mod mode {
+    use super::*;
+
+    #[test]
+    fn given_options_when_report_only_then_switches_mode_to_report_only() {
+        let options = CoepOptions::new().report_only();
+
+        assert_eq!(options.mode(), PolicyMode::ReportOnly);
+    }
+
+    #[test]
+    fn given_options_when_mode_called_then_returns_current_mode() {
+        let options = CoepOptions::new()
+            .policy(CoepPolicy::Credentialless)
+            .report_only();
+
+        assert_eq!(options.mode(), PolicyMode::ReportOnly);
     }
 }
 

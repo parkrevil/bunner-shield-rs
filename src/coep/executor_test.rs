@@ -52,6 +52,23 @@ mod execute {
     }
 
     #[test]
+    fn given_report_only_mode_when_execute_then_sets_report_only_header() {
+        let executor = Coep::new(CoepOptions::new().report_only());
+        let mut headers = common::normalized_headers_from(&[]);
+
+        executor
+            .execute(&mut headers)
+            .expect("execute should succeed");
+
+        let result = headers.into_result();
+        assert_eq!(
+            result.get("Cross-Origin-Embedder-Policy-Report-Only"),
+            Some(&"require-corp".to_string())
+        );
+        assert!(!result.contains_key("Cross-Origin-Embedder-Policy"));
+    }
+
+    #[test]
     fn given_executor_when_execute_multiple_times_then_reuses_cached_header_value() {
         let executor = Coep::new(CoepOptions::new().policy(CoepPolicy::Credentialless));
         let mut first_headers = common::normalized_headers_from(&[]);

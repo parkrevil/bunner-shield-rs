@@ -1,5 +1,5 @@
 use crate::constants::header_values::{COEP_CREDENTIALLESS, COEP_REQUIRE_CORP};
-use crate::executor::FeatureOptions;
+use crate::executor::{FeatureOptions, PolicyMode};
 use std::str::FromStr;
 use thiserror::Error;
 
@@ -35,6 +35,7 @@ impl FromStr for CoepPolicy {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CoepOptions {
     pub(crate) policy: CoepPolicy,
+    pub(crate) mode: PolicyMode,
 }
 
 impl CoepOptions {
@@ -55,7 +56,17 @@ impl CoepOptions {
     pub fn from_policy_str(policy: &str) -> Result<Self, CoepOptionsError> {
         Ok(Self {
             policy: policy.parse()?,
+            mode: PolicyMode::Enforce,
         })
+    }
+
+    pub fn report_only(mut self) -> Self {
+        self.mode = PolicyMode::ReportOnly;
+        self
+    }
+
+    pub fn mode(&self) -> PolicyMode {
+        self.mode
     }
 }
 
@@ -63,6 +74,7 @@ impl Default for CoepOptions {
     fn default() -> Self {
         Self {
             policy: CoepPolicy::RequireCorp,
+            mode: PolicyMode::Enforce,
         }
     }
 }

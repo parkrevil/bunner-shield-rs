@@ -28,12 +28,12 @@
 - [x] README/문서에 COOP Report-Only 사용 가이드 추가
 
 ### COEP Report-Only
-- [ ] `CoepOptions`에 `mode: PolicyMode` 필드 추가
-- [ ] `.report_only()` 빌더 메서드 구현
-- [ ] `Coep` 실행기를 동적 헤더 매크로로 마이그레이션
-- [ ] `src/coep/options_test.rs` 및 `src/coep/executor_test.rs`에 모드 테스트 추가
-- [ ] `tests/coep.rs`에 Report-Only 통합 시나리오 추가
-- [ ] 문서에 COEP Report-Only 점진 도입 전략 기재
+- [x] `CoepOptions`에 `mode: PolicyMode` 필드 추가
+- [x] `.report_only()` 빌더 메서드 구현
+- [x] `Coep` 실행기를 동적 헤더 매크로로 마이그레이션
+- [x] `src/coep/options_test.rs` 및 `src/coep/executor_test.rs`에 모드 테스트 추가
+- [x] `tests/coep.rs`에 Report-Only 통합 시나리오 추가
+- [x] 문서에 COEP Report-Only 점진 도입 전략 기재
 
 ### Permissions-Policy Report-Only
 - [ ] `PermissionsPolicyOptions`에 `mode: PolicyMode` 필드 추가
