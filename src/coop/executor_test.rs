@@ -22,7 +22,7 @@ mod execute {
     use super::*;
 
     #[test]
-    fn given_headers_when_execute_then_sets_coop_header_with_cached_value() {
+    fn given_enforce_mode_when_execute_then_sets_coop_header_with_cached_value() {
         let executor = Coop::new(CoopOptions::new().policy(CoopPolicy::SameOriginAllowPopups));
         let mut headers = common::normalized_headers_from(&[("X-Test", "1")]);
 
@@ -36,6 +36,22 @@ mod execute {
             Some(&"same-origin-allow-popups".to_string())
         );
         assert_eq!(result.get("X-Test"), Some(&"1".to_string()));
+    }
+
+    #[test]
+    fn given_report_only_mode_when_execute_then_sets_report_only_header() {
+        let executor = Coop::new(CoopOptions::new().report_only());
+        let mut headers = common::normalized_headers_from(&[]);
+
+        executor
+            .execute(&mut headers)
+            .expect("execute should succeed");
+
+        let result = headers.into_result();
+        assert_eq!(
+            result.get("Cross-Origin-Opener-Policy-Report-Only"),
+            Some(&"same-origin".to_string())
+        );
     }
 
     #[test]
