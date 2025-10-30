@@ -36,9 +36,9 @@
 - [x] 문서에 COEP Report-Only 점진 도입 전략 기재
 
 ### Permissions-Policy Report-Only
-- [ ] `PermissionsPolicyOptions`에 `mode: PolicyMode` 필드 추가
-- [ ] `.report_only()` 빌더 메서드 구현 (브라우저 경고 처리 포함)
-- [ ] `PermissionsPolicy` 실행기를 동적 헤더 매크로로 마이그레이션
-- [ ] 경고/폴백 로직 테스트 (`src/permissions_policy/options_test.rs`, `executor_test.rs`) 추가
-- [ ] `tests/permissions_policy.rs`에 Report-Only 통합 시나리오 추가
-- [ ] 문서에 브라우저 호환성 및 폴백 전략 업데이트
+- [x] `PermissionsPolicyOptions`에 `mode: PolicyMode` 필드 추가
+- [x] `.report_only()` 빌더 메서드 구현 (브라우저 경고 처리 포함)
+- [x] `PermissionsPolicy` 실행기를 동적 헤더 매크로로 마이그레이션
+- [x] 경고/폴백 로직 테스트 (`src/permissions_policy/options_test.rs`, `executor_test.rs`) 추가
+- [x] `tests/permissions_policy.rs`에 Report-Only 통합 시나리오 추가
+- [x] 문서에 브라우저 호환성 및 폴백 전략 업데이트
