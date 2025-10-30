@@ -10,6 +10,7 @@ mod new {
 
         assert_eq!(options.header_value(), "accelerometer=()");
         assert_eq!(options.mode(), PolicyMode::Enforce);
+        assert!(!options.should_emit_feature_policy_fallback());
     }
 }
 
@@ -21,6 +22,30 @@ mod policy {
         let options = PermissionsPolicyOptions::new("camera=() ").policy("camera=()");
 
         assert_eq!(options.header_value(), "camera=()");
+    }
+}
+
+mod report_only {
+    use super::*;
+
+    #[test]
+    fn given_options_when_report_only_then_sets_report_mode_and_enables_fallback() {
+        let options = PermissionsPolicyOptions::new("camera=()").report_only();
+
+        assert_eq!(options.mode(), PolicyMode::ReportOnly);
+        assert!(options.should_emit_feature_policy_fallback());
+        assert_eq!(options.header_value(), "camera=()");
+    }
+
+    #[test]
+    fn given_report_only_then_policy_mutation_preserves_report_mode_and_fallback() {
+        let options = PermissionsPolicyOptions::new("camera=()")
+            .report_only()
+            .policy("geolocation=()");
+
+        assert_eq!(options.mode(), PolicyMode::ReportOnly);
+        assert!(options.should_emit_feature_policy_fallback());
+        assert_eq!(options.header_value(), "geolocation=()");
     }
 }
 
