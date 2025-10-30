@@ -37,7 +37,6 @@ impl PermissionsPolicyOptions {
         self.mode
     }
 
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) fn should_emit_feature_policy_fallback(&self) -> bool {
         self.emit_feature_policy_fallback
     }

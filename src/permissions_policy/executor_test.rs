@@ -89,4 +89,41 @@ mod execute {
             Some(&"fullscreen=()".to_string())
         );
     }
+
+    #[test]
+    fn given_report_only_mode_when_execute_then_sets_report_only_and_feature_policy_fallback() {
+        let executor =
+            PermissionsPolicy::new(PermissionsPolicyOptions::new("camera=()").report_only());
+        let mut headers = common::normalized_headers_from(&[]);
+
+        executor
+            .execute(&mut headers)
+            .expect("execute should succeed");
+
+        let result = headers.into_result();
+        assert_eq!(
+            result.get("Permissions-Policy-Report-Only"),
+            Some(&"camera=()".to_string())
+        );
+        assert_eq!(result.get("Feature-Policy"), Some(&"camera=()".to_string()));
+        assert!(!result.contains_key("Permissions-Policy"));
+    }
+
+    #[test]
+    fn given_enforce_mode_when_execute_then_does_not_emit_feature_policy_fallback() {
+        let executor = PermissionsPolicy::new(PermissionsPolicyOptions::new("microphone=()"));
+        let mut headers = common::normalized_headers_from(&[]);
+
+        executor
+            .execute(&mut headers)
+            .expect("execute should succeed");
+
+        let result = headers.into_result();
+        assert_eq!(
+            result.get("Permissions-Policy"),
+            Some(&"microphone=()".to_string())
+        );
+        assert!(!result.contains_key("Feature-Policy"));
+        assert!(!result.contains_key("Permissions-Policy-Report-Only"));
+    }
 }

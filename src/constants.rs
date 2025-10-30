@@ -7,6 +7,8 @@ pub mod header_keys {
     pub const X_FRAME_OPTIONS: &str = "X-Frame-Options";
     pub const REFERRER_POLICY: &str = "Referrer-Policy";
     pub const PERMISSIONS_POLICY: &str = "Permissions-Policy";
+    pub const PERMISSIONS_POLICY_REPORT_ONLY: &str = "Permissions-Policy-Report-Only";
+    pub const FEATURE_POLICY: &str = "Feature-Policy";
     pub const X_DNS_PREFETCH_CONTROL: &str = "X-DNS-Prefetch-Control";
     pub const CLEAR_SITE_DATA: &str = "Clear-Site-Data";
     pub const SET_COOKIE: &str = "Set-Cookie";

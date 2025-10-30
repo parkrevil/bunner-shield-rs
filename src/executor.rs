@@ -151,6 +151,31 @@ macro_rules! impl_dynamic_header_executor {
             }
         }
     };
+
+    ($struct:ty, $options_ty:ty, $header_key_fn:path, fallback => $fallback_fn:path) => {
+        impl $crate::executor::FeatureExecutor for $struct {
+            type Options = $options_ty;
+
+            fn options(&self) -> &Self::Options {
+                self.cached.options()
+            }
+
+            fn execute(
+                &self,
+                headers: &mut $crate::normalized_headers::NormalizedHeaders,
+            ) -> Result<(), $crate::executor::ExecutorError> {
+                let header_key = $header_key_fn(self.cached.options());
+                let header_value = self.cached.cloned_header_value();
+                headers.insert(header_key, header_value.clone());
+
+                if let Some(fallback_key) = $fallback_fn(self.cached.options()) {
+                    headers.insert(fallback_key, header_value);
+                }
+
+                Ok(())
+            }
+        }
+    };
 }
 
 #[cfg(test)]
