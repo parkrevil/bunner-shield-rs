@@ -92,6 +92,29 @@ mod success {
     }
 }
 
+mod report_only {
+    use super::*;
+
+    #[test]
+    fn given_report_only_policy_when_secure_then_sets_report_only_header_with_fallback() {
+        let shield = Shield::new()
+            .permissions_policy(PermissionsPolicyOptions::new("geolocation=()").report_only())
+            .expect("feature");
+
+        let result = shield.secure(empty_headers()).expect("secure");
+
+        assert_eq!(
+            result.get("Permissions-Policy-Report-Only"),
+            Some(&"geolocation=()".to_string())
+        );
+        assert_eq!(
+            result.get("Feature-Policy"),
+            Some(&"geolocation=()".to_string())
+        );
+        assert!(!result.contains_key("Permissions-Policy"));
+    }
+}
+
 mod edge {
     use super::*;
 
