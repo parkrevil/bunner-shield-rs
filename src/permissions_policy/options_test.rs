@@ -1,4 +1,5 @@
 use super::*;
+use crate::executor::PolicyMode;
 
 mod new {
     use super::*;
@@ -8,6 +9,7 @@ mod new {
         let options = PermissionsPolicyOptions::new("accelerometer=()");
 
         assert_eq!(options.header_value(), "accelerometer=()");
+        assert_eq!(options.mode(), PolicyMode::Enforce);
     }
 }
 

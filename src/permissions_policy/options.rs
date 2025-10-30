@@ -1,16 +1,18 @@
-use crate::executor::FeatureOptions;
+use crate::executor::{FeatureOptions, PolicyMode};
 use std::borrow::Cow;
 use thiserror::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PermissionsPolicyOptions {
     policy: String,
+    mode: PolicyMode,
 }
 
 impl PermissionsPolicyOptions {
     pub fn new(policy: impl Into<String>) -> Self {
         Self {
             policy: policy.into(),
+            mode: PolicyMode::Enforce,
         }
     }
 
@@ -21,6 +23,10 @@ impl PermissionsPolicyOptions {
 
     pub(crate) fn header_value(&self) -> &str {
         self.policy.as_str()
+    }
+
+    pub fn mode(&self) -> PolicyMode {
+        self.mode
     }
 
     pub fn builder() -> PolicyBuilder {
