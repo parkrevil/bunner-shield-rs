@@ -64,6 +64,15 @@ impl CoopOptions {
             mode: PolicyMode::Enforce,
         })
     }
+
+    pub fn report_only(mut self) -> Self {
+        self.mode = PolicyMode::ReportOnly;
+        self
+    }
+
+    pub fn mode(&self) -> PolicyMode {
+        self.mode
+    }
 }
 
 impl Default for CoopOptions {

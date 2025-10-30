@@ -2,6 +2,7 @@ use super::*;
 use crate::constants::header_values::{
     COOP_SAME_ORIGIN, COOP_SAME_ORIGIN_ALLOW_POPUPS, COOP_UNSAFE_NONE,
 };
+use crate::executor::PolicyMode;
 
 mod as_str {
     use super::*;
@@ -95,6 +96,7 @@ mod new {
         let options = CoopOptions::new();
 
         assert_eq!(options.policy, CoopPolicy::SameOrigin);
+        assert_eq!(options.mode(), PolicyMode::Enforce);
     }
 }
 
@@ -141,6 +143,27 @@ mod policy {
         let error = CoopOptions::from_policy_str("bad").expect_err("expected invalid policy error");
 
         assert_eq!(error, CoopOptionsError::InvalidPolicy("bad".to_string()));
+    }
+}
+
+mod report_only {
+    use super::*;
+
+    #[test]
+    fn given_options_when_report_only_then_sets_report_only_mode() {
+        let options = CoopOptions::new().report_only();
+
+        assert_eq!(options.mode(), PolicyMode::ReportOnly);
+    }
+
+    #[test]
+    fn given_report_only_when_chained_with_policy_then_preserves_mode() {
+        let options = CoopOptions::new()
+            .report_only()
+            .policy(CoopPolicy::SameOriginAllowPopups);
+
+        assert_eq!(options.mode(), PolicyMode::ReportOnly);
+        assert_eq!(options.policy, CoopPolicy::SameOriginAllowPopups);
     }
 }
 
