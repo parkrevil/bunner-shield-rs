@@ -51,6 +51,23 @@ mod success {
             Some("unsafe-none")
         );
     }
+
+    #[test]
+    fn given_report_only_mode_when_secure_then_sets_report_only_header() {
+        let shield = Shield::new()
+            .coop(CoopOptions::new().report_only())
+            .expect("feature");
+
+        let result = shield.secure(empty_headers()).expect("secure");
+
+        assert!(!result.contains_key("Cross-Origin-Opener-Policy"));
+        assert_eq!(
+            result
+                .get("Cross-Origin-Opener-Policy-Report-Only")
+                .map(String::as_str),
+            Some("same-origin")
+        );
+    }
 }
 
 mod edge {
