@@ -20,12 +20,12 @@
 ## 선택 (환경/요구에 따라)
 
 ### COOP Report-Only
-- [ ] `CoopOptions`에 `mode: PolicyMode` 필드 추가
-- [ ] `.report_only()` 빌더 메서드 구현
-- [ ] `Coop` 실행기를 동적 헤더 매크로로 마이그레이션
-- [ ] `src/coop/options_test.rs` 및 `src/coop/executor_test.rs`에 모드 테스트 추가
-- [ ] `tests/coop.rs`에 Report-Only 통합 시나리오 추가
-- [ ] README/문서에 COOP Report-Only 사용 가이드 추가
+- [x] `CoopOptions`에 `mode: PolicyMode` 필드 추가
+- [x] `.report_only()` 빌더 메서드 구현
+- [x] `Coop` 실행기를 동적 헤더 매크로로 마이그레이션
+- [x] `src/coop/options_test.rs` 및 `src/coop/executor_test.rs`에 모드 테스트 추가
+- [x] `tests/coop.rs`에 Report-Only 통합 시나리오 추가
+- [x] README/문서에 COOP Report-Only 사용 가이드 추가
 
 ### COEP Report-Only
 - [ ] `CoepOptions`에 `mode: PolicyMode` 필드 추가
@@ -42,4 +42,3 @@
 - [ ] 경고/폴백 로직 테스트 (`src/permissions_policy/options_test.rs`, `executor_test.rs`) 추가
 - [ ] `tests/permissions_policy.rs`에 Report-Only 통합 시나리오 추가
 - [ ] 문서에 브라우저 호환성 및 폴백 전략 업데이트
-
