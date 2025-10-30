@@ -1,7 +1,7 @@
 use crate::constants::header_values::{
     COOP_SAME_ORIGIN, COOP_SAME_ORIGIN_ALLOW_POPUPS, COOP_UNSAFE_NONE,
 };
-use crate::executor::FeatureOptions;
+use crate::executor::{FeatureOptions, PolicyMode};
 use std::str::FromStr;
 use thiserror::Error;
 
@@ -40,6 +40,7 @@ impl FromStr for CoopPolicy {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CoopOptions {
     pub(crate) policy: CoopPolicy,
+    pub(crate) mode: PolicyMode,
 }
 
 impl CoopOptions {
@@ -60,6 +61,7 @@ impl CoopOptions {
     pub fn from_policy_str(policy: &str) -> Result<Self, CoopOptionsError> {
         Ok(Self {
             policy: policy.parse()?,
+            mode: PolicyMode::Enforce,
         })
     }
 }
@@ -68,6 +70,7 @@ impl Default for CoopOptions {
     fn default() -> Self {
         Self {
             policy: CoopPolicy::SameOrigin,
+            mode: PolicyMode::Enforce,
         }
     }
 }
