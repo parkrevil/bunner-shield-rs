@@ -34,9 +34,7 @@ mod flags_and_misc_directives {
 
     #[test]
     fn given_upgrade_flag_when_set_then_present_in_header() {
-        let header = CspOptions::new()
-            .upgrade_insecure_requests()
-            .header_value();
+        let header = CspOptions::new().upgrade_insecure_requests().header_value();
         assert!(header.contains("upgrade-insecure-requests"));
     }
 }

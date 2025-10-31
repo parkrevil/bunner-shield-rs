@@ -13,7 +13,6 @@ use crate::executor::{FeatureOptions, PolicyMode};
 use super::errors::CspOptionsError;
 use super::warnings::{CspOptionsWarning, CspOptionsWarningKind, CspWarningSeverity};
 
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ReportToMergeStrategy {
     #[default]

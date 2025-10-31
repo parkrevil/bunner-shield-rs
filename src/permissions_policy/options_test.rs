@@ -8,8 +8,8 @@ mod new {
     fn given_initial_policy_when_new_then_stores_policy_string() {
         let options = PermissionsPolicyOptions::new("accelerometer=()");
 
-    assert_eq!(options.header_value(), "accelerometer=()");
-    assert_eq!(options.mode(), PolicyMode::Enforce);
+        assert_eq!(options.header_value(), "accelerometer=()");
+        assert_eq!(options.mode(), PolicyMode::Enforce);
     }
 }
 

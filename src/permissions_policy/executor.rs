@@ -23,7 +23,11 @@ fn header_key_for_options(options: &PermissionsPolicyOptions) -> &'static str {
     }
 }
 
-crate::impl_dynamic_header_executor!(PermissionsPolicy, PermissionsPolicyOptions, header_key_for_options);
+crate::impl_dynamic_header_executor!(
+    PermissionsPolicy,
+    PermissionsPolicyOptions,
+    header_key_for_options
+);
 
 #[cfg(test)]
 #[path = "executor_test.rs"]
