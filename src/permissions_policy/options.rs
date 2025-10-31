@@ -6,7 +6,6 @@ use thiserror::Error;
 pub struct PermissionsPolicyOptions {
     policy: String,
     mode: PolicyMode,
-    emit_feature_policy_fallback: bool,
 }
 
 impl PermissionsPolicyOptions {
@@ -14,7 +13,6 @@ impl PermissionsPolicyOptions {
         Self {
             policy: policy.into(),
             mode: PolicyMode::Enforce,
-            emit_feature_policy_fallback: false,
         }
     }
 
@@ -25,7 +23,6 @@ impl PermissionsPolicyOptions {
 
     pub fn report_only(mut self) -> Self {
         self.mode = PolicyMode::ReportOnly;
-        self.emit_feature_policy_fallback = true;
         self
     }
 
@@ -35,10 +32,6 @@ impl PermissionsPolicyOptions {
 
     pub fn mode(&self) -> PolicyMode {
         self.mode
-    }
-
-    pub(crate) fn should_emit_feature_policy_fallback(&self) -> bool {
-        self.emit_feature_policy_fallback
     }
 
     pub fn builder() -> PolicyBuilder {

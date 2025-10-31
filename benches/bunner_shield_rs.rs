@@ -202,7 +202,7 @@ fn build_comprehensive_csp_options() -> CspOptions {
         .frame_ancestors([CspSource::None])
         .base_uri([CspSource::host("https://app.example.com")])
         .report_to("primary-endpoint")
-        .block_all_mixed_content()
+    .upgrade_insecure_requests()
         .upgrade_insecure_requests()
         .sandbox_with(sandbox_tokens)
         .script_src(|script| {

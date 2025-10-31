@@ -96,7 +96,7 @@ mod report_only {
     use super::*;
 
     #[test]
-    fn given_report_only_policy_when_secure_then_sets_report_only_header_with_fallback() {
+    fn given_report_only_policy_when_secure_then_sets_only_report_only_header() {
         let shield = Shield::new()
             .permissions_policy(PermissionsPolicyOptions::new("geolocation=()").report_only())
             .expect("feature");
@@ -107,11 +107,8 @@ mod report_only {
             result.get("Permissions-Policy-Report-Only"),
             Some(&"geolocation=()".to_string())
         );
-        assert_eq!(
-            result.get("Feature-Policy"),
-            Some(&"geolocation=()".to_string())
-        );
         assert!(!result.contains_key("Permissions-Policy"));
+        assert!(!result.contains_key("Feature-Policy"));
     }
 }
 

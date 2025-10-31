@@ -31,7 +31,6 @@ pub(crate) fn validate_with_warnings(
 
     let mut warnings = Vec::new();
     options.validate_worker_fallback(&mut warnings)?;
-    options.emit_mixed_content_dependency_warnings(&mut warnings);
     options.emit_risky_scheme_warnings(&mut warnings);
 
     Ok(warnings)

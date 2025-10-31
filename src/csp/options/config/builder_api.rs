@@ -162,11 +162,6 @@ impl CspOptions {
         self
     }
 
-    pub fn block_all_mixed_content(mut self) -> Self {
-        self.set_flag_directive(CspDirective::BlockAllMixedContent);
-        self
-    }
-
     pub fn report_only(mut self) -> Self {
         self.mode = PolicyMode::ReportOnly;
         self

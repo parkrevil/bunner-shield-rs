@@ -763,24 +763,6 @@ mod success {
     }
 
     #[test]
-    fn given_block_all_mixed_content_when_secure_then_sets_flag_directive() {
-        let options = CspOptions::new()
-            .default_src([CspSource::SelfKeyword])
-            .block_all_mixed_content();
-        let shield = Shield::new().csp(options).expect("feature");
-
-        let header = shield
-            .secure(empty_headers())
-            .expect("secure")
-            .get("Content-Security-Policy")
-            .cloned()
-            .expect("csp header");
-        let directives = parse_csp_header(&header);
-
-        assert_directive_tokens(&directives, "block-all-mixed-content", &[]);
-    }
-
-    #[test]
     fn given_worker_src_when_secure_then_uses_configured_scheme() {
         let options = CspOptions::new()
             .default_src([CspSource::SelfKeyword])

@@ -26,18 +26,6 @@ mod info {
     }
 }
 
-mod warning {
-    use super::*;
-
-    #[test]
-    fn given_warning_constructor_when_warning_then_sets_warning_severity() {
-        let warning = CspOptionsWarning::warning(
-            CspOptionsWarningKind::UpgradeInsecureRequestsWithoutBlockAllMixedContent,
-        );
-        assert!(matches!(warning.severity, CspWarningSeverity::Warning));
-    }
-}
-
 mod critical {
     use super::*;
 

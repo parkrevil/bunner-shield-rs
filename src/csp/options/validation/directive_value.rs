@@ -236,7 +236,7 @@ pub(crate) fn directive_expects_sources(name: &str) -> bool {
 pub(crate) fn allows_empty_value(name: &str) -> bool {
     matches!(
         name,
-        "upgrade-insecure-requests" | "block-all-mixed-content" | "sandbox"
+        "upgrade-insecure-requests" | "sandbox"
     )
 }
 

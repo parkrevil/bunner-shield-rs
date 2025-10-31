@@ -18,7 +18,6 @@ impl CspHashAlgorithm {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CspDirective {
     BaseUri,
-    BlockAllMixedContent,
     ConnectSrc,
     DefaultSrc,
     FontSrc,
@@ -45,9 +44,8 @@ pub enum CspDirective {
 }
 
 impl CspDirective {
-    pub const ALL: [CspDirective; 25] = [
+    pub const ALL: [CspDirective; 24] = [
         CspDirective::BaseUri,
-        CspDirective::BlockAllMixedContent,
         CspDirective::ConnectSrc,
         CspDirective::DefaultSrc,
         CspDirective::FontSrc,
@@ -76,7 +74,6 @@ impl CspDirective {
     pub fn as_str(self) -> &'static str {
         match self {
             CspDirective::BaseUri => "base-uri",
-            CspDirective::BlockAllMixedContent => "block-all-mixed-content",
             CspDirective::ConnectSrc => "connect-src",
             CspDirective::DefaultSrc => "default-src",
             CspDirective::FontSrc => "font-src",

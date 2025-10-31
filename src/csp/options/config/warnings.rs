@@ -50,8 +50,6 @@ impl CspWarningSeverity {
 pub enum CspOptionsWarningKind {
     MissingWorkerSrcFallback,
     WeakWorkerSrcFallback,
-    UpgradeInsecureRequestsWithoutBlockAllMixedContent,
-    BlockAllMixedContentWithoutUpgradeInsecureRequests,
     RiskySchemes {
         directive: String,
         schemes: Vec<String>,

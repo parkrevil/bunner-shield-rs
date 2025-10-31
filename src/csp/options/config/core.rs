@@ -13,8 +13,6 @@ use crate::executor::{FeatureOptions, PolicyMode};
 use super::errors::CspOptionsError;
 use super::warnings::{CspOptionsWarning, CspOptionsWarningKind, CspWarningSeverity};
 
-#[cfg(test)]
-use crate::csp::options::validation::TokenValidationCache;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ReportToMergeStrategy {
@@ -237,12 +235,6 @@ impl CspOptions {
             .filter(|value| !value.trim().is_empty())
     }
 
-    pub(crate) fn has_directive(&self, name: &str) -> bool {
-        self.directives
-            .iter()
-            .any(|(directive, _)| directive == name)
-    }
-
     pub fn validate_with_warnings(&self) -> Result<Vec<CspOptionsWarning>, CspOptionsError> {
         validation::validate_with_warnings(self)
     }
@@ -311,26 +303,6 @@ impl CspOptions {
             CspOptionsWarningKind::MissingWorkerSrcFallback,
         ));
         Ok(())
-    }
-
-    pub(crate) fn emit_mixed_content_dependency_warnings(
-        &self,
-        warnings: &mut Vec<CspOptionsWarning>,
-    ) {
-        let has_upgrade = self.has_directive(CspDirective::UpgradeInsecureRequests.as_str());
-        let has_block = self.has_directive(CspDirective::BlockAllMixedContent.as_str());
-
-        if has_upgrade && !has_block {
-            warnings.push(CspOptionsWarning::warning(
-                CspOptionsWarningKind::UpgradeInsecureRequestsWithoutBlockAllMixedContent,
-            ));
-        }
-
-        if has_block && !has_upgrade {
-            warnings.push(CspOptionsWarning::warning(
-                CspOptionsWarningKind::BlockAllMixedContentWithoutUpgradeInsecureRequests,
-            ));
-        }
     }
 
     pub(crate) fn emit_risky_scheme_warnings(&self, warnings: &mut Vec<CspOptionsWarning>) {
@@ -447,135 +419,6 @@ impl FeatureOptions for CspOptions {
 
     fn validate(&self) -> Result<(), Self::Error> {
         self.validate_with_warnings().map(|_| ())
-    }
-}
-
-#[cfg(test)]
-impl CspOptions {
-    pub(crate) fn validate_token(directive: &str, token: &str) -> Result<(), CspOptionsError> {
-        validation::validate_token(directive, token)
-    }
-
-    pub(crate) fn validate_source_expression(token: &str) -> Result<(), CspOptionsError> {
-        validation::validate_source_expression(token)
-    }
-
-    pub(crate) fn validate_source_expression_cached(
-        token: &str,
-        cache: &mut TokenValidationCache,
-    ) -> Result<(), CspOptionsError> {
-        validation::validate_source_expression_cached(token, cache)
-    }
-
-    pub(crate) fn validate_strict_dynamic_host_sources(
-        script_src: Option<&str>,
-        script_src_elem: Option<&str>,
-    ) -> Result<(), CspOptionsError> {
-        validation::validate_strict_dynamic_host_sources(script_src, script_src_elem)
-    }
-
-    pub(crate) fn strict_dynamic_has_host_sources(
-        script_src: Option<&str>,
-        script_src_elem: Option<&str>,
-    ) -> bool {
-        validation::strict_dynamic_has_host_sources(script_src, script_src_elem)
-    }
-
-    pub(crate) fn validate_host_like_source(
-        value: &str,
-        original: &str,
-    ) -> Result<(), CspOptionsError> {
-        validation::validate_host_like_source(value, original)
-    }
-
-    pub(crate) fn validate_wildcard_host(token: &str) -> Result<(), CspOptionsError> {
-        validation::validate_wildcard_host(token)
-    }
-
-    pub(crate) fn validate_path_source(token: &str) -> Result<(), CspOptionsError> {
-        validation::validate_path_source(token)
-    }
-
-    pub(crate) fn validate_directive_value(
-        directive: &str,
-        value: &str,
-        cache: &mut TokenValidationCache,
-    ) -> Result<(), CspOptionsError> {
-        validation::validate_directive_value(directive, value, cache)
-    }
-
-    pub(crate) fn enforce_scheme_restrictions(
-        directive: &str,
-        token: &str,
-    ) -> Result<(), CspOptionsError> {
-        validation::enforce_scheme_restrictions(directive, token)
-    }
-
-    pub(crate) fn normalize_port_wildcard(
-        candidate: String,
-        original: &str,
-    ) -> Result<String, CspOptionsError> {
-        validation::normalize_port_wildcard(candidate, original)
-    }
-
-    pub(crate) fn directive_supports_nonces(name: &str) -> bool {
-        validation::directive_supports_nonces(name)
-    }
-
-    pub(crate) fn directive_supports_hashes(name: &str) -> bool {
-        validation::directive_supports_hashes(name)
-    }
-
-    pub(crate) fn directive_supports_strict_dynamic(name: &str) -> bool {
-        validation::directive_supports_strict_dynamic(name)
-    }
-
-    pub(crate) fn directive_supports_unsafe_inline(name: &str) -> bool {
-        validation::directive_supports_unsafe_inline(name)
-    }
-
-    pub(crate) fn directive_supports_unsafe_eval(name: &str) -> bool {
-        validation::directive_supports_unsafe_eval(name)
-    }
-
-    pub(crate) fn directive_supports_unsafe_hashes(name: &str) -> bool {
-        validation::directive_supports_unsafe_hashes(name)
-    }
-
-    pub(crate) fn directive_supports_wasm_unsafe_eval(name: &str) -> bool {
-        validation::directive_supports_wasm_unsafe_eval(name)
-    }
-
-    pub(crate) fn directive_supports_report_sample(name: &str) -> bool {
-        validation::directive_supports_report_sample(name)
-    }
-
-    pub(crate) fn directive_is_script_family(name: &str) -> bool {
-        validation::directive_is_script_family(name)
-    }
-
-    pub(crate) fn directive_is_style_family(name: &str) -> bool {
-        validation::directive_is_style_family(name)
-    }
-
-    pub(crate) fn directive_expects_sources(name: &str) -> bool {
-        validation::directive_expects_sources(name)
-    }
-
-    pub(crate) fn allows_empty_value(name: &str) -> bool {
-        validation::allows_empty_value(name)
-    }
-
-    pub(crate) fn contains_conflicting_none(tokens: &[&str]) -> bool {
-        validation::contains_conflicting_none(tokens)
-    }
-
-    pub(crate) fn is_permissive_default_source(value: &str) -> bool {
-        validation::is_permissive_default_source(value)
-    }
-
-    pub(crate) fn has_invalid_header_text(value: &str) -> bool {
-        validation::has_invalid_header_text(value)
     }
 }
 
