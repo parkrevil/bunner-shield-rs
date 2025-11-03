@@ -176,8 +176,11 @@ mod expiry_v2 {
         raw.extend_from_slice(mac_trunc);
         let token = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(raw);
 
-        // Signature still validates under generic verify
-        assert!(service.verify(&token).is_ok());
+        // Default verify now enforces expiry for v2 tokens and rejects legacy v1 tokens
+        assert_eq!(
+            service.verify(&token).unwrap_err(),
+            CsrfTokenError::MissingTimestamp
+        );
         // Expiry-aware verification refuses v1 tokens
         let err = service
             .verify_with_max_age(&token, 60, 0)

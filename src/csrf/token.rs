@@ -85,7 +85,10 @@ impl HmacCsrfService {
         Ok(URL_SAFE_NO_PAD.encode(raw))
     }
 
-    /// Verifies a CSRF token (signature only; no expiry or replay checks here).
+    /// Verifies a CSRF token.
+    ///
+    /// Default behavior enforces expiry for v2 tokens using a reasonable max-age window.
+    /// For legacy v1 tokens (no timestamp), this returns `MissingTimestamp`.
     pub fn verify(&self, token: &str) -> Result<(), CsrfTokenError> {
         let raw = URL_SAFE_NO_PAD
             .decode(token)
@@ -98,6 +101,41 @@ impl HmacCsrfService {
         let version = raw[0];
         match version {
             TOKEN_VERSION_V1 => {
+                // Validate minimal structure first for clearer errors
+                if raw.len() < 1 + 8 + 16 {
+                    return Err(CsrfTokenError::InvalidStructure);
+                }
+                // Legacy tokens lack a timestamp; enforce MissingTimestamp to avoid unbounded validity.
+                Err(CsrfTokenError::MissingTimestamp)
+            }
+            TOKEN_VERSION_V2 => {
+                if raw.len() < 1 + 8 + 8 + 16 {
+                    return Err(CsrfTokenError::InvalidStructure);
+                }
+                let mut ts = [0u8; 8];
+                ts.copy_from_slice(&raw[1..9]);
+                // Use default max-age window for expiry check, computing current time internally.
+                let now = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .map_err(|_| CsrfTokenError::InvalidTimestamp)?
+                    .as_secs();
+                self.verify_with_max_age(token, DEFAULT_MAX_AGE_SECS, now)
+            }
+            other => Err(CsrfTokenError::UnsupportedVersion(other)),
+        }
+    }
+
+    /// Verifies a CSRF token signature only (no expiry, no replay protection).
+    /// Useful for specialized flows or diagnostics; avoid in production request validation.
+    pub fn verify_signature_only(&self, token: &str) -> Result<(), CsrfTokenError> {
+        let raw = URL_SAFE_NO_PAD
+            .decode(token)
+            .map_err(|_| CsrfTokenError::InvalidEncoding)?;
+        if raw.is_empty() {
+            return Err(CsrfTokenError::InvalidStructure);
+        }
+        match raw[0] {
+            TOKEN_VERSION_V1 => {
                 if raw.len() < 1 + 8 + 16 {
                     return Err(CsrfTokenError::InvalidStructure);
                 }
@@ -105,7 +143,6 @@ impl HmacCsrfService {
                 nonce_bytes.copy_from_slice(&raw[1..9]);
                 let nonce = u64::from_be_bytes(nonce_bytes);
                 let mac_provided = &raw[9..];
-
                 if self.mac_matches_any(&nonce.to_be_bytes(), mac_provided)? {
                     Ok(())
                 } else {
@@ -121,11 +158,9 @@ impl HmacCsrfService {
                 let mut nonce = [0u8; 8];
                 nonce.copy_from_slice(&raw[9..17]);
                 let mac_provided = &raw[17..];
-
                 let mut msg = [0u8; 16];
                 msg[..8].copy_from_slice(&ts);
                 msg[8..].copy_from_slice(&nonce);
-
                 if self.mac_matches_any(&msg, mac_provided)? {
                     Ok(())
                 } else {
@@ -162,8 +197,8 @@ impl HmacCsrfService {
                 let mut ts = [0u8; 8];
                 ts.copy_from_slice(&raw[1..9]);
                 let issued_secs = u64::from_be_bytes(ts);
-                // replay signature validation
-                self.verify(token)?;
+                // Signature validation (no expiry) prior to age check
+                self.verify_signature_only(token)?;
                 if now_secs
                     .checked_sub(issued_secs)
                     .map(|age| age <= max_age_secs)
@@ -266,6 +301,10 @@ fn ct_eq(a: &[u8], b: &[u8]) -> bool {
     }
     diff == 0
 }
+
+/// Default maximum token age for v2 CSRF tokens (in seconds).
+/// Chosen to balance security and UX; adjust via explicit APIs if needed.
+const DEFAULT_MAX_AGE_SECS: u64 = 2 * 60 * 60; // 2 hours
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum CsrfTokenError {
