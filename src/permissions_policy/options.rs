@@ -61,10 +61,21 @@ impl FeatureOptions for PermissionsPolicyOptions {
 #[path = "options_test.rs"]
 mod options_test;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct PolicyBuilder {
     entries: Vec<PolicyEntry>,
     error: Option<PolicyBuilderError>,
+    quote_origins: bool,
+}
+
+impl Default for PolicyBuilder {
+    fn default() -> Self {
+        Self {
+            entries: Vec::new(),
+            error: None,
+            quote_origins: true,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -92,6 +103,11 @@ pub enum PolicyBuilderError {
 }
 
 impl PolicyBuilder {
+    pub fn legacy_unquoted_origins(mut self) -> Self {
+        self.quote_origins = false;
+        self
+    }
+
     pub fn feature<'a, I>(mut self, name: impl Into<String>, allowlist: I) -> Self
     where
         I: IntoIterator<Item = AllowListItem<'a>>,
@@ -129,7 +145,12 @@ impl PolicyBuilder {
                         }
                         None
                     } else {
-                        Some(trimmed.to_string())
+                        let token = if self.quote_origins {
+                            format!("\"{}\"", trimmed)
+                        } else {
+                            trimmed.to_string()
+                        };
+                        Some(token)
                     }
                 }
             };

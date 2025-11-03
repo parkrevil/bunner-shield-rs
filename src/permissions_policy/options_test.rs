@@ -92,7 +92,7 @@ mod builder_minimal {
 
         assert_eq!(
             options.header_value(),
-            "geolocation=(() self), camera=(https://a.example *)"
+            "geolocation=(() self), camera=(\"https://a.example\" *)"
         );
         assert!(options.validate().is_ok());
     }
@@ -121,7 +121,10 @@ mod builder_minimal {
             .build()
             .expect("builder should succeed for valid entries");
 
-        assert_eq!(options.header_value(), "camera=(self https://example.com)");
+        assert_eq!(
+            options.header_value(),
+            "camera=(self \"https://example.com\")"
+        );
     }
 
     #[test]
@@ -205,7 +208,7 @@ mod builder_minimal {
 
         assert_eq!(
             options.header_value(),
-            "geolocation=(https://a.example https://b.example self)"
+            "geolocation=(\"https://a.example\" \"https://b.example\" self)"
         );
     }
 
@@ -222,5 +225,19 @@ mod builder_minimal {
             options.header_value(),
             "camera=(()), geolocation=(self), microphone=(*)"
         );
+    }
+
+    #[test]
+    fn given_legacy_toggle_when_build_then_renders_unquoted_origins() {
+        let options = PermissionsPolicyOptions::builder()
+            .legacy_unquoted_origins()
+            .feature(
+                "camera",
+                [AllowListItem::Origin(Cow::Borrowed("https://a.example"))],
+            )
+            .build()
+            .expect("builder should succeed");
+
+        assert_eq!(options.header_value(), "camera=(https://a.example)");
     }
 }
