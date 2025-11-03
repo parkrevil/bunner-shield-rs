@@ -108,7 +108,7 @@ mod success {
             "max-age=0".to_string(),
         );
 
-        let secured = shield.secure(headers).expect("secure");
+        let secured = shield.secure_with_multi(headers).expect("secure");
 
         let csp = secured.get("Content-Security-Policy").expect("csp header");
         assert!(csp.contains("default-src 'self'"));
@@ -172,7 +172,7 @@ mod success {
             .map(String::to_string)
             .expect("clear-site-data header");
         assert_clear_site_data(&clear_site_data_header, &clear_site_data_value);
-        assert!(!secured.contains_key("X-Powered-By"));
+        assert!(!secured.headers.contains_key("X-Powered-By"));
         assert_eq!(
             secured.get("Content-Type").map(String::as_str),
             Some("application/json")
@@ -182,8 +182,8 @@ mod success {
         let service = HmacCsrfService::new(base_secret());
         assert!(service.verify(csrf_token).is_ok());
 
-        let cookie = secured.get("Set-Cookie").expect("csrf cookie present");
-        assert!(cookie.contains("SameSite=Strict"));
+        let cookies = secured.get_cookies();
+        assert!(cookies.iter().any(|c| c.contains("SameSite=Strict")));
     }
 
     #[test]
@@ -257,12 +257,12 @@ mod success {
             .same_site(SameSiteOptions::new().same_site(SameSitePolicy::Strict))
             .expect("same-site");
 
-        let secured = shield.secure(empty_headers()).expect("secure");
+        let secured = shield.secure_with_multi(empty_headers()).expect("secure");
 
-        let cookie = secured.get("Set-Cookie").expect("cookie present");
-        assert!(cookie.contains("SameSite=Strict"));
-        assert!(cookie.contains("Secure"));
-        assert!(cookie.contains("HttpOnly"));
+        let cookies = secured.get_cookies();
+        assert!(cookies.iter().any(|c| c.contains("SameSite=Strict")));
+        assert!(cookies.iter().all(|c| c.contains("Secure")));
+        assert!(cookies.iter().all(|c| c.contains("HttpOnly")));
     }
 
     #[test]
@@ -279,21 +279,20 @@ mod success {
             "session=abc; Path=/\ntracking=1".to_string(),
         );
 
-        let secured = shield.secure(headers).expect("secure");
+        let secured = shield.secure_with_multi(headers).expect("secure");
 
-        let cookies = secured.get("Set-Cookie").expect("cookies present");
-        let mut lines: Vec<&str> = cookies.split('\n').collect();
-        lines.sort();
+        let mut cookies = secured.get_cookies().to_vec();
+        cookies.sort();
 
-        assert_eq!(lines.len(), 3);
-        assert!(lines.iter().any(|line| line.starts_with("session=abc")));
-        assert!(lines.iter().any(|line| line.starts_with("tracking=1")));
+        assert_eq!(cookies.len(), 3);
+        assert!(cookies.iter().any(|line| line.starts_with("session=abc")));
+        assert!(cookies.iter().any(|line| line.starts_with("tracking=1")));
         assert!(
-            lines
+            cookies
                 .iter()
                 .any(|line| line.contains("__Host-csrf-token=") && line.contains("SameSite=Strict"))
         );
-        for line in &lines {
+        for line in &cookies {
             assert!(line.contains("SameSite=Strict"));
             assert!(line.contains("Secure"));
             assert!(line.contains("HttpOnly"));
@@ -317,18 +316,17 @@ mod success {
         headers.insert("Clear-Site-Data".to_string(), "\"cookies\"".to_string());
         headers.insert("Permissions-Policy".to_string(), "camera=()".to_string());
 
-        let secured = shield.secure(headers).expect("secure");
+        let secured = shield.secure_with_multi(headers).expect("secure");
 
         let token = secured.get("X-CSRF-Token").expect("csrf token present");
         let service = HmacCsrfService::new(base_secret());
         assert!(service.verify(token).is_ok());
 
-        let cookies = secured.get("Set-Cookie").expect("cookies present");
-        let mut lines: Vec<&str> = cookies.split('\n').collect();
-        lines.sort();
-        assert!(lines.iter().any(|line| line.starts_with("session=abc")));
-        assert!(lines.iter().any(|line| line.contains("__Host-csrf-token=") && line.contains("SameSite=Strict")));
-        for line in &lines {
+        let mut cookies = secured.get_cookies().to_vec();
+        cookies.sort();
+        assert!(cookies.iter().any(|line| line.starts_with("session=abc")));
+        assert!(cookies.iter().any(|line| line.contains("__Host-csrf-token=") && line.contains("SameSite=Strict")));
+        for line in &cookies {
             assert!(line.contains("SameSite=Strict"));
             assert!(line.contains("Secure"));
             assert!(line.contains("HttpOnly"));
@@ -388,8 +386,12 @@ mod success {
         second_headers.insert("Set-Cookie".to_string(), "tracking=1; Path=/".to_string());
         second_headers.insert("X-Other".to_string(), "value".to_string());
 
-        let first = shield.secure(first_headers).expect("first secure");
-        let second = shield.secure(second_headers).expect("second secure");
+        let first = shield
+            .secure_with_multi(first_headers)
+            .expect("first secure");
+        let second = shield
+            .secure_with_multi(second_headers)
+            .expect("second secure");
 
         let token_one = first.get("X-CSRF-Token").expect("first token");
         let token_two = second.get("X-CSRF-Token").expect("second token");
@@ -419,8 +421,7 @@ mod success {
             Some("microphone=()"),
         );
 
-        let first_cookies = first.get("Set-Cookie").expect("first cookies");
-        let mut first_lines: Vec<&str> = first_cookies.split('\n').collect();
+        let mut first_lines: Vec<String> = first.get_cookies().to_vec();
         first_lines.sort();
         assert!(
             first_lines
@@ -429,8 +430,7 @@ mod success {
         );
         assert!(first_lines.iter().any(|line| line.contains("__Host-csrf-token=") && line.contains("SameSite=Strict")));
 
-        let second_cookies = second.get("Set-Cookie").expect("second cookies");
-        let mut second_lines: Vec<&str> = second_cookies.split('\n').collect();
+        let mut second_lines: Vec<String> = second.get_cookies().to_vec();
         second_lines.sort();
         assert!(
             second_lines

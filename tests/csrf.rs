@@ -15,20 +15,20 @@ mod success {
             .csrf(CsrfOptions::new(secret()))
             .expect("feature");
 
-        let result = shield.secure(empty_headers()).expect("secure");
+        let result = shield.secure_with_multi(empty_headers()).expect("secure");
 
         let token = result.get("X-CSRF-Token").expect("csrf token present");
         // Verify token signature using the same secret
         let service = HmacCsrfService::new(secret());
         assert!(service.verify(token).is_ok());
 
-        let cookie = result.get("Set-Cookie").expect("csrf cookie present");
-        assert!(cookie.contains("__Host-csrf-token="));
-        assert!(cookie.contains("Path=/"));
-        assert!(cookie.contains("Secure"));
-        assert!(cookie.contains("HttpOnly"));
-        assert!(cookie.contains("SameSite=Lax"));
-        assert!(!cookie.contains("Domain="));
+        let cookies = result.get_cookies();
+        assert!(cookies.iter().any(|c| c.contains("__Host-csrf-token=")));
+        assert!(cookies.iter().all(|c| c.contains("Path=/")));
+        assert!(cookies.iter().all(|c| c.contains("Secure")));
+        assert!(cookies.iter().all(|c| c.contains("HttpOnly")));
+        assert!(cookies.iter().all(|c| c.contains("SameSite=Lax")));
+        assert!(cookies.iter().all(|c| !c.contains("Domain=")));
     }
 
     #[test]
@@ -37,7 +37,7 @@ mod success {
             .csrf(CsrfOptions::new(secret()).token_length(40))
             .expect("feature");
 
-        let result = shield.secure(empty_headers()).expect("secure");
+        let result = shield.secure_with_multi(empty_headers()).expect("secure");
 
         let token = result.get("X-CSRF-Token").expect("csrf token present");
         // Length differs due to base64url encoding; ensure token verifies
@@ -66,15 +66,15 @@ mod success {
             .csrf(CsrfOptions::new(secret()).cookie_name("__Host-csrf-alt"))
             .expect("feature");
 
-        let result = shield.secure(empty_headers()).expect("secure");
+        let result = shield.secure_with_multi(empty_headers()).expect("secure");
 
-        let cookie = result.get("Set-Cookie").expect("csrf cookie present");
-        assert!(cookie.starts_with("__Host-csrf-alt="));
-        assert!(cookie.contains("Path=/"));
-        assert!(cookie.contains("Secure"));
-        assert!(cookie.contains("HttpOnly"));
-        assert!(cookie.contains("SameSite=Lax"));
-        assert!(!cookie.contains("Domain="));
+        let cookies = result.get_cookies();
+        assert!(cookies.iter().any(|c| c.starts_with("__Host-csrf-alt=")));
+        assert!(cookies.iter().all(|c| c.contains("Path=/")));
+        assert!(cookies.iter().all(|c| c.contains("Secure")));
+        assert!(cookies.iter().all(|c| c.contains("HttpOnly")));
+        assert!(cookies.iter().all(|c| c.contains("SameSite=Lax")));
+        assert!(cookies.iter().all(|c| !c.contains("Domain=")));
     }
 }
 
@@ -93,14 +93,14 @@ mod edge {
             "__Host-csrf-token=abc; Path=/; SameSite=None".to_string(),
         );
 
-        let result = shield.secure(headers).expect("secure");
+        let result = shield.secure_with_multi(headers).expect("secure");
 
-        let cookie = result.get("Set-Cookie").expect("csrf cookie present");
-        assert!(cookie.contains("Path=/"));
-        assert!(cookie.contains("SameSite=Lax"));
-        assert!(cookie.contains("Secure"));
-        assert!(cookie.contains("HttpOnly"));
-        assert!(!cookie.contains("Domain="));
+        let cookies = result.get_cookies();
+        assert!(cookies.iter().any(|c| c.contains("Path=/")));
+        assert!(cookies.iter().any(|c| c.contains("SameSite=Lax")));
+        assert!(cookies.iter().any(|c| c.contains("Secure")));
+        assert!(cookies.iter().any(|c| c.contains("HttpOnly")));
+        assert!(cookies.iter().any(|c| !c.contains("Domain=")));
     }
 
     #[test]
@@ -112,12 +112,10 @@ mod edge {
         let mut headers = empty_headers();
         headers.insert("Set-Cookie".to_string(), "session=abc; Path=/".to_string());
 
-        let result = shield.secure(headers).expect("secure");
+        let result = shield.secure_with_multi(headers).expect("secure");
 
-        let cookies = result.get("Set-Cookie").expect("cookies present");
-        let mut lines: Vec<&str> = cookies.split('\n').collect();
+        let mut lines: Vec<String> = result.get_cookies().to_vec();
         lines.sort();
-
         assert!(lines.iter().any(|line| line.starts_with("session=abc")));
         assert!(
             lines

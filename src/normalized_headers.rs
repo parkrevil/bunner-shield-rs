@@ -111,6 +111,37 @@ impl NormalizedHeaders {
             .collect()
     }
 
+    /// Consume and produce a multi-header aware result.
+    /// - Single-value headers go into `headers` as before.
+    /// - Multi-value headers (currently only Set-Cookie) are exposed via `multi` and accessors.
+    pub fn into_result_with_multi(self) -> NormalizedResult {
+        let mut headers: HashMap<String, String> = HashMap::with_capacity(self.entries.len());
+        let mut multi: HashMap<String, Vec<String>> = HashMap::new();
+
+        for entry in self.entries.into_values() {
+            if entry.multi_value {
+                // Canonicalize multi header names to a single canonical case key.
+                let key = entry.original.to_ascii_lowercase();
+                if key == "set-cookie" {
+                    let bucket = multi.entry("Set-Cookie".to_string()).or_default();
+                    for v in entry.values {
+                        bucket.push(v.into_owned());
+                    }
+                } else {
+                    // Future-proofing: if other multi headers are added later, preserve original case key
+                    let bucket = multi.entry(entry.original).or_default();
+                    for v in entry.values {
+                        bucket.push(v.into_owned());
+                    }
+                }
+            } else {
+                headers.insert(entry.original, entry.joined.into_owned());
+            }
+        }
+
+        NormalizedResult { headers, multi }
+    }
+
     pub(crate) fn sanitize_for_http(&mut self) {
         let mut renames: Vec<(String, Option<String>)> = Vec::new();
 
@@ -280,3 +311,33 @@ fn is_token_char(ch: char) -> bool {
 #[cfg(test)]
 #[path = "normalized_headers_test.rs"]
 mod normalized_headers_test;
+
+/// Result of normalizing headers with explicit multi-value header support.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NormalizedResult {
+    pub headers: HashMap<String, String>,
+    pub multi: HashMap<String, Vec<String>>,
+}
+
+impl NormalizedResult {
+    /// Get a single-value header by name (exact, case-sensitive on original casing as emitted).
+    pub fn get(&self, name: &str) -> Option<&String> {
+        self.headers.get(name)
+    }
+
+    /// Get all values for a multi-value header by canonical name. Case-insensitive for Set-Cookie.
+    pub fn get_all(&self, name: &str) -> Option<&[String]> {
+        if name.eq_ignore_ascii_case("set-cookie") {
+            return self.multi.get("Set-Cookie").map(|v| v.as_slice());
+        }
+        self.multi.get(name).map(|v| v.as_slice())
+    }
+
+    /// Convenience accessor for retrieving all Set-Cookie header values.
+    pub fn get_cookies(&self) -> &[String] {
+        self.multi
+            .get("Set-Cookie")
+            .map(|v| v.as_slice())
+            .unwrap_or(&[])
+    }
+}

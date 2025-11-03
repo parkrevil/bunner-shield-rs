@@ -14,7 +14,7 @@ use crate::csrf::{Csrf, CsrfOptions};
 use crate::executor::{Executor, ExecutorError};
 use crate::fetch_metadata::{FetchMetadata, FetchMetadataOptions};
 use crate::hsts::{Hsts, HstsOptions};
-use crate::normalized_headers::NormalizedHeaders;
+use crate::normalized_headers::{NormalizedHeaders, NormalizedResult};
 use crate::origin_agent_cluster::{OriginAgentCluster, OriginAgentClusterOptions};
 use crate::permissions_policy::{PermissionsPolicy, PermissionsPolicyOptions};
 use crate::referrer_policy::{ReferrerPolicy as ReferrerPolicyExecutor, ReferrerPolicyOptions};
@@ -66,6 +66,23 @@ impl Shield {
         }
 
         Ok(normalized.into_result())
+    }
+
+    /// Like `secure`, but preserves multi-value headers (e.g., Set-Cookie) distinctly.
+    pub fn secure_with_multi(
+        &self,
+        headers: HashMap<String, String>,
+    ) -> Result<NormalizedResult, ShieldError> {
+        let mut normalized = NormalizedHeaders::new(headers);
+
+        for entry in &self.pipeline {
+            entry
+                .executor
+                .execute(&mut normalized)
+                .map_err(ShieldError::ExecutionFailed)?;
+        }
+
+        Ok(normalized.into_result_with_multi())
     }
 
     pub fn csp(mut self, options: CspOptions) -> Result<Self, ShieldError> {

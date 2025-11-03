@@ -141,13 +141,12 @@ mod edge {
             "session=abc; Path=/\ntracking=1".to_string(),
         );
 
-        let result = shield.secure(headers).expect("secure");
+        let result = shield.secure_with_multi(headers).expect("secure");
 
-        let cookies = result.get("Set-Cookie").expect("cookies present");
-        let lines: Vec<&str> = cookies.split('\n').collect();
-        assert_eq!(lines.len(), 2);
-        assert!(lines.iter().all(|line| line.contains("SameSite=Lax")));
-        assert!(lines.iter().all(|line| line.contains("Secure")));
+        let cookies = result.get_cookies();
+        assert_eq!(cookies.len(), 2);
+        assert!(cookies.iter().all(|line| line.contains("SameSite=Lax")));
+        assert!(cookies.iter().all(|line| line.contains("Secure")));
     }
 
     #[test]

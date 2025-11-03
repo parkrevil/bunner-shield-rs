@@ -38,7 +38,7 @@ pub use crate::fetch_metadata::{
     FetchMetadataOptionsError, FetchMetadataParseError, FetchMetadataRule, FetchMode, FetchSite,
 };
 pub use crate::hsts::{HstsOptions, HstsOptionsError};
-pub use crate::normalized_headers::NormalizedHeaders;
+pub use crate::normalized_headers::{NormalizedHeaders, NormalizedResult};
 pub use crate::origin_agent_cluster::{OriginAgentCluster, OriginAgentClusterOptions};
 pub use crate::permissions_policy::{
     PermissionsPolicy, PermissionsPolicyOptions, PermissionsPolicyOptionsError,
