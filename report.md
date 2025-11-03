@@ -9,10 +9,14 @@
 - [x] CSRF: `HmacCsrfService::verify` 만료 시간 검증 기본화
 - [x] CSRF: `CsrfReplayStore` 기본 구현체 제공(메모리/Redis)
 	- 메모리 기본 구현 포함, Redis 구현은 `csrf-redis` feature로 제공
-- [ ] Set-Cookie: `NormalizedHeaders::into_result()` 재설계(다중 헤더)
-- [ ] Set-Cookie: `HashMap<String, Vec<String>>` 또는 동등 API로 반환
-- [ ] Set-Cookie: `get_cookies() -> Vec<String>` 등 전용 접근자 제공
-- [ ] Set-Cookie: 통합 테스트 수정(개행 기반 제거)
+- [x] Set-Cookie: `NormalizedHeaders::into_result()` 재설계(다중 헤더)
+	- 하위 호환을 위해 기존 `into_result()` 유지, 신규 `into_result_with_multi()`와 `NormalizedResult` 도입
+- [x] Set-Cookie: `HashMap<String, Vec<String>>` 또는 동등 API로 반환
+	- `NormalizedResult.multi` 필드에 다중 헤더 저장, `headers`에는 단일 헤더만 유지
+- [x] Set-Cookie: `get_cookies() -> Vec<String>` 등 전용 접근자 제공
+	- `NormalizedResult::get_cookies()` 제공
+- [x] Set-Cookie: 통합 테스트 수정(개행 기반 제거)
+	- 통합/CSRF/SameSite 관련 테스트를 `secure_with_multi()` + `get_cookies()`로 마이그레이션
 - [ ] 요청/응답 분리: `Shield::secure()` 주의사항 및 필터링 헬퍼 제공
 
 ## 1) 표준 준수 및 기능
