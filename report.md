@@ -7,9 +7,9 @@
 
 ## 2) 보안 설계·아키텍처
 - [x] CSRF: 정적 허용 출처 목록(`allowed_origins`) 추가 및 `Host` 기반 제거
-- [ ] CSRF: Stateless 토큰 nonce — 영구 저장소 옵션 또는 랜덤 nonce 권장
-- [ ] CSRF: `verify()` 기본 동작에 만료 포함, `verify_signature_only()` 분리, `now_secs` 내부 계산
-- [ ] Fetch Metadata: 정책 위반 훅 `on_violation` 옵션 제공
+- [x] CSRF: Stateless 토큰 nonce — 영구 저장소 옵션 또는 랜덤 nonce 권장
+- [x] CSRF: `verify()` 기본 동작에 만료 포함, `verify_signature_only()` 분리, `now_secs` 내부 계산
+- [x] Fetch Metadata: 정책 위반 훅 `on_violation` 옵션 제공
 - [ ] SafeHeaders: 이름 재고(`HeaderSanitizer`/`HttpHeaderValidator`), Rustdoc에 방어 범위 설명, 기본 활성화 여부 명시
 
 ## 3) API 설계·DX
