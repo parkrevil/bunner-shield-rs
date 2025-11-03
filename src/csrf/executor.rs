@@ -37,6 +37,34 @@ impl FeatureExecutor for Csrf {
     }
 
     fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), ExecutorError> {
+        // If request method indicates a state-changing operation, verify incoming CSRF token header.
+        if let Some(method) = request_method(headers)
+            && should_verify(&self.options.validate_methods, &method)
+        {
+            let token = headers
+                .get_all(CSRF_TOKEN)
+                .and_then(|vals| vals.first())
+                .map(|v| v.as_ref().to_string());
+            match token {
+                Some(t) if !t.is_empty() => {
+                    let now = std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .map_err(|_| Box::new(CsrfError::SystemTime) as ExecutorError)?
+                        .as_secs();
+                    if let Err(err) = self.token_service.verify_with_max_age(
+                        &t,
+                        self.options.token_max_age_secs,
+                        now,
+                    ) {
+                        return Err(Box::new(CsrfError::VerificationFailed(err)) as ExecutorError);
+                    }
+                }
+                _ => {
+                    return Err(Box::new(CsrfError::MissingToken) as ExecutorError);
+                }
+            }
+        }
+
         // Optional request-origin check before issuing a token
         if self.options.origin_validation {
             // Build a simple map from current headers for lookup
@@ -92,8 +120,31 @@ pub enum CsrfError {
     TokenGeneration(CsrfTokenError),
     #[error("origin/referer validation failed: {0}")]
     OriginValidation(super::origin::OriginCheckError),
+    #[error("missing X-CSRF-Token header for state-changing request")]
+    MissingToken,
+    #[error("system clock error while verifying CSRF token")]
+    SystemTime,
+    #[error("CSRF token verification failed: {0}")]
+    VerificationFailed(CsrfTokenError),
 }
 
 #[cfg(test)]
 #[path = "executor_test.rs"]
 mod executor_test;
+
+fn request_method(headers: &NormalizedHeaders) -> Option<String> {
+    // Try common header keys that tests/framework adapters can set.
+    // X-Request-Method (custom), Method (generic), and pseudo-header ":method" if passed through.
+    for name in ["X-Request-Method", "Method", ":method"] {
+        if let Some(values) = headers.get_all(name)
+            && let Some(v) = values.first()
+        {
+            return Some(v.as_ref().to_ascii_uppercase());
+        }
+    }
+    None
+}
+
+fn should_verify(configured: &[String], method: &str) -> bool {
+    configured.iter().any(|m| m.eq_ignore_ascii_case(method))
+}

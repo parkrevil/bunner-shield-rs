@@ -220,6 +220,40 @@ mod execute {
         // Execute should succeed and not depend on verification path
         assert!(executor.execute(&mut headers).is_ok());
     }
+
+    #[test]
+    fn given_post_method_and_valid_token_when_execute_then_verification_succeeds() {
+        let secret = secret();
+        let options = CsrfOptions::new(secret);
+        let executor = Csrf::new(options);
+        // First, issue a token (simulating prior GET): no state-changing method present
+        let mut headers = common::normalized_headers_from(&[]);
+        executor.execute(&mut headers).expect("issue");
+        let issued = headers
+            .get_all("X-CSRF-Token")
+            .and_then(|v| v.first())
+            .map(|v| v.to_string())
+            .expect("token present");
+
+        // New request: include method + token for verification path
+        let mut verify_headers = common::normalized_headers_from(&[("X-Request-Method", "POST")]);
+        verify_headers.insert_owned("X-CSRF-Token", issued);
+        executor
+            .execute(&mut verify_headers)
+            .expect("verification must pass");
+    }
+
+    #[test]
+    fn given_post_method_and_missing_token_when_execute_then_fails() {
+        let secret = secret();
+        let options = CsrfOptions::new(secret);
+        let executor = Csrf::new(options);
+        let mut headers = common::normalized_headers_from(&[("X-Request-Method", "POST")]);
+        let err = executor
+            .execute(&mut headers)
+            .expect_err("missing token must fail");
+        assert!(err.to_string().contains("missing X-CSRF-Token"));
+    }
 }
 
 mod origin_validation_option_builder {

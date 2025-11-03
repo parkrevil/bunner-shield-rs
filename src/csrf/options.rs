@@ -17,6 +17,8 @@ pub struct CsrfOptions {
     pub(crate) verification_keys: Vec<[u8; 32]>,
     pub(crate) origin_validation: bool,
     pub(crate) use_referer: bool,
+    pub(crate) validate_methods: Vec<String>,
+    pub(crate) token_max_age_secs: u64,
 }
 
 impl CsrfOptions {
@@ -28,6 +30,13 @@ impl CsrfOptions {
             verification_keys: Vec::new(),
             origin_validation: false,
             use_referer: true,
+            validate_methods: vec![
+                "POST".to_string(),
+                "PUT".to_string(),
+                "PATCH".to_string(),
+                "DELETE".to_string(),
+            ],
+            token_max_age_secs: 2 * 60 * 60,
         }
     }
 
@@ -51,6 +60,24 @@ impl CsrfOptions {
     /// Issued tokens always use the primary `secret_key`.
     pub fn verification_keys(mut self, keys: Vec<[u8; 32]>) -> Self {
         self.verification_keys = keys;
+        self
+    }
+
+    /// Sets which HTTP methods should trigger CSRF token verification when present in request headers.
+    /// Values are matched case-insensitively; defaults to [POST, PUT, PATCH, DELETE].
+    pub fn validate_methods<I, S>(mut self, methods: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        self.validate_methods = methods.into_iter().map(|m| m.into()).collect();
+        self
+    }
+
+    /// Sets the maximum allowed age for CSRF tokens (seconds) when verifying.
+    /// Defaults to 2 hours.
+    pub fn token_max_age_secs(mut self, secs: u64) -> Self {
+        self.token_max_age_secs = secs;
         self
     }
 }
