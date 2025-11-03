@@ -27,17 +27,11 @@ impl Csrf {
             cookie_prefix,
         }
     }
-}
 
-impl FeatureExecutor for Csrf {
-    type Options = CsrfOptions;
-
-    fn options(&self) -> &Self::Options {
-        &self.options
-    }
-
-    fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), ExecutorError> {
-        // If request method indicates a state-changing operation, verify incoming CSRF token header.
+    /// Verifies the incoming request for CSRF concerns.
+    /// - For state-changing methods (POST/PUT/PATCH/DELETE by default), requires a valid X-CSRF-Token within max-age.
+    /// - If origin validation is enabled, validates Origin/Referer against the Host header.
+    pub fn verify_request(&self, headers: &NormalizedHeaders) -> Result<(), ExecutorError> {
         if let Some(method) = request_method(headers)
             && should_verify(&self.options.validate_methods, &method)
         {
@@ -65,9 +59,7 @@ impl FeatureExecutor for Csrf {
             }
         }
 
-        // Optional request-origin check before issuing a token
         if self.options.origin_validation {
-            // Build a simple map from current headers for lookup
             let mut req_headers = std::collections::HashMap::new();
             if let Some(values) = headers.get_all("Origin")
                 && let Some(v) = values.first()
@@ -80,12 +72,9 @@ impl FeatureExecutor for Csrf {
                 req_headers.insert("Referer".to_string(), v.to_string());
             }
 
-            // Derive allowed origin from current host header if present; otherwise skip check.
-            // Many frameworks pass Host via headers; if missing, we can't validate.
             if let Some(host_vals) = headers.get_all("Host")
                 && let Some(host) = host_vals.first()
             {
-                // Assume https by default; production servers should run behind TLS.
                 let allowed0 = format!("https://{}", host);
                 let allowed_refs = [allowed0.as_str()];
                 if let Err(err) =
@@ -96,6 +85,11 @@ impl FeatureExecutor for Csrf {
             }
         }
 
+        Ok(())
+    }
+
+    /// Issues a fresh CSRF token and corresponding Set-Cookie header on the response.
+    pub fn issue_response(&self, headers: &mut NormalizedHeaders) -> Result<(), ExecutorError> {
         let token = self
             .token_service
             .issue(self.options.token_length)
@@ -109,8 +103,20 @@ impl FeatureExecutor for Csrf {
 
         headers.insert_owned(CSRF_TOKEN, token);
         headers.insert_owned(SET_COOKIE, cookie);
-
         Ok(())
+    }
+}
+
+impl FeatureExecutor for Csrf {
+    type Options = CsrfOptions;
+
+    fn options(&self) -> &Self::Options {
+        &self.options
+    }
+
+    fn execute(&self, headers: &mut NormalizedHeaders) -> Result<(), ExecutorError> {
+        self.verify_request(headers)?;
+        self.issue_response(headers)
     }
 }
 
