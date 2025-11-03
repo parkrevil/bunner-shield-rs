@@ -3,14 +3,29 @@ use std::fmt;
 use std::str::FromStr;
 use thiserror::Error;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct FetchMetadataOptions {
     pub(crate) allow_navigation_requests: bool,
     pub(crate) require_user_activation_for_navigation: bool,
     pub(crate) allow_legacy_clients: bool,
     pub(crate) navigation_destinations: Vec<FetchDestination>,
     pub(crate) cross_site_allowances: Vec<FetchMetadataRule>,
+    pub(crate) on_violation: Option<fn(&FetchMetadataViolation)>,
 }
+
+impl PartialEq for FetchMetadataOptions {
+    fn eq(&self, other: &Self) -> bool {
+        self.allow_navigation_requests == other.allow_navigation_requests
+            && self.require_user_activation_for_navigation
+                == other.require_user_activation_for_navigation
+            && self.allow_legacy_clients == other.allow_legacy_clients
+            && self.navigation_destinations == other.navigation_destinations
+            && self.cross_site_allowances == other.cross_site_allowances
+        // intentionally ignore on_violation hook in equality semantics
+    }
+}
+
+impl Eq for FetchMetadataOptions {}
 
 impl FetchMetadataOptions {
     pub fn new() -> Self {
@@ -70,6 +85,16 @@ impl FetchMetadataOptions {
         }
         self
     }
+
+    /// Registers a hook that will be invoked when a cross-site request is blocked by policy.
+    ///
+    /// Notes:
+    /// - This is a simple function pointer for cloneability; use a free function to record/emit telemetry.
+    /// - The hook is best-effort and must not panic.
+    pub fn on_violation(mut self, hook: fn(&FetchMetadataViolation)) -> Self {
+        self.on_violation = Some(hook);
+        self
+    }
 }
 
 impl Default for FetchMetadataOptions {
@@ -83,6 +108,7 @@ impl Default for FetchMetadataOptions {
                 FetchDestination::NestedDocument,
             ],
             cross_site_allowances: Vec::new(),
+            on_violation: None,
         }
     }
 }
@@ -363,6 +389,14 @@ pub enum FetchMetadataParseError {
     InvalidMode(String),
     #[error("invalid Sec-Fetch-Dest value `{0}`")]
     InvalidDestination(String),
+}
+
+/// Telemetry payload passed to `on_violation` hooks.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FetchMetadataViolation {
+    pub site: String,
+    pub mode: String,
+    pub destination: String,
 }
 
 #[cfg(test)]

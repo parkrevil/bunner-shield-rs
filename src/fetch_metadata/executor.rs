@@ -1,5 +1,6 @@
 use super::options::{
-    FetchDestination, FetchMetadataOptions, FetchMetadataParseError, FetchMode, FetchSite,
+    FetchDestination, FetchMetadataOptions, FetchMetadataParseError, FetchMetadataViolation,
+    FetchMode, FetchSite,
 };
 use crate::constants::header_keys::{
     SEC_FETCH_DEST, SEC_FETCH_MODE, SEC_FETCH_SITE, SEC_FETCH_USER,
@@ -76,11 +77,24 @@ impl FetchMetadata {
             return Ok(());
         }
 
-        Err(Box::new(FetchMetadataError::CrossSiteBlocked {
-            site: "cross-site".to_string(),
-            mode: mode.as_str().to_string(),
-            destination: destination.as_str().to_string(),
-        }))
+        {
+            // Invoke violation hook if configured (best-effort, non-fatal for hook failures)
+            if let Some(hook) = self.options.on_violation {
+                let ev = FetchMetadataViolation {
+                    site: "cross-site".to_string(),
+                    mode: mode.as_str().to_string(),
+                    destination: destination.as_str().to_string(),
+                };
+                // Hooks should not panic; ignore any panics to avoid masking policy failures.
+                let _ = std::panic::catch_unwind(|| hook(&ev));
+            }
+
+            Err(Box::new(FetchMetadataError::CrossSiteBlocked {
+                site: "cross-site".to_string(),
+                mode: mode.as_str().to_string(),
+                destination: destination.as_str().to_string(),
+            }))
+        }
     }
 
     fn navigation_allowed(

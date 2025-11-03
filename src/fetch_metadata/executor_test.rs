@@ -114,6 +114,14 @@ mod execute {
 
     mod failure {
         use super::*;
+        use crate::fetch_metadata::FetchMetadataViolation;
+        use std::sync::atomic::{AtomicBool, Ordering};
+
+        static VIOLATION_HOOK_CALLED: AtomicBool = AtomicBool::new(false);
+
+        fn record_violation(_ev: &FetchMetadataViolation) {
+            VIOLATION_HOOK_CALLED.store(true, Ordering::SeqCst);
+        }
 
         #[test]
         fn given_missing_headers_and_legacy_disallowed_when_execute_then_fails() {
@@ -153,11 +161,14 @@ mod execute {
                 ("Sec-Fetch-Dest", "empty"),
             ]);
 
-            let error = executor_with(FetchMetadataOptions::new())
+            VIOLATION_HOOK_CALLED.store(false, Ordering::SeqCst);
+
+            let error = executor_with(FetchMetadataOptions::new().on_violation(record_violation))
                 .execute(&mut headers)
                 .expect_err("expected cross-site block");
 
             assert!(error.to_string().contains("cross-site request blocked"));
+            assert!(VIOLATION_HOOK_CALLED.load(Ordering::SeqCst));
         }
 
         #[test]
