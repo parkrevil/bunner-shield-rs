@@ -157,12 +157,11 @@ mod execute {
     #[test]
     fn given_origin_validation_enabled_and_matching_origin_when_execute_then_ok() {
         let secret = secret();
-        let options = CsrfOptions::new(secret).origin_validation(true, false);
+        let options = CsrfOptions::new(secret)
+            .origin_validation(true, false)
+            .allowed_origins(["https://example.com"]);
         let executor = Csrf::new(options);
-        let mut headers = common::normalized_headers_from(&[
-            ("Host", "example.com"),
-            ("Origin", "https://example.com"),
-        ]);
+        let mut headers = common::normalized_headers_from(&[("Origin", "https://example.com")]);
 
         let result = executor.execute(&mut headers);
         assert!(result.is_ok());
@@ -171,12 +170,11 @@ mod execute {
     #[test]
     fn given_origin_validation_enabled_and_mismatched_origin_when_execute_then_error() {
         let secret = secret();
-        let options = CsrfOptions::new(secret).origin_validation(true, false);
+        let options = CsrfOptions::new(secret)
+            .origin_validation(true, false)
+            .allowed_origins(["https://example.com"]);
         let executor = Csrf::new(options);
-        let mut headers = common::normalized_headers_from(&[
-            ("Host", "example.com"),
-            ("Origin", "https://evil.com"),
-        ]);
+        let mut headers = common::normalized_headers_from(&[("Origin", "https://evil.com")]);
 
         let err = executor
             .execute(&mut headers)
@@ -188,25 +186,29 @@ mod execute {
     fn given_origin_validation_enabled_no_origin_use_referer_true_when_execute_then_ok_if_referer_matches()
      {
         let secret = secret();
-        let options = CsrfOptions::new(secret).origin_validation(true, true);
+        let options = CsrfOptions::new(secret)
+            .origin_validation(true, true)
+            .allowed_origins(["https://example.com"]);
         let executor = Csrf::new(options);
-        let mut headers = common::normalized_headers_from(&[
-            ("Host", "example.com"),
-            ("Referer", "https://example.com/path"),
-        ]);
+        let mut headers =
+            common::normalized_headers_from(&[("Referer", "https://example.com/path")]);
 
         assert!(executor.execute(&mut headers).is_ok());
     }
 
     #[test]
-    fn given_origin_validation_enabled_no_host_header_when_execute_then_skips_validation() {
+    fn given_origin_validation_enabled_without_origin_or_referer_when_execute_then_fails() {
         let secret = secret();
-        let options = CsrfOptions::new(secret).origin_validation(true, true);
+        let options = CsrfOptions::new(secret)
+            .origin_validation(true, true)
+            .allowed_origins(["https://example.com"]);
         let executor = Csrf::new(options);
-        let mut headers = common::normalized_headers_from(&[("Origin", "https://evil.com")]);
+        let mut headers = common::normalized_headers_from(&[]);
 
-        // With no Host, validator is skipped and token is still issued
-        assert!(executor.execute(&mut headers).is_ok());
+        let err = executor
+            .execute(&mut headers)
+            .expect_err("expected origin validation error");
+        assert!(err.to_string().contains("origin/referer validation failed"));
     }
 
     #[test]

@@ -17,6 +17,7 @@ pub struct CsrfOptions {
     pub(crate) verification_keys: Vec<[u8; 32]>,
     pub(crate) origin_validation: bool,
     pub(crate) use_referer: bool,
+    pub(crate) allowed_origins: Vec<String>,
     pub(crate) validate_methods: Vec<String>,
     pub(crate) token_max_age_secs: u64,
 }
@@ -30,6 +31,7 @@ impl CsrfOptions {
             verification_keys: Vec::new(),
             origin_validation: false,
             use_referer: true,
+            allowed_origins: Vec::new(),
             validate_methods: vec![
                 "POST".to_string(),
                 "PUT".to_string(),
@@ -53,6 +55,17 @@ impl CsrfOptions {
     pub fn origin_validation(mut self, enabled: bool, use_referer: bool) -> Self {
         self.origin_validation = enabled;
         self.use_referer = use_referer;
+        self
+    }
+
+    /// Sets the allowed origins for Origin/Referer validation when `origin_validation` is enabled.
+    /// Examples: ["https://example.com", "https://app.example.com:8443"].
+    pub fn allowed_origins<I, S>(mut self, origins: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        self.allowed_origins = origins.into_iter().map(|s| s.into()).collect();
         self
     }
 
@@ -101,6 +114,10 @@ impl FeatureOptions for CsrfOptions {
             });
         }
 
+        if self.origin_validation && self.allowed_origins.is_empty() {
+            return Err(CsrfOptionsError::MissingAllowedOrigins);
+        }
+
         Ok(())
     }
 }
@@ -118,6 +135,8 @@ pub enum CsrfOptionsError {
         minimum: usize,
         maximum: usize,
     },
+    #[error("origin validation requires non-empty allowed_origins")]
+    MissingAllowedOrigins,
 }
 
 #[cfg(test)]

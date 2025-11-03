@@ -72,16 +72,15 @@ impl Csrf {
                 req_headers.insert("Referer".to_string(), v.to_string());
             }
 
-            if let Some(host_vals) = headers.get_all("Host")
-                && let Some(host) = host_vals.first()
-            {
-                let allowed0 = format!("https://{}", host);
-                let allowed_refs = [allowed0.as_str()];
-                if let Err(err) =
-                    validate_origin(&req_headers, self.options.use_referer, &allowed_refs)
-                {
-                    return Err(Box::new(CsrfError::OriginValidation(err)) as ExecutorError);
-                }
+            let allowed: Vec<&str> = self
+                .options
+                .allowed_origins
+                .iter()
+                .map(|s| s.as_str())
+                .collect();
+
+            if let Err(err) = validate_origin(&req_headers, self.options.use_referer, &allowed) {
+                return Err(Box::new(CsrfError::OriginValidation(err)) as ExecutorError);
             }
         }
 

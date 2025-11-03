@@ -677,11 +677,14 @@ mod success {
     #[test]
     fn given_csrf_origin_validation_matching_origin_then_secure_ok() {
         let shield = Shield::new()
-            .csrf(CsrfOptions::new(base_secret()).origin_validation(true, false))
+            .csrf(
+                CsrfOptions::new(base_secret())
+                    .origin_validation(true, false)
+                    .allowed_origins(["https://example.com"]),
+            )
             .expect("csrf");
 
         let mut headers = empty_headers();
-        headers.insert("Host".into(), "example.com".into());
         headers.insert("Origin".into(), "https://example.com".into());
 
         let secured = shield.secure(headers).expect("secure");
@@ -693,11 +696,14 @@ mod success {
     #[test]
     fn given_csrf_origin_validation_use_referer_true_then_referer_match_ok() {
         let shield = Shield::new()
-            .csrf(CsrfOptions::new(base_secret()).origin_validation(true, true))
+            .csrf(
+                CsrfOptions::new(base_secret())
+                    .origin_validation(true, true)
+                    .allowed_origins(["https://example.com"]),
+            )
             .expect("csrf");
 
         let mut headers = empty_headers();
-        headers.insert("Host".into(), "example.com".into());
         headers.insert("Referer".into(), "https://example.com/path".to_string());
 
         let secured = shield.secure(headers).expect("secure");
@@ -705,16 +711,24 @@ mod success {
     }
 
     #[test]
-    fn given_csrf_origin_validation_enabled_but_no_host_then_skips_validation() {
+    fn given_csrf_origin_validation_enabled_without_origin_or_referer_then_fails() {
         let shield = Shield::new()
-            .csrf(CsrfOptions::new(base_secret()).origin_validation(true, true))
+            .csrf(
+                CsrfOptions::new(base_secret())
+                    .origin_validation(true, true)
+                    .allowed_origins(["https://example.com"]),
+            )
             .expect("csrf");
 
-        let mut headers = empty_headers();
-        headers.insert("Origin".into(), "https://evil.com".into());
+        let headers = empty_headers();
 
-        let secured = shield.secure(headers).expect("secure");
-        assert!(secured.contains_key("X-CSRF-Token"));
+        let result = shield.secure(headers);
+        match result {
+            Err(ShieldError::ExecutionFailed(err)) => {
+                assert!(err.to_string().contains("origin/referer validation failed"));
+            }
+            other => panic!("expected execution error, got {other:?}"),
+        }
     }
 }
 
@@ -802,11 +816,14 @@ mod failure {
     #[test]
     fn given_csrf_origin_validation_mismatched_origin_then_secure_fails() {
         let shield = Shield::new()
-            .csrf(CsrfOptions::new(base_secret()).origin_validation(true, false))
+            .csrf(
+                CsrfOptions::new(base_secret())
+                    .origin_validation(true, false)
+                    .allowed_origins(["https://example.com"]),
+            )
             .expect("csrf");
 
         let mut headers = empty_headers();
-        headers.insert("Host".into(), "example.com".into());
         headers.insert("Origin".into(), "https://evil.com".into());
 
         let msg = exec_error_message(shield.secure(headers));
@@ -816,17 +833,19 @@ mod failure {
     #[test]
     fn given_csrf_origin_validation_null_or_empty_origin_without_fallback_then_fails() {
         let shield = Shield::new()
-            .csrf(CsrfOptions::new(base_secret()).origin_validation(true, false))
+            .csrf(
+                CsrfOptions::new(base_secret())
+                    .origin_validation(true, false)
+                    .allowed_origins(["https://example.com"]),
+            )
             .expect("csrf");
 
         let mut headers1 = empty_headers();
-        headers1.insert("Host".into(), "example.com".into());
         headers1.insert("Origin".into(), "null".into());
         let msg1 = exec_error_message(shield.secure(headers1));
         assert!(msg1.contains("origin/referer validation failed"));
 
         let mut headers2 = empty_headers();
-        headers2.insert("Host".into(), "example.com".into());
         headers2.insert("Origin".into(), " ".into());
         let msg2 = exec_error_message(shield.secure(headers2));
         assert!(msg2.contains("origin/referer validation failed"));
