@@ -37,8 +37,8 @@ mod new {
         let options = ReferrerPolicyOptions::new();
 
         assert_eq!(
-            options.policy,
-            ReferrerPolicyValue::StrictOriginWhenCrossOrigin
+            options.policies,
+            vec![ReferrerPolicyValue::StrictOriginWhenCrossOrigin]
         );
     }
 }
@@ -50,7 +50,7 @@ mod policy {
     fn given_explicit_policy_when_policy_then_updates_policy_field() {
         let options = ReferrerPolicyOptions::new().policy(ReferrerPolicyValue::NoReferrer);
 
-        assert_eq!(options.policy, ReferrerPolicyValue::NoReferrer);
+        assert_eq!(options.policies, vec![ReferrerPolicyValue::NoReferrer]);
     }
 }
 
@@ -63,7 +63,19 @@ mod header_value {
 
         let value = options.header_value();
 
-        assert_eq!(value, values::REFERRER_POLICY_ORIGIN);
+        assert_eq!(value.as_ref(), values::REFERRER_POLICY_ORIGIN);
+    }
+
+    #[test]
+    fn given_multiple_policies_when_header_value_then_renders_comma_separated_list() {
+        let options = ReferrerPolicyOptions::new().policies([
+            ReferrerPolicyValue::NoReferrer,
+            ReferrerPolicyValue::OriginWhenCrossOrigin,
+        ]);
+
+        let value = options.header_value();
+
+        assert_eq!(value.as_ref(), "no-referrer, origin-when-cross-origin");
     }
 }
 

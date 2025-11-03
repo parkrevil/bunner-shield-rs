@@ -5,6 +5,7 @@ use crate::constants::header_values::{
     REFERRER_POLICY_UNSAFE_URL,
 };
 use crate::executor::FeatureOptions;
+use std::borrow::Cow;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReferrerPolicyValue {
@@ -37,9 +38,9 @@ impl ReferrerPolicyValue {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ReferrerPolicyOptions {
-    pub(crate) policy: ReferrerPolicyValue,
+    pub(crate) policies: Vec<ReferrerPolicyValue>,
 }
 
 impl ReferrerPolicyOptions {
@@ -48,19 +49,38 @@ impl ReferrerPolicyOptions {
     }
 
     pub fn policy(mut self, policy: ReferrerPolicyValue) -> Self {
-        self.policy = policy;
+        self.policies = vec![policy];
         self
     }
 
-    pub(crate) fn header_value(&self) -> &'static str {
-        self.policy.as_str()
+    pub fn policies<I>(mut self, policies: I) -> Self
+    where
+        I: IntoIterator<Item = ReferrerPolicyValue>,
+    {
+        self.policies = policies.into_iter().collect();
+        self
+    }
+
+    pub(crate) fn header_value(&self) -> Cow<'static, str> {
+        match self.policies.as_slice() {
+            [single] => Cow::Borrowed(single.as_str()),
+            many if !many.is_empty() => {
+                let joined = many
+                    .iter()
+                    .map(|v| v.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                Cow::Owned(joined)
+            }
+            _ => Cow::Borrowed(ReferrerPolicyValue::StrictOriginWhenCrossOrigin.as_str()),
+        }
     }
 }
 
 impl Default for ReferrerPolicyOptions {
     fn default() -> Self {
         Self {
-            policy: ReferrerPolicyValue::StrictOriginWhenCrossOrigin,
+            policies: vec![ReferrerPolicyValue::StrictOriginWhenCrossOrigin],
         }
     }
 }
