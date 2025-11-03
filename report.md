@@ -6,7 +6,7 @@
 - [ ] 요청/응답 분리: `Shield::secure()` 주의사항 및 필터링 헬퍼 제공
 
 ## 2) 보안 설계·아키텍처
-- [ ] CSRF: 정적 허용 출처 목록(`allowed_origins`) 추가 및 `Host` 기반 제거
+- [x] CSRF: 정적 허용 출처 목록(`allowed_origins`) 추가 및 `Host` 기반 제거
 - [ ] CSRF: Stateless 토큰 nonce — 영구 저장소 옵션 또는 랜덤 nonce 권장
 - [ ] CSRF: `verify()` 기본 동작에 만료 포함, `verify_signature_only()` 분리, `now_secs` 내부 계산
 - [ ] Fetch Metadata: 정책 위반 훅 `on_violation` 옵션 제공
