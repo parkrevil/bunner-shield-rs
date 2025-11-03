@@ -33,3 +33,12 @@ features = ["user-hooks"]
 [[bench]]
 name = "bunner_shield_rs"
 harness = false
+
+[features]
+default = []
+# Optional Redis-backed CSRF replay store implementation
+csrf-redis = ["redis"]
+
+[dependencies.redis]
+version = "0.25"
+optional = true

@@ -3,11 +3,12 @@
 > 마지막 업데이트: 2025-10-31
 
 ## 0) 즉시 해결 — Critical
-- [ ] CSRF: `Csrf` executor에 검증 로직 추가 (요청별 토큰 검증)
-- [ ] CSRF: `X-CSRF-Token` 헤더 검증(POST/PUT/DELETE)
-- [ ] CSRF: 요청/응답 컨텍스트 분리(요청 검증/응답 설정 인터페이스)
-- [ ] CSRF: `HmacCsrfService::verify` 만료 시간 검증 기본화
-- [ ] CSRF: `CsrfReplayStore` 기본 구현체 제공(메모리/Redis)
+- [x] CSRF: `Csrf` executor에 검증 로직 추가 (요청별 토큰 검증)
+- [x] CSRF: `X-CSRF-Token` 헤더 검증(POST/PUT/DELETE)
+- [x] CSRF: 요청/응답 컨텍스트 분리(요청 검증/응답 설정 인터페이스)
+- [x] CSRF: `HmacCsrfService::verify` 만료 시간 검증 기본화
+- [x] CSRF: `CsrfReplayStore` 기본 구현체 제공(메모리/Redis)
+	- 메모리 기본 구현 포함, Redis 구현은 `csrf-redis` feature로 제공
 - [ ] Set-Cookie: `NormalizedHeaders::into_result()` 재설계(다중 헤더)
 - [ ] Set-Cookie: `HashMap<String, Vec<String>>` 또는 동등 API로 반환
 - [ ] Set-Cookie: `get_cookies() -> Vec<String>` 등 전용 접근자 제공
