@@ -3,35 +3,12 @@
 > 마지막 업데이트: 2025-11-03
 
 ## 0) 즉시 해결 — Critical
-- [x] CSRF: `Csrf` executor에 검증 로직 추가 (요청별 토큰 검증)
-- [x] CSRF: `X-CSRF-Token` 헤더 검증(POST/PUT/DELETE)
-- [x] CSRF: 요청/응답 컨텍스트 분리(요청 검증/응답 설정 인터페이스)
-- [x] CSRF: `HmacCsrfService::verify` 만료 시간 검증 기본화
-- [x] CSRF: `CsrfReplayStore` 기본 구현체 제공(메모리/Redis)
-	- 메모리 기본 구현 포함, Redis 구현은 `csrf-redis` feature로 제공
-- [x] Set-Cookie: `NormalizedHeaders::into_result()` 재설계(다중 헤더)
-	- 하위 호환을 위해 기존 `into_result()` 유지, 신규 `into_result_with_multi()`와 `NormalizedResult` 도입
-- [x] Set-Cookie: `HashMap<String, Vec<String>>` 또는 동등 API로 반환
-	- `NormalizedResult.multi` 필드에 다중 헤더 저장, `headers`에는 단일 헤더만 유지
-- [x] Set-Cookie: `get_cookies() -> Vec<String>` 등 전용 접근자 제공
-	- `NormalizedResult::get_cookies()` 제공
-- [x] Set-Cookie: 통합 테스트 수정(개행 기반 제거)
-	- 통합/CSRF/SameSite 관련 테스트를 `secure_with_multi()` + `get_cookies()`로 마이그레이션
 - [ ] 요청/응답 분리: `Shield::secure()` 주의사항 및 필터링 헬퍼 제공
-
-## 1) 표준 준수 및 기능
-- [x] Referrer-Policy: 다중 정책 지원(`Vec<ReferrerPolicyValue>`), 직렬화 시 쉼표 연결, 단일 정책 편의 메서드 유지
-	- `header_value()`가 Cow 반환, 옵션/실행기/테스트 갱신 완료
-- [x] Permissions-Policy: Origin 직렬화 정책 적용(비키워드=항상 인용, 정규화, 레거시 토글 옵션)
-	- 기본값으로 origin 인용 활성화, `legacy_unquoted_origins()` 토글 추가, 테스트 통과
-- [x] HSTS: `preload` 권장 2년 문서화 및 정책 가이드
-	- `docs/hsts.md` 추가: 롤아웃 단계, 2년(63,072,000s) 권장, 비활성화/프리로드 체크리스트 포함
 
 ## 2) 보안 설계·아키텍처
 - [ ] CSRF: 정적 허용 출처 목록(`allowed_origins`) 추가 및 `Host` 기반 제거
 - [ ] CSRF: Stateless 토큰 nonce — 영구 저장소 옵션 또는 랜덤 nonce 권장
 - [ ] CSRF: `verify()` 기본 동작에 만료 포함, `verify_signature_only()` 분리, `now_secs` 내부 계산
-- [ ] Fetch Metadata: 프레임워크 통합 가이드(Axum/Actix), 위반 시 응답 전략(403/500) 문서화, Observability 가이드
 - [ ] Fetch Metadata: 정책 위반 훅 `on_violation` 옵션 제공
 - [ ] SafeHeaders: 이름 재고(`HeaderSanitizer`/`HttpHeaderValidator`), Rustdoc에 방어 범위 설명, 기본 활성화 여부 명시
 
