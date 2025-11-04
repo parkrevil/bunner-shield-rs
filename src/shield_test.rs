@@ -34,6 +34,50 @@ mod new {
     }
 }
 
+mod builder_api {
+    use super::*;
+    use crate::permissions_policy::PermissionsPolicyOptions;
+
+    #[test]
+    fn given_builder_with_valid_feature_when_secure_then_succeeds() {
+        let shield = Shield::builder()
+            .x_powered_by()
+            .permissions_policy(PermissionsPolicyOptions::new("geolocation=()"))
+            .build();
+        let headers = common::headers_with(&[]);
+
+        let result = shield.secure(headers).expect("secure");
+        assert_eq!(
+            result.get("Permissions-Policy").map(String::as_str),
+            Some("geolocation=()")
+        );
+    }
+
+    #[test]
+    fn given_builder_with_invalid_feature_when_secure_then_returns_validation_error() {
+        let shield = Shield::builder()
+            .permissions_policy(PermissionsPolicyOptions::new("  "))
+            .build();
+        let headers = common::headers_with(&[]);
+
+        let error = shield
+            .secure(headers)
+            .expect_err("expected validation failure at secure time");
+        match error {
+            ShieldError::ExecutorValidationFailed(inner) => {
+                assert!(
+                    inner
+                        .to_string()
+                        .contains("permissions policy value must not be empty"),
+                    "unexpected validation message: {}",
+                    inner
+                )
+            }
+            other => panic!("unexpected error: {other:?}"),
+        }
+    }
+}
+
 mod x_powered_by {
     use super::*;
 
