@@ -33,9 +33,9 @@ mod new {
     fn given_new_options_when_created_then_uses_secure_http_only_lax_defaults() {
         let options = SameSiteOptions::new();
 
-        assert!(options.meta.secure);
-        assert!(options.meta.http_only);
-        assert_eq!(options.meta.same_site, SameSitePolicy::Lax);
+        assert!(options.default.meta.secure);
+        assert!(options.default.meta.http_only);
+        assert_eq!(options.default.meta.same_site, SameSitePolicy::Lax);
     }
 }
 
@@ -46,7 +46,7 @@ mod secure {
     fn given_false_when_secure_then_updates_secure_flag() {
         let options = SameSiteOptions::new().secure(false);
 
-        assert!(!options.meta.secure);
+        assert!(!options.default.meta.secure);
     }
 }
 
@@ -57,7 +57,7 @@ mod http_only {
     fn given_false_when_http_only_then_updates_http_only_flag() {
         let options = SameSiteOptions::new().http_only(false);
 
-        assert!(!options.meta.http_only);
+        assert!(!options.default.meta.http_only);
     }
 }
 
@@ -68,7 +68,7 @@ mod same_site {
     fn given_policy_when_same_site_then_updates_policy_field() {
         let options = SameSiteOptions::new().same_site(SameSitePolicy::Strict);
 
-        assert_eq!(options.meta.same_site, SameSitePolicy::Strict);
+        assert_eq!(options.default.meta.same_site, SameSitePolicy::Strict);
     }
 }
 
