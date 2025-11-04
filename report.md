@@ -19,7 +19,7 @@
 - [ ] 공개 API 최소화: `lib.rs` 최상위 노출 축소, `prelude` 검토
 	- 진행: `prelude` 모듈 추가(공통 옵션/타입 재노출). 최상위 노출 축소는 추후 진행.
 - [ ] 추상화 수준: 정적 헤더 단순 함수화, 동적 기능만 트레이트, 매크로 사용 최소화/예시 문서화
-- [ ] SameSite: 쿠키 이름별 정책 맵, Path/Domain/Max-Age 속성 강제 옵션
+- [x] SameSite: 쿠키 이름별 정책 맵, Path/Domain/Max-Age 속성 강제 옵션
 - [ ] NormalizedHeaders: 파이프라인 정렬 최적화(BinaryHeap 등) 또는 정렬 상태 보장
 
 ## 4) 문서·예제
