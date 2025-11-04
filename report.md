@@ -13,10 +13,11 @@
 - [ ] SafeHeaders: 이름 재고(`HeaderSanitizer`/`HttpHeaderValidator`), Rustdoc에 방어 범위 설명, 기본 활성화 여부 명시
 
 ## 3) API 설계·DX
-- [ ] Shield 빌더: 검증을 `secure()`로 지연, 메서드 `Self` 반환, `build()` 단계 옵션
-- [ ] 에러 타입: 공통 `ShieldError`로 통합 또는 카테고리 그룹핑, `source()` 체인 유지
+- [x] Shield 빌더: 검증을 `secure()`로 지연, 메서드 `Self` 반환, `build()` 단계 옵션
+- [x] 에러 타입: 공통 `ShieldError`로 통합 또는 카테고리 그룹핑, `source()` 체인 유지
 - [ ] 모듈 구조: 복잡 모듈 구조 정당성 문서 또는 평탄화 검토
 - [ ] 공개 API 최소화: `lib.rs` 최상위 노출 축소, `prelude` 검토
+	- 진행: `prelude` 모듈 추가(공통 옵션/타입 재노출). 최상위 노출 축소는 추후 진행.
 - [ ] 추상화 수준: 정적 헤더 단순 함수화, 동적 기능만 트레이트, 매크로 사용 최소화/예시 문서화
 - [ ] SameSite: 쿠키 이름별 정책 맵, Path/Domain/Max-Age 속성 강제 옵션
 - [ ] NormalizedHeaders: 파이프라인 정렬 최적화(BinaryHeap 등) 또는 정렬 상태 보장
