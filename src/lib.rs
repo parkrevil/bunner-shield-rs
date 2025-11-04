@@ -56,6 +56,33 @@ pub use crate::x_dns_prefetch_control::{
 };
 pub use crate::x_frame_options::{XFrameOptions, XFrameOptionsOptions, XFrameOptionsPolicy};
 
+/// Commonly used types for typical usage. Import with `use bunner_shield_rs::prelude::*;`.
+pub mod prelude {
+    pub use crate::coep::CoepOptions;
+    pub use crate::coop::CoopOptions;
+    pub use crate::corp::CorpOptions;
+    pub use crate::csp::{
+        CspNonce, CspNonceManager, CspNonceManagerError, CspOptions, CspOptionsError,
+        TrustedTypesPolicy, TrustedTypesPolicyError,
+    };
+    pub use crate::csrf::{CsrfOptions, CsrfOptionsError, CsrfTokenError, HmacCsrfService};
+    pub use crate::fetch_metadata::{
+        FetchDestination, FetchMetadataOptions, FetchMetadataOptionsError, FetchMetadataRule,
+        FetchMode, FetchSite,
+    };
+    pub use crate::hsts::{HstsOptions, HstsOptionsError};
+    pub use crate::origin_agent_cluster::OriginAgentClusterOptions;
+    pub use crate::permissions_policy::{PermissionsPolicyOptions, PermissionsPolicyOptionsError};
+    pub use crate::referrer_policy::{ReferrerPolicyOptions, ReferrerPolicyValue};
+    pub use crate::same_site::{CookieMeta, SameSiteOptions, SameSiteOptionsError, SameSitePolicy};
+    pub use crate::x_dns_prefetch_control::{
+        XdnsPrefetchControlOptions, XdnsPrefetchControlPolicy,
+    };
+    pub use crate::x_frame_options::{XFrameOptionsOptions, XFrameOptionsPolicy};
+
+    pub use crate::{Shield, ShieldError, ShieldErrorKind, ShieldResult};
+}
+
 #[cfg(test)]
 #[path = "tests_common.rs"]
 pub(crate) mod tests_common;
