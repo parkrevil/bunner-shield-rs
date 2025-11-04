@@ -349,6 +349,34 @@ pub enum ShieldError {
     ExecutionFailed(ExecutorError),
 }
 
+/// High-level categories for `ShieldError` to enable quick classification
+/// while preserving the original error via `source()`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ShieldErrorKind {
+    Validation,
+    Execution,
+}
+
+impl ShieldError {
+    /// Returns the error category without allocating or inspecting inner text.
+    pub fn kind(&self) -> ShieldErrorKind {
+        match self {
+            ShieldError::ExecutorValidationFailed(_) => ShieldErrorKind::Validation,
+            ShieldError::ExecutionFailed(_) => ShieldErrorKind::Execution,
+        }
+    }
+
+    /// Convenience: true if this is a validation error produced before execution.
+    pub fn is_validation(&self) -> bool {
+        matches!(self, ShieldError::ExecutorValidationFailed(_))
+    }
+
+    /// Convenience: true if this is an execution error produced while applying headers.
+    pub fn is_execution(&self) -> bool {
+        matches!(self, ShieldError::ExecutionFailed(_))
+    }
+}
+
 #[cfg(test)]
 #[path = "shield_test.rs"]
 mod shield_test;

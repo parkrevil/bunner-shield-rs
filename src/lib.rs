@@ -47,7 +47,10 @@ pub use crate::referrer_policy::{ReferrerPolicy, ReferrerPolicyOptions, Referrer
 pub use crate::same_site::{
     CookieMeta, SameSite, SameSiteOptions, SameSiteOptionsError, SameSitePolicy,
 };
-pub use crate::shield::{Shield, ShieldError};
+pub use crate::shield::{Shield, ShieldError, ShieldErrorKind};
+
+/// Unified result type for public APIs that return a `ShieldError`.
+pub type ShieldResult<T> = Result<T, ShieldError>;
 pub use crate::x_dns_prefetch_control::{
     XdnsPrefetchControl, XdnsPrefetchControlOptions, XdnsPrefetchControlPolicy,
 };
